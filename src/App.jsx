@@ -4,13 +4,19 @@ import CustomerHomePage from "./customer_components/pages/CustomerHomePage";
 import VendorHomePage from "./vendor_components/pages/VendorHomePage";
 import AboutVendor from "./vendor_components/pages/AboutVendor";
 import AboutCostumer from "./customer_components/pages/AboutCostumer";
+import CustomerHeader from "./customer_components/organisms/CustomerHeader";
+import CustomerFooter from "./customer_components/organisms/CustomerFooter";
 
 const CustomerLayout = () => {
   return (
-    <Routes>
-      <Route index element={<CustomerHomePage />} />
-      <Route path="about" element={<AboutCostumer />} />
-    </Routes>
+    <>
+      <CustomerHeader />
+      <Routes>
+        <Route index element={<CustomerHomePage />} />
+        <Route path="about" element={<AboutCostumer />} />
+      </Routes>
+      <CustomerFooter />
+    </>
   );
 };
 

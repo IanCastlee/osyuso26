@@ -1,13 +1,15 @@
 import React from "react";
+import CustomerHero from "../organisms/CustomerHero";
+import CategorySection from "../organisms/CategorySection";
+import MarketSection from "../organisms/MarketSection";
 
 function CustomerHomePage() {
   return (
-    <div className="min-h-screen bg-gray-100 flex items-center justify-center">
-      <div className="bg-white shadow-lg rounded-2xl p-8 text-center">
-        <h1 className="text-3xl font-bold text-gray-800 mb-4">
-          Customer Home Page
-        </h1>
-        <p className="text-gray-600">Welcome! This is your dashboard.</p>
+    <div className="w-full  bg-gray-100 h-[calc(100vh-4rem)] px-28">
+      <div className="w-full h-full overflow-y-auto flex flex-col">
+        <CustomerHero />
+        <CategorySection />
+        <MarketSection />
       </div>
     </div>
   );

@@ -4,24 +4,30 @@
    DESIGN TOKENS (LIGHT ONLY)
 ========================= */
 :root {
+  /* text colors */
   --text-primary: #08060d;
   --text-secondary: #6b6375;
   --text-muted: #9ca3af;
-
   --accent: #aa3bff;
 
+  /* layout colors */
   --bg: #ffffff;
   --border: #e5e4e7;
   --code-bg: #f4f3ec;
 
+  /* theme colors */
+  --color-primary: #f9fafb; /* gray-50 */
+  --color-secondary: #ea580c; /* orange-600 */
+
+  /* typography */
   font:
     18px/145% system-ui,
     "Segoe UI",
     Roboto,
     sans-serif;
+
   letter-spacing: 0.18px;
 
-  background: var(--bg);
   color: var(--text-primary);
 
   font-synthesis: none;
@@ -40,9 +46,8 @@ body {
   background: var(--bg);
 }
 
-/* optional layout wrapper */
 #root {
-  width: 1126px;
+  width: 100%;
   max-width: 100%;
   margin: 0 auto;
   min-height: 100vh;
@@ -65,13 +70,6 @@ h2 {
 h1 {
   font-size: 56px;
   letter-spacing: -1.68px;
-  margin: 32px 0;
-}
-
-h2 {
-  font-size: 24px;
-  letter-spacing: -0.24px;
-  margin: 0 0 8px;
 }
 
 p {
@@ -108,4 +106,24 @@ code {
 
 .text-accent {
   color: var(--accent);
+}
+
+/* =========================
+   BACKGROUND UTILITIES
+========================= */
+
+.bg-primary {
+  background: var(--color-primary);
+}
+
+.bg-secondary {
+  background: var(--color-secondary);
+}
+
+/* =========================
+   BORDER UTILITIES
+========================= */
+
+.border-default {
+  border-color: var(--border);
 }
