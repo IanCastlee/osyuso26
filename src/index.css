@@ -3,6 +3,7 @@
 /* =========================
    DESIGN TOKENS (LIGHT ONLY)
 ========================= */
+
 :root {
   /* text colors */
   --text-primary: #08060d;
@@ -67,11 +68,6 @@ h2 {
   font-weight: 500;
 }
 
-h1 {
-  font-size: 56px;
-  letter-spacing: -1.68px;
-}
-
 p {
   margin: 0;
 }
@@ -126,4 +122,14 @@ code {
 
 .border-default {
   border-color: var(--border);
+}
+
+/* NO SCROLLBAR */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }

@@ -1,7 +1,13 @@
 import React from "react";
 import meat from "../../../../assets_osyuso/shop.png";
+import { useNavigate } from "react-router-dom";
 
 function MarketCard() {
+  const navigate = useNavigate();
+
+  const handleClick = () => {
+    navigate("/market");
+  };
   return (
     <>
       <div
@@ -9,6 +15,7 @@ function MarketCard() {
   border border-gray-200 rounded-md
   hover:shadow-xl transition-all duration-300 
   cursor-pointer group bg-white"
+        onClick={handleClick}
       >
         {/* Image */}
         <div className="flex items-center justify-center">

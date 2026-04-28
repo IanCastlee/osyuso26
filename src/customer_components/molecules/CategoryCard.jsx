@@ -1,25 +1,33 @@
 import React from "react";
+import { useNavigate } from "react-router-dom";
 import meat from "../../../../assets_osyuso/meat.png";
 
 function CategoryCard() {
-  return (
-    <>
-      <div className="w-[100px] h-[120px] flex flex-col items-center justify-center overflow-hidden transition-all duration-300 cursor-pointer group ">
-        {/* Image */}
-        <div className="flex items-center justify-center">
-          <img
-            src={meat}
-            alt="Meat"
-            className="h-[50px] w-[50px] object-contain group-hover:scale-110 transition-transform duration-300"
-          />
-        </div>
+  const navigate = useNavigate();
 
-        {/* Text */}
-        <div className="mt-2 flex items-center justify-center">
-          <span className="text-sm font-semibold text-primary">Meat</span>
-        </div>
+  const handleClick = () => {
+    navigate("/categories");
+  };
+
+  return (
+    <div
+      onClick={handleClick}
+      className="w-[100px] h-[120px] flex flex-col items-center justify-center overflow-hidden transition-all duration-300 cursor-pointer group"
+    >
+      {/* Image */}
+      <div className="flex items-center justify-center">
+        <img
+          src={meat}
+          alt="Meat"
+          className="h-[50px] w-[50px] object-contain group-hover:scale-110 transition-transform duration-300"
+        />
       </div>
-    </>
+
+      {/* Text */}
+      <div className="mt-2 flex items-center justify-center">
+        <span className="text-sm font-semibold text-primary">Meat</span>
+      </div>
+    </div>
   );
 }
 
