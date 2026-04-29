@@ -70,14 +70,14 @@ function FAQ() {
 
   return (
     <div>
-      <div className="flex justify-between  bg-secondary px-20 py-6 items-center">
+      <div className="flex justify-between  bg-secondary px-2 lg:px-20 py-6 items-center">
         <div>
-          <h1 className="text-2xl font-bold text-white flex items-center gap-2">
+          <h1 className="text-sm lg:text-2xl font-bold text-white flex items-center gap-2">
             <AiOutlineQuestionCircle className="text-white" />
             Frequently Asked Questions
           </h1>
 
-          <p className="text-sm text-gray-200 mt-1">
+          <p className="text-[10px] lg:text-sm text-gray-200 mt-1 leading-relaxed">
             Find quick answers about ordering, payments, and OSYUSO.
           </p>
         </div>

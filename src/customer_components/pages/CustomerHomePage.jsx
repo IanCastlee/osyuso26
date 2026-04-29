@@ -5,7 +5,7 @@ import MarketSection from "../organisms/MarketSection";
 
 function CustomerHomePage() {
   return (
-    <div className="w-full bg-gray-100 px-28">
+    <div className="w-full bg-gray-100 px-1 lg:px-28">
       <div className="w-full h-full  flex flex-col">
         <CustomerHero />
         <CategorySection />

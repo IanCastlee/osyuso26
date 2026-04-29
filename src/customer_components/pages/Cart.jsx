@@ -23,29 +23,24 @@ function Cart() {
     },
   ]);
 
-  // Update weight
   const updateWeight = (id, change) => {
     setItems((prev) =>
       prev.map((item) =>
         item.id === id
-          ? {
-              ...item,
-              weight: Math.max(0.5, item.weight + change),
-            }
+          ? { ...item, weight: Math.max(0.5, item.weight + change) }
           : item,
       ),
     );
   };
 
-  // Remove item
   const removeItem = (id) => {
     setItems((prev) => prev.filter((item) => item.id !== id));
   };
 
   return (
-    <div className="w-full bg-gray-100 px-28">
+    <div className="w-full bg-gray-100 px-4 md:px-10 lg:px-28 py-4">
       {/* TITLE */}
-      <h1 className=" flex items-center gap-1 text-2xl font-bold text-primary mb-6">
+      <h1 className="flex items-center gap-2 text-xl md:text-2xl font-bold text-primary mb-4 md:mb-6">
         <BsCart4 /> Your Cart
       </h1>
 
@@ -57,10 +52,10 @@ function Cart() {
           return (
             <div
               key={item.id}
-              className="bg-primary rounded-sm shadow-xs hover:shadow-md transition p-4 flex flex-col md:flex-row gap-4"
+              className="bg-white rounded-md shadow-sm hover:shadow-md transition p-3 md:p-4 flex flex-col md:flex-row gap-4"
             >
               {/* IMAGE */}
-              <div className="w-full md:w-[120px] h-[120px] overflow-hidden rounded-lg">
+              <div className="w-full md:w-[120px] h-[180px] md:h-[120px] overflow-hidden rounded-lg">
                 <LazyLoadImage
                   src={item.image}
                   className="w-full h-full object-cover"
@@ -71,11 +66,13 @@ function Cart() {
               <div className="flex-1 flex flex-col justify-between gap-3">
                 {/* NAME + PRICE */}
                 <div>
-                  <h3 className="font-semibold text-primary">{item.name}</h3>
+                  <h3 className="font-semibold text-sm md:text-base text-primary">
+                    {item.name}
+                  </h3>
 
                   <p className="text-xs text-gray-500">Seller: {item.seller}</p>
 
-                  <p className="text-secondary font-bold mt-1">
+                  <p className="text-secondary font-bold mt-1 text-sm md:text-base">
                     ₱{item.price} / kg
                   </p>
                 </div>
@@ -91,7 +88,9 @@ function Cart() {
                       -
                     </button>
 
-                    <span className="px-4 text-sm">{item.weight} kg</span>
+                    <span className="px-4 text-xs md:text-sm">
+                      {item.weight} kg
+                    </span>
 
                     <button
                       onClick={() => updateWeight(item.id, 0.5)}
@@ -104,19 +103,24 @@ function Cart() {
                   {/* SUBTOTAL */}
                   <div className="text-left sm:text-right">
                     <p className="text-xs text-gray-500">Subtotal</p>
-                    <p className="font-bold text-primary">₱{subtotal}</p>
+                    <p className="font-bold text-primary text-sm md:text-base">
+                      ₱{subtotal}
+                    </p>
                   </div>
                 </div>
 
                 {/* ACTIONS */}
-                <div className="flex justify-end gap-2 mt-2">
+                <div className="flex flex-col sm:flex-row justify-end gap-2 mt-2">
                   {/* REMOVE */}
-                  <button className="flex text-xs items-center gap-1 px-5 py-2 border border-secondary text-secondary hover:bg-secondary hover:text-white transition">
+                  <button
+                    onClick={() => removeItem(item.id)}
+                    className="w-full sm:w-auto text-xs px-4 py-2 border border-secondary text-secondary hover:bg-secondary hover:text-white transition rounded-md"
+                  >
                     Remove
                   </button>
 
                   {/* BUY NOW */}
-                  <button className="px-5 text-xs py-2 bg-secondary text-white hover:opacity-90 transition">
+                  <button className="w-full sm:w-auto text-xs px-4 py-2 bg-secondary text-white hover:opacity-90 transition rounded-md">
                     Buy Now
                   </button>
                 </div>

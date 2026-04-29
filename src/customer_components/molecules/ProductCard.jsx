@@ -13,34 +13,36 @@ function ProductCard() {
   return (
     <div
       onClick={handleClick}
-      className="w-[200px] bg-white rounded-sm overflow-hidden shadow-sm hover:shadow-lg transition-all duration-300 cursor-pointer group"
+      className="w-full bg-white rounded-sm overflow-hidden shadow-sm hover:shadow-lg transition-all duration-300 cursor-pointer group"
     >
-      {/* Image */}
-      <div className="w-full h-[140px] overflow-hidden">
+      {/* IMAGE */}
+      <div className="w-full aspect-[4/3] overflow-hidden">
         <LazyLoadImage
           src={meatImage}
           className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
         />
       </div>
 
-      {/* Content */}
-      <div className="p-3 flex flex-col gap-1">
-        <h3 className="text-sm font-semibold text-primary">
+      {/* CONTENT */}
+      <div className="p-2 sm:p-3 flex flex-col gap-1">
+        <h3 className="text-xs sm:text-sm font-semibold text-primary line-clamp-1">
           Premium Pork Belly
         </h3>
 
-        <p className="text-secondary font-bold text-sm">₱280 / kg</p>
+        <p className="text-secondary font-bold text-xs sm:text-sm">₱280 / kg</p>
 
-        <p className="text-xs text-gray-500">Seller: Juan Meat Shop</p>
+        <p className="text-[10px] sm:text-xs text-gray-500 line-clamp-1">
+          Seller: Juan Meat Shop
+        </p>
 
+        {/* BUTTON */}
         <div className="flex items-center justify-end mt-2">
-          {/* Prevent button from triggering card click */}
           <button
             onClick={(e) => {
               e.stopPropagation();
               navigate("/reserve");
             }}
-            className="text-xs bg-secondary text-white px-4 py-1 rounded-xs hover:opacity-90 transition"
+            className="text-[10px] sm:text-xs bg-secondary text-white px-3 sm:px-4 py-1 rounded-xs hover:opacity-90 transition"
           >
             Buy
           </button>

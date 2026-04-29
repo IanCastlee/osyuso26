@@ -45,13 +45,13 @@ function SpecialOfferCard() {
   const current = offers[index];
 
   return (
-    <div className="w-full max-h-[300px] flex flex-row rounded-xl overflow-hidden shadow-sm hover:shadow-lg transition bg-gradient-to-r from-orange-500 via-orange-400 to-yellow-400 text-white relative">
+    <div className="w-full h-[150px] lg:h-auto lg:max-h-[300px] flex flex-row rounded-lg lg:rounded-xl overflow-hidden shadow-sm hover:shadow-lg transition bg-gradient-to-r from-orange-500 via-orange-400 to-yellow-400 text-white relative">
       {/* IMAGE */}
       <div className="w-[35%] h-full overflow-hidden relative">
         <img
           src={current.image}
           alt="offer"
-          className="w-full h-full object-contain object-center scale-x-[-1] transition-all duration-500"
+          className="w-full h-full object-cover lg:object-contain  lg:object-center scale-x-[-1] transition-all duration-500"
         />
         <div className="absolute inset-0 bg-black/10"></div>
       </div>
@@ -59,31 +59,33 @@ function SpecialOfferCard() {
       {/* CONTENT */}
       <div className="w-[65%] p-4 flex flex-col justify-center gap-2 transition-all duration-500">
         {/* TAG */}
-        <span className="text-xs font-semibold bg-white/20 w-fit px-3 py-1 rounded-full backdrop-blur-md">
+        <span className="text-[10px] lg:text-xs font-semibold bg-white/20 w-fit px-2 lg:px-3 py-0 lg:py-1 rounded-full backdrop-blur-md">
           {current.tag}
         </span>
 
         {/* TITLE */}
-        <h2 className="text-3xl font-bold leading-tight">{current.title}</h2>
+        <h2 className="text-sm md:text-xl lg:text-3xl font-bold leading-tight">
+          {current.title}
+        </h2>
 
         {/* DESCRIPTION */}
-        <p className="text-sm text-white/90 leading-snug">
+        <p className="text-[10px] lg:text-sm text-white/90 leading-snug">
           {current.description}
         </p>
 
         {/* BUTTON */}
-        <button className="mt-2 w-fit px-4 py-1 text-sm bg-white text-orange-500 font-semibold rounded-md hover:bg-gray-100 transition">
+        <button className="mt-0 lg:mt-2 w-fit px-2 lg:px-4 py-0 lg:py-1 text-[10px] lg:text-sm bg-white text-orange-500 font-semibold rounded-md hover:bg-gray-100 transition">
           Shop Now
         </button>
       </div>
 
       {/* DOTS */}
-      <div className="absolute bottom-2 right-4 flex gap-2">
+      <div className="absolute bottom-2 right-4 flex gap-1 lg:gap-2">
         {offers.map((_, i) => (
           <button
             key={i}
             onClick={() => setIndex(i)}
-            className={`w-2 h-2 rounded-full transition-all ${
+            className={`w-1 lg:w-2 h-1 lg:h-2 rounded-full transition-all ${
               index === i ? "bg-white scale-110" : "bg-white/40"
             }`}
           />

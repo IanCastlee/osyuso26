@@ -45,7 +45,7 @@ function SignIn() {
   };
 
   return (
-    <div className="flex flex-col w-full bg-primary  items-center justify-center ">
+    <>
       <header className="w-full h-[70px] bg-secondary text-white shadow-xs px-8 flex justify-between items-center">
         <h2 className="flex items-center font-bold text-2xl md:text-[24px] tracking-wide">
           OSY
@@ -63,63 +63,64 @@ function SignIn() {
           FAQ
         </button>
       </header>
+      <div className="flex flex-col w-full bg-primary  items-center justify-center px-1">
+        {/* CARD */}
+        <div className="w-full max-w-md bg-white rounded-xl shadow-md p-6 space-y-4 my-10">
+          {/* TITLE */}
+          <h1 className="text-2xl font-bold text-primary text-center">
+            Welcome Back
+          </h1>
 
-      {/* CARD */}
-      <div className="w-full max-w-md bg-white rounded-xl shadow-md p-6 space-y-4 my-10">
-        {/* TITLE */}
-        <h1 className="text-2xl font-bold text-primary text-center">
-          Welcome Back
-        </h1>
+          <p className="text-sm text-gray-500 text-center">
+            Sign in to continue shopping fresh products
+          </p>
 
-        <p className="text-sm text-gray-500 text-center">
-          Sign in to continue shopping fresh products
-        </p>
+          {/* FORM */}
+          <form onSubmit={handleSubmit} className="space-y-4 mt-6">
+            <InputField
+              label="Email"
+              name="email"
+              type="email"
+              value={form.email}
+              onChange={handleChange}
+              placeholder="Enter your email"
+              icon={FaEnvelope}
+              error={errors.email}
+            />
 
-        {/* FORM */}
-        <form onSubmit={handleSubmit} className="space-y-4 mt-6">
-          <InputField
-            label="Email"
-            name="email"
-            type="email"
-            value={form.email}
-            onChange={handleChange}
-            placeholder="Enter your email"
-            icon={FaEnvelope}
-            error={errors.email}
-          />
+            <InputField
+              label="Password"
+              name="password"
+              type="password"
+              value={form.password}
+              onChange={handleChange}
+              placeholder="Enter password"
+              icon={FaLock}
+              error={errors.password}
+            />
 
-          <InputField
-            label="Password"
-            name="password"
-            type="password"
-            value={form.password}
-            onChange={handleChange}
-            placeholder="Enter password"
-            icon={FaLock}
-            error={errors.password}
-          />
+            {/* BUTTON */}
+            <button
+              type="submit"
+              className="w-full bg-secondary text-white py-2 rounded-md font-semibold hover:opacity-90 transition"
+            >
+              Sign In
+            </button>
+          </form>
 
-          {/* BUTTON */}
-          <button
-            type="submit"
-            className="w-full bg-secondary text-white py-2 rounded-md font-semibold hover:opacity-90 transition"
-          >
-            Sign In
-          </button>
-        </form>
-
-        {/* FOOTER */}
-        <p className="text-xs text-center text-gray-500">
-          Don’t have an account?{" "}
-          <span
-            onClick={handleSignUpClick}
-            className="text-secondary cursor-pointer hover:underline"
-          >
-            Sign Up
-          </span>
-        </p>
+          {/* FOOTER */}
+          <p className="text-xs text-center text-gray-500">
+            Don’t have an account?{" "}
+            <span
+              onClick={handleSignUpClick}
+              className="text-secondary cursor-pointer hover:underline"
+            >
+              Sign Up
+            </span>
+          </p>
+        </div>
       </div>
-    </div>
+    </>
   );
 }
 

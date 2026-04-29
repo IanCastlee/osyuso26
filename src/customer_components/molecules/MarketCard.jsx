@@ -11,7 +11,7 @@ function MarketCard() {
   return (
     <>
       <div
-        className="w-[100px] h-[120px] flex flex-col items-center justify-center 
+        className="w-[48%] lg:w-[120px] h-[120px] flex flex-col items-center justify-center 
   border border-gray-200 rounded-md
   hover:shadow-xl transition-all duration-300 
   cursor-pointer group bg-white"
@@ -28,7 +28,9 @@ function MarketCard() {
 
         {/* Text */}
         <div className="mt-2 flex items-center justify-center">
-          <span className="text-sm font-semibold text-primary">Shop Name</span>
+          <span className=" text-xs lg:text-sm font-semibold text-primary">
+            Shop Name
+          </span>
         </div>
       </div>
     </>
