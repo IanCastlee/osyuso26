@@ -42,29 +42,31 @@ function Notification() {
   };
 
   return (
-    <div className="w-full bg-gray-100 min-h-[calc(100vh-4rem)] px-6 md:px-28 py-8">
+    <div className="w-full bg-gray-100 min-h-[calc(100vh-4rem)] px-4 sm:px-6 md:px-28 py-6 sm:py-8">
       {/* HEADER */}
       <div className="flex justify-between items-center mb-4">
-        <h1 className="text-2xl font-bold text-primary">Notifications</h1>
+        <h1 className="text-lg sm:text-xl md:text-2xl font-bold text-primary">
+          Notifications
+        </h1>
 
         {/* MARK ALL */}
         <button
           onClick={() =>
             setNotifications((prev) => prev.map((n) => ({ ...n, read: true })))
           }
-          className="text-sm text-secondary hover:underline"
+          className="text-xs sm:text-sm text-secondary hover:underline"
         >
           Mark all as read
         </button>
       </div>
 
       {/* TABS */}
-      <div className="flex gap-6 border-b border-gray-200 mb-6">
+      <div className="flex gap-4 sm:gap-6 border-b border-gray-200 mb-6">
         {tabs.map((tab) => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
-            className={`pb-2 text-sm font-medium transition-all ${
+            className={`pb-2 text-xs sm:text-sm font-medium transition-all ${
               activeTab === tab
                 ? "text-secondary border-b-2 border-secondary"
                 : "text-gray-500 hover:text-secondary"
@@ -81,35 +83,41 @@ function Notification() {
           <div
             key={notif.id}
             onClick={() => markAsRead(notif.id)}
-            className={`cursor-pointer bg-primary rounded-xs shadow-xs hover:shadow-xs transition p-4 flex gap-4 items-start border-l-4 ${
+            className={`cursor-pointer bg-primary rounded-xs shadow-xs hover:shadow-xs transition p-3 sm:p-4 flex gap-3 sm:gap-4 items-start border-l-4 ${
               notif.read ? "border-gray-200" : "border-secondary"
             }`}
           >
             {/* ICON */}
-            <div className="text-secondary text-2xl mt-1">
+            <div className="text-secondary text-xl sm:text-2xl mt-1">
               <IoMdNotificationsOutline />
             </div>
 
             {/* CONTENT */}
             <div className="flex-1">
               <div className="flex justify-between items-center">
-                <h3 className="font-semibold text-primary">{notif.title}</h3>
+                <h3 className="font-semibold text-sm sm:text-base text-primary">
+                  {notif.title}
+                </h3>
 
                 {!notif.read && (
                   <span className="w-2 h-2 bg-secondary rounded-full"></span>
                 )}
               </div>
 
-              <p className="text-sm text-gray-600 mt-1">{notif.message}</p>
+              <p className="text-xs sm:text-sm text-gray-600 mt-1 leading-snug">
+                {notif.message}
+              </p>
 
-              <p className="text-xs text-gray-400 mt-2">{notif.time}</p>
+              <p className="text-[10px] sm:text-xs text-gray-400 mt-2">
+                {notif.time}
+              </p>
             </div>
           </div>
         ))}
 
         {/* EMPTY STATE */}
         {filtered.length === 0 && (
-          <div className="text-center text-gray-400 mt-10">
+          <div className="text-center text-gray-400 mt-10 text-sm">
             No notifications found
           </div>
         )}

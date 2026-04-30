@@ -4,12 +4,14 @@ import InputField from "../customer_components/atoms/InputField";
 import { useNavigate } from "react-router-dom";
 import { RxQuestionMarkCircled } from "react-icons/rx";
 import { PiShoppingCartSimpleFill } from "react-icons/pi";
+import useFormSubmit from "../hooks/useFormSubmit";
 
 function SignUp() {
   const navigate = useNavigate();
 
   const [form, setForm] = useState({
-    name: "",
+    fname: "",
+    lname: "",
     email: "",
     password: "",
     confirm: "",
@@ -21,12 +23,31 @@ function SignUp() {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = (e) => {
+  const handleFaqClick = () => {
+    navigate("/faq");
+  };
+
+  const handleSignInClick = () => {
+    navigate("/signin");
+  };
+
+  //SUBMIT LOGIC:
+  const { submit, loading, error } = useFormSubmit(
+    "auth/sign-up.php",
+    (res) => {
+      console.log("Success:", res);
+      navigate("/signin");
+    },
+  );
+
+  //handleSubmit with frontend validation
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
     let newErrors = {};
 
-    if (!form.name) newErrors.name = "Name is required";
+    if (!form.fname) newErrors.fname = "First name is required";
+    if (!form.lname) newErrors.lname = "Last name is required";
     if (!form.email) newErrors.email = "Email is required";
     if (!form.password) newErrors.password = "Password is required";
     if (form.password !== form.confirm)
@@ -35,16 +56,16 @@ function SignUp() {
     setErrors(newErrors);
 
     if (Object.keys(newErrors).length === 0) {
-      console.log("Submit:", form);
+      try {
+        await submit({
+          name: `${form.fname} ${form.lname}`,
+          email: form.email,
+          password: form.password,
+        });
+      } catch (err) {
+        console.error(err.message);
+      }
     }
-  };
-
-  const handleFaqClick = () => {
-    navigate("/faq");
-  };
-
-  const handleSignInClick = () => {
-    navigate("/signin");
   };
   return (
     <>
@@ -79,16 +100,26 @@ function SignUp() {
 
           {/* FORM */}
           <form onSubmit={handleSubmit} className="space-y-4 mt-6">
-            <InputField
-              label="Full Name"
-              name="name"
-              value={form.name}
-              onChange={handleChange}
-              placeholder="Enter your name"
-              icon={FaUser}
-              error={errors.name}
-            />
-
+            <div className="flex justify-between items-center gap-1">
+              <InputField
+                label="First Name"
+                name="fname"
+                value={form.fname}
+                onChange={handleChange}
+                placeholder="Enter your first name"
+                icon={FaUser}
+                error={errors.fname}
+              />
+              <InputField
+                label="Last Name"
+                name="lname"
+                value={form.lname}
+                onChange={handleChange}
+                placeholder="Enter your last name"
+                icon={FaUser}
+                error={errors.lname}
+              />
+            </div>
             <InputField
               label="Email"
               name="email"
@@ -125,10 +156,15 @@ function SignUp() {
             {/* BUTTON */}
             <button
               type="submit"
-              className="w-full bg-secondary text-white py-2 rounded-md font-semibold hover:opacity-90 transition"
+              disabled={loading}
+              className="w-full bg-secondary text-white py-2 rounded-md font-semibold hover:opacity-90 transition disabled:opacity-50"
             >
-              Sign Up
+              {loading ? "Creating..." : "Sign Up"}
             </button>
+
+            {error && (
+              <p className="text-xs text-red-500 text-center">{error}</p>
+            )}
           </form>
 
           {/* FOOTER */}

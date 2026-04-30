@@ -10,6 +10,15 @@ import { PiShoppingCartSimpleFill } from "react-icons/pi";
 import { IoIosInformationCircleOutline } from "react-icons/io";
 import { TbMenu2 } from "react-icons/tb";
 import { RiHomeLine } from "react-icons/ri";
+import { BiSolidShoppingBags } from "react-icons/bi";
+import { FiTrendingUp } from "react-icons/fi";
+
+import { HiUserGroup } from "react-icons/hi2";
+
+import { CiUser } from "react-icons/ci";
+import { CiCircleInfo } from "react-icons/ci";
+import { CiCalendar } from "react-icons/ci";
+import { CiSettings } from "react-icons/ci";
 
 export const icons = {
   BsCart4,
@@ -24,4 +33,11 @@ export const icons = {
   RiHomeLine,
   IoIosInformationCircleOutline,
   TbMenu2,
+  HiUserGroup,
+  BiSolidShoppingBags,
+  FiTrendingUp,
+  CiUser,
+  CiCircleInfo,
+  CiCalendar,
+  CiSettings,
 };

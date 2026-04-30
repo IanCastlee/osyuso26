@@ -1,9 +1,14 @@
 import React from "react";
 import MarketCard from "../molecules/MarketCard";
+import { useNavigate } from "react-router-dom";
 
 function MarketSection() {
-  const markets = Array(20).fill(null); // simulate data
+  const navigate = useNavigate();
+  const markets = Array(20).fill(null);
 
+  const handleViewAll = () => {
+    navigate("/all-markets");
+  };
   return (
     <div className="w-full flex flex-col gap-4 p-1 lg:p-4 bg-primary mt-4 mb-6">
       {/* Title */}
@@ -19,7 +24,10 @@ function MarketSection() {
       </div>
 
       <div className="w-full flex justify-end">
-        <button className=" text-[10px] lg:text-xs text-primary px-4 rounded  hover:text-secondary transition duration-300">
+        <button
+          onClick={handleViewAll}
+          className=" text-[10px] lg:text-xs text-primary px-4 rounded  hover:text-secondary transition duration-300"
+        >
           View All Markets
         </button>
       </div>

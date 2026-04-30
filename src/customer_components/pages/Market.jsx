@@ -9,6 +9,7 @@ const categories = ["Meat", "Fruits", "Vegetables"];
 
 function Market() {
   const [activeCategory, setActiveCategory] = useState("Meat");
+  const location = "San Bernardo, Bulusan Sorsogon";
 
   return (
     <div className="w-full bg-gray-100 lg:px-3 sm:px-6 lg:px-28">
@@ -48,13 +49,19 @@ function Market() {
               Linda Rim
             </h2>
 
-            <span className="flex items-center gap-1 text-[11px] sm:text-xs text-secondary">
-              <CiLocationOn /> San Bernardo, Bulusan Sorsogon
-            </span>
+            <a
+              href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(location)}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-1 text-[11px] sm:text-xs text-secondary hover:underline"
+            >
+              <CiLocationOn />
+              {location}
+            </a>
           </div>
 
           {/* CATEGORIES DISPLAY */}
-          <span className="flex flex-wrap items-center gap-1 text-xs sm:text-sm text-secondary">
+          <span className="hidden lg:flex flex-wrap items-center gap-1 text-xs sm:text-sm text-secondary">
             <CiShoppingBasket className="text-lg sm:text-2xl" />
 
             {categories.map((item, index) => (
@@ -74,7 +81,7 @@ function Market() {
           flex gap-4 sm:gap-6 md:gap-8
           mt-6 border-b border-gray-200
           px-3 sm:px-4 overflow-x-auto
-          whitespace-nowrap mt-4
+          whitespace-nowrap mt-4 lg:mt-10
         "
         >
           {categories.map((item) => (

@@ -6,7 +6,6 @@ import {
   useLocation,
 } from "react-router-dom";
 import CustomerHomePage from "./customer_components/pages/CustomerHomePage";
-import VendorHomePage from "./vendor_components/pages/VendorHomePage";
 import AboutVendor from "./vendor_components/pages/AboutVendor";
 import AboutCostumer from "./customer_components/pages/AboutCostumer";
 import CustomerHeader from "./customer_components/organisms/CustomerHeader";
@@ -20,6 +19,14 @@ import FAQ from "./customer_components/pages/FAQ";
 import SignIn from "./auth_pages/SignIn";
 import SignUp from "./auth_pages/SignUp";
 import SignUpSeller from "./auth_pages/SignUpSeller";
+import AllCategories from "./customer_components/pages/AllCategories";
+import AllMarkets from "./customer_components/pages/AllMarkets";
+import SidebarVendor from "./vendor_components/organisms/SidebarVendor";
+import DashboardVendor from "./vendor_components/pages/DashboardVendor";
+import ProductsVendor from "./vendor_components/pages/ProductsVendor";
+import DashboardAdmin from "./admin_components/pages/DashboardAdmin";
+import SidebarAdmin from "./admin_components/organisms/SidebarAdmin";
+import ActiveVendor from "./admin_components/pages/ActiveVendor";
 
 const CustomerLayout = () => {
   const location = useLocation();
@@ -42,7 +49,9 @@ const CustomerLayout = () => {
         <Routes>
           <Route index element={<CustomerHomePage />} />
           <Route path="categories" element={<Categories />} />
+          <Route path="all-categories" element={<AllCategories />} />
           <Route path="market" element={<Market />} />
+          <Route path="all-markets" element={<AllMarkets />} />
           <Route path="reserve" element={<ReserveDetails />} />
           <Route path="cart" element={<Cart />} />
           <Route path="notification" element={<Notifcation />} />
@@ -64,15 +73,43 @@ const CustomerLayout = () => {
 
 const VendorLayout = () => {
   return (
-    <Routes>
-      <Route index element={<VendorHomePage />} />
-      <Route path="about" element={<AboutVendor />} />
-    </Routes>
+    <div className="w-full h-screen flex overflow-hidden">
+      {/* SIDEBAR */}
+      <div className="w-[260px] h-full bg-secondary text-white flex flex-col">
+        <SidebarVendor />
+      </div>
+
+      {/* MAIN CONTENT */}
+      <div className="flex-1 h-full overflow-y-auto bg-gray-100">
+        <Routes>
+          <Route index element={<DashboardVendor />} />
+          <Route path="/vendor-products" element={<ProductsVendor />} />
+          <Route path="about" element={<AboutVendor />} />
+        </Routes>
+      </div>
+    </div>
   );
 };
 
 const AdminLayout = () => {
-  return <div>AdminLayout</div>;
+  return (
+    <div className="w-full h-screen flex overflow-hidden">
+      {/* SIDEBAR */}
+      <div className="w-[260px] h-full bg-secondary text-white flex flex-col">
+        <SidebarAdmin />
+      </div>
+
+      {/* MAIN CONTENT */}
+      <div className="flex-1 h-full overflow-y-auto bg-gray-100">
+        <Routes>
+          <Route index element={<DashboardAdmin />} />
+
+          {/* USERS */}
+          <Route path="active-vendors" element={<ActiveVendor />} />
+        </Routes>
+      </div>
+    </div>
+  );
 };
 
 function App() {

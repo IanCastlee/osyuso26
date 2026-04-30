@@ -147,11 +147,11 @@ function SignUpSeller() {
                 />
 
                 <InputField
-                  label="NearBy"
+                  label="Nearby Landmark"
                   name="nearby"
                   value={form.nearby}
                   onChange={handleChange}
-                  placeholder="NearBy e.g. Church, School, etc."
+                  placeholder="e.g. Church, School, Park, etc."
                   icon={FaMapMarkerAlt}
                 />
               </>
