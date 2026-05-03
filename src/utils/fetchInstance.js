@@ -1,21 +1,19 @@
-const BASE_URL = "http://localhost/OSYUSO_R/backend/";
+const BASE_URL = "http://localhost/OSYUSO26/backend/";
 
-// GET TOKEN (same logic as yours)
 const getToken = () => {
   const authData = sessionStorage.getItem("auth-storage");
-
   if (!authData) return null;
 
   const parsed = JSON.parse(authData);
   return parsed?.state?.token || parsed?.token || null;
 };
 
-// MAIN FETCH WRAPPER
 const fetchInstance = async (endpoint, options = {}) => {
   const token = getToken();
+  const isFormData = options.body instanceof FormData;
 
   const headers = {
-    "Content-Type": "application/json",
+    ...(isFormData ? {} : { "Content-Type": "application/json" }),
     ...(options.headers || {}),
   };
 
@@ -23,29 +21,39 @@ const fetchInstance = async (endpoint, options = {}) => {
     headers.Authorization = `Bearer ${token}`;
   }
 
-  const response = await fetch(BASE_URL + endpoint, {
-    ...options,
-    headers,
-  });
+  let response;
+  let rawText;
 
-  // HANDLE STATUS LIKE INTERCEPTOR
-  if (response.status === 401) {
-    sessionStorage.removeItem("auth-storage");
-    window.location.href = "/signin";
-    return;
+  try {
+    response = await fetch(BASE_URL + endpoint, {
+      ...options,
+      headers,
+    });
+
+    rawText = await response.text();
+  } catch (networkErr) {
+    throw {
+      success: false,
+      message: "NETWORK ERROR",
+      error: networkErr.message,
+    };
   }
 
-  if (response.status === 403) {
-    sessionStorage.removeItem("auth-storage");
-    window.location.href = "/";
-    return;
-  }
+  let data;
 
-  // parse JSON safely
-  const data = await response.json().catch(() => null);
+  try {
+    data = JSON.parse(rawText);
+  } catch (e) {
+    // 🔥 THIS IS KEY: shows PHP fatal error
+    throw {
+      success: false,
+      message: "INVALID JSON FROM BACKEND",
+      error: rawText,
+    };
+  }
 
   if (!response.ok) {
-    throw data || { message: "Request failed" };
+    throw data;
   }
 
   return data;

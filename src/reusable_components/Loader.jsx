@@ -1,7 +1,13 @@
-function Loader() {
+function Loader({ size = 10, color = "blue-400", fullScreen = false }) {
   return (
-    <div className="flex justify-center items-center py-10">
-      <div className="w-10 h-10 border-4 border-blue-400 border-t-transparent rounded-full animate-spin"></div>
+    <div
+      className={`flex justify-center items-center ${
+        fullScreen ? "h-screen" : "py-10"
+      }`}
+    >
+      <div
+        className={`w-${size} h-${size} border-4 border-${color} border-t-transparent rounded-full animate-spin`}
+      ></div>
     </div>
   );
 }

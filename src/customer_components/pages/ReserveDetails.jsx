@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { LazyLoadImage } from "react-lazy-load-image-component";
-import meatImage from "../../../../assets_osyuso/meatProduct.jpeg";
-import profileImage from "../../../../assets_osyuso/shop.png";
+import meatImage from "../../assets/assets_osyuso/meatProduct.jpeg";
+import profileImage from "../../assets/assets_osyuso/shop.png";
 
 import { CiLocationOn } from "react-icons/ci";
 import { CiShop } from "react-icons/ci";

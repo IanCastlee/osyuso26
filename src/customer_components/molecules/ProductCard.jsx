@@ -1,18 +1,32 @@
-import React from "react";
+import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import meatImage from "../../../../assets_osyuso/meatProduct.jpeg";
+import meatImage from "../../assets/assets_osyuso/meatProduct.jpeg";
 import { LazyLoadImage } from "react-lazy-load-image-component";
+import fetchInstance from "../../utils/fetchInstance";
+import ButtonLoader from "../../reusable_components/ButtonLoader";
 
 function ProductCard() {
   const navigate = useNavigate();
+  const [loading, setLoading] = useState(false);
 
-  const handleClick = () => {
-    navigate("/reserve");
+  const handleProtectedNav = async () => {
+    try {
+      setLoading(true);
+
+      // backend check (token validation)
+      await fetchInstance("auth/me.php");
+
+      navigate("/reserve");
+    } catch (err) {
+      navigate("/signin");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <div
-      onClick={handleClick}
+      onClick={handleProtectedNav}
       className="w-full bg-white rounded-sm overflow-hidden shadow-sm hover:shadow-lg transition-all duration-300 cursor-pointer group"
     >
       {/* IMAGE */}
@@ -29,7 +43,9 @@ function ProductCard() {
           Premium Pork Belly
         </h3>
 
-        <p className="text-secondary font-bold text-xs sm:text-sm">₱280 / kg</p>
+        <p className="text-secondary font-bold text-xs sm:text-sm">
+          ₱280 / kg
+        </p>
 
         <p className="text-[10px] sm:text-xs text-gray-500 line-clamp-1">
           Seller: Juan Meat Shop
@@ -38,14 +54,15 @@ function ProductCard() {
         {/* BUTTON */}
         <div className="flex items-center justify-end mt-2">
           <button
-            onClick={(e) => {
-              e.stopPropagation();
-              navigate("/reserve");
-            }}
-            className="text-[10px] sm:text-xs bg-secondary text-white px-3 sm:px-4 py-1 rounded-xs hover:opacity-90 transition"
-          >
-            Buy
-          </button>
+  disabled={loading}
+  onClick={(e) => {
+    e.stopPropagation();
+    handleProtectedNav();
+  }}
+  className="text-[10px] sm:text-xs bg-secondary text-white px-3 sm:px-4 py-1 rounded-xs hover:opacity-90 transition flex items-center justify-center"
+>
+  {loading ? <ButtonLoader /> : "Buy"}
+</button>
         </div>
       </div>
     </div>

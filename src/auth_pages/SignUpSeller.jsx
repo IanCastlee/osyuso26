@@ -6,26 +6,34 @@ import {
   FaEnvelope,
   FaLock,
   FaMapMarkerAlt,
+  FaPhoneAlt,
 } from "react-icons/fa";
-import { useNavigate } from "react-router-dom";
+
 import { PiShoppingCartSimpleFill } from "react-icons/pi";
 import { RxQuestionMarkCircled } from "react-icons/rx";
-
-const categoriesList = ["Meat", "Fish", "Fruits", "Vegetables", "Frozen Goods"];
+import useFormSubmit from "../hooks/useFormSubmit";
+import { useNavigate } from "react-router-dom";
+import LoaderWithText from "../reusable_components/LoaderWithText";
+import { useToast } from "../context/ToastContext";
 
 function SignUpSeller() {
   const navigate = useNavigate();
 
+  const { showToast } = useToast();
   const [step, setStep] = useState(1);
 
   const [form, setForm] = useState({
     shopName: "",
-    ownerName: "",
+    fname: "",
+    lname: "",
+    phone: "",
     address: "",
-    categories: [],
+    nearby: "",
     permit: null,
+    permit_number: "",
     email: "",
     password: "",
+    confirmPassword: "",
   });
 
   const [errors, setErrors] = useState({});
@@ -34,87 +42,136 @@ function SignUpSeller() {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
-  const toggleCategory = (cat) => {
-    setForm((prev) => {
-      const exists = prev.categories.includes(cat);
-      return {
-        ...prev,
-        categories: exists
-          ? prev.categories.filter((c) => c !== cat)
-          : [...prev.categories, cat],
-      };
-    });
-  };
-
   const handleFile = (e) => {
     setForm({ ...form, permit: e.target.files[0] });
   };
 
-  const next = () => setStep((s) => s + 1);
-  const back = () => setStep((s) => s - 1);
+  const { submit, loading } = useFormSubmit("auth/signup-seller.php", (res) => {
+    showToast({
+      type: "success",
+      message: "Account created!",
+      duration: 5000,
+    });
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
+    navigate("/signin");
+  });
 
-    let newErrors = {};
+  // ================= VALIDATION =================
+  const validateStep = (step) => {
+    let errors = {};
 
-    if (!form.email) newErrors.email = "Email is required";
-    if (!form.password) newErrors.password = "Password is required";
+    if (step === 1) {
+      if (!form.shopName) errors.shopName = "Shop name is required";
+      if (!form.fname) errors.fname = "First name is required";
+      if (!form.lname) errors.lname = "Last name is required";
 
-    setErrors(newErrors);
+      if (!form.phone) {
+        errors.phone = "Phone number is required";
+      } else if (!/^09\d{9}$/.test(form.phone)) {
+        errors.phone = "Must start with 09 and be 11 digits";
+      }
 
-    if (Object.keys(newErrors).length === 0) {
-      console.log("SELLER DATA:", form);
+      if (!form.address) errors.address = "Address is required";
+      if (!form.nearby) errors.nearby = "Nearby landmark is required";
+    }
+
+    if (step === 2) {
+      if (!form.permit) errors.permit = "Business permit is required";
+      if (!form.permit_number)
+        errors.permit_number = "Permit number is required";
+    }
+
+    if (step === 3) {
+      if (!form.email) errors.email = "Email is required";
+
+      if (!form.password) {
+        errors.password = "Password is required";
+      } else if (form.password.length < 8) {
+        errors.password = "Min 8 characters required";
+      } else if (!/[!@#$%^&*(),.?":{}|<>]/.test(form.password)) {
+        errors.password = "Must include special character";
+      }
+
+      if (!form.confirmPassword) {
+        errors.confirmPassword = "Confirm password is required";
+      } else if (form.confirmPassword !== form.password) {
+        errors.confirmPassword = "Passwords do not match";
+      }
+    }
+
+    return errors;
+  };
+
+  // ================= STEP CONTROL =================
+  const next = () => {
+    const stepErrors = validateStep(step);
+    setErrors(stepErrors);
+
+    if (Object.keys(stepErrors).length === 0) {
+      setStep((s) => s + 1);
     }
   };
 
-  const handleFaqClick = () => {
-    navigate("/faq");
+  const back = () => setStep((s) => s - 1);
+
+  // ================= SUBMIT =================
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    const submitErrors = validateStep(3);
+    setErrors(submitErrors);
+
+    if (Object.keys(submitErrors).length > 0) return;
+
+    const data = new FormData();
+
+    Object.entries(form).forEach(([key, value]) => {
+      data.append(key, value);
+    });
+
+    try {
+      await submit(data);
+    } catch (err) {
+      showToast({
+        type: "error",
+        message: err?.message || "Something went wrong",
+      });
+    }
   };
+  // ================= UI =================
   return (
     <>
-      <header className="w-full h-[70px] bg-secondary text-white shadow-xs px-8 flex justify-between items-center">
-        <h2 className="flex items-center font-bold text-2xl md:text-[24px] tracking-wide">
-          OSY
-          <PiShoppingCartSimpleFill />
-          SO
+      <header className="w-full h-[70px] bg-secondary text-white flex justify-between items-center px-6">
+        <h2 className="flex items-center font-bold text-xl">
+          OSY <PiShoppingCartSimpleFill /> SO
         </h2>
 
-        {/* FAQ */}
         <button
-          onClick={handleFaqClick}
-          className="flex items-center gap-1 text-xs hover:opacity-80 transition"
-          title="FAQ"
+          onClick={() => navigate("/faq")}
+          className="flex items-center gap-1 text-xs"
         >
-          <RxQuestionMarkCircled className="text-sm" />
-          FAQ
+          <RxQuestionMarkCircled /> FAQ
         </button>
       </header>
-      <div className="flex flex-col w-full bg-primary  items-center justify-center px-1">
-        {/* CARD */}
-        <div className="w-full max-w-xl bg-white rounded-xl shadow-md p-6 my-10">
-          {/* TITLE */}
-          <h1 className="text-2xl font-bold text-primary text-center mb-4">
+
+      <div className="flex justify-center bg-primary min-h-screen p-4">
+        <div className="w-full max-w-xl bg-white p-6 rounded-xl shadow-md">
+          <h1 className="text-2xl font-bold text-center mb-2">
             Seller Registration
           </h1>
 
-          <p className="text-sm text-gray-500 text-center mb-6">
-            Join OSYUSO as a verified seller
-          </p>
-
           {/* STEP INDICATOR */}
-          <div className="flex justify-center gap-2 mb-6">
+          <div className="flex gap-2 justify-center mb-5">
             {[1, 2, 3].map((s) => (
               <div
                 key={s}
-                className={`h-1 mt-1 w-10 rounded-full transition ${
+                className={`h-1 w-10 rounded-full ${
                   step >= s ? "bg-secondary" : "bg-gray-300"
                 }`}
               />
             ))}
           </div>
 
-          {/* FORM */}
           <form onSubmit={handleSubmit} className="space-y-4">
             {/* STEP 1 */}
             {step === 1 && (
@@ -126,15 +183,37 @@ function SignUpSeller() {
                   onChange={handleChange}
                   placeholder="Enter shop name"
                   icon={FaStore}
+                  error={errors.shopName}
                 />
 
                 <InputField
-                  label="Owner Name"
-                  name="ownerName"
-                  value={form.ownerName}
+                  label="First Name"
+                  name="fname"
+                  value={form.fname}
                   onChange={handleChange}
-                  placeholder="Enter owner name"
+                  placeholder="Enter first name"
                   icon={FaUser}
+                  error={errors.fname}
+                />
+
+                <InputField
+                  label="Last Name"
+                  name="lname"
+                  value={form.lname}
+                  onChange={handleChange}
+                  placeholder="Enter last name"
+                  icon={FaUser}
+                  error={errors.lname}
+                />
+
+                <InputField
+                  label="Phone"
+                  name="phone"
+                  value={form.phone}
+                  onChange={handleChange}
+                  placeholder="09XXXXXXXXX"
+                  icon={FaPhoneAlt}
+                  error={errors.phone}
                 />
 
                 <InputField
@@ -144,6 +223,7 @@ function SignUpSeller() {
                   onChange={handleChange}
                   placeholder="Shop address"
                   icon={FaMapMarkerAlt}
+                  error={errors.address}
                 />
 
                 <InputField
@@ -151,8 +231,9 @@ function SignUpSeller() {
                   name="nearby"
                   value={form.nearby}
                   onChange={handleChange}
-                  placeholder="e.g. Church, School, Park, etc."
+                  placeholder="e.g. Church, School, Park"
                   icon={FaMapMarkerAlt}
+                  error={errors.nearby}
                 />
               </>
             )}
@@ -160,38 +241,23 @@ function SignUpSeller() {
             {/* STEP 2 */}
             {step === 2 && (
               <>
-                <p className="text-sm font-semibold text-primary">
-                  Select Categories
-                </p>
+                <input
+                  type="file"
+                  onChange={handleFile}
+                  className="w-full border p-2 rounded-md"
+                />
+                {errors.permit && (
+                  <p className="text-red-500 text-xs">{errors.permit}</p>
+                )}
 
-                <div className="flex flex-wrap gap-2 mt-2">
-                  {categoriesList.map((cat) => (
-                    <button
-                      type="button"
-                      key={cat}
-                      onClick={() => toggleCategory(cat)}
-                      className={`px-3 py-1 text-sm rounded-full border transition ${
-                        form.categories.includes(cat)
-                          ? "bg-secondary text-white border-secondary"
-                          : "bg-white text-gray-600"
-                      }`}
-                    >
-                      {cat}
-                    </button>
-                  ))}
-                </div>
-
-                <div className="mt-6">
-                  <p className="text-sm font-semibold text-primary mt-4">
-                    Business Permit
-                  </p>
-
-                  <input
-                    type="file"
-                    onChange={handleFile}
-                    className="w-full border p-2 rounded-md"
-                  />
-                </div>
+                <InputField
+                  label="Permit Number"
+                  name="permit_number"
+                  value={form.permit_number}
+                  onChange={handleChange}
+                  icon={FaLock}
+                  error={errors.permit_number}
+                />
               </>
             )}
 
@@ -201,7 +267,6 @@ function SignUpSeller() {
                 <InputField
                   label="Email"
                   name="email"
-                  type="email"
                   value={form.email}
                   onChange={handleChange}
                   placeholder="Enter email"
@@ -220,28 +285,26 @@ function SignUpSeller() {
                   error={errors.password}
                 />
 
-                {/* SUMMARY */}
-                <div className="text-xs text-gray-500 bg-gray-50 p-3 rounded-md">
-                  <p>
-                    <b>Shop:</b> {form.shopName}
-                  </p>
-                  <p>
-                    <b>Owner:</b> {form.ownerName}
-                  </p>
-                  <p>
-                    <b>Categories:</b> {form.categories.join(", ")}
-                  </p>
-                </div>
+                <InputField
+                  label="Confirm Password"
+                  name="confirmPassword"
+                  type="password"
+                  value={form.confirmPassword}
+                  onChange={handleChange}
+                  placeholder="Confirm password"
+                  icon={FaLock}
+                  error={errors.confirmPassword}
+                />
               </>
             )}
 
             {/* BUTTONS */}
-            <div className="flex justify-between mt-6">
+            <div className="flex justify-between pt-4">
               {step > 1 && (
                 <button
                   type="button"
                   onClick={back}
-                  className="px-4 py-2 text-sm border border-gray-500 rounded-md"
+                  className="border px-4 py-2"
                 >
                   Back
                 </button>
@@ -251,16 +314,23 @@ function SignUpSeller() {
                 <button
                   type="button"
                   onClick={next}
-                  className="ml-auto px-4 py-2 text-sm bg-secondary text-white rounded-md"
+                  className="ml-auto bg-secondary text-white px-4 py-2 rounded"
                 >
                   Next
                 </button>
               ) : (
                 <button
                   type="submit"
-                  className="ml-auto text-sm px-4 py-2 bg-secondary text-white rounded-md"
+                  disabled={loading}
+                  className="ml-auto bg-secondary text-white px-4 py-2 rounded flex items-center gap-2 disabled:opacity-50"
                 >
-                  Submit
+                  {loading ? (
+                    <>
+                      <LoaderWithText text="Processing..." size="w-3 h-3" />
+                    </>
+                  ) : (
+                    "Submit"
+                  )}
                 </button>
               )}
             </div>

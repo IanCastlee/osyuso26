@@ -1,6 +1,6 @@
 import React, { useState } from "react";
-import bgImage from "../../../../assets_osyuso/bg.webp";
-import profileImage from "../../../../assets_osyuso/shop.png";
+import bgImage from "../../assets/assets_osyuso/bg.webp";
+import profileImage from "../../assets/assets_osyuso/shop.png";
 import { LazyLoadImage } from "react-lazy-load-image-component";
 import { CiLocationOn, CiShoppingBasket } from "react-icons/ci";
 import ProductCard from "../molecules/ProductCard";

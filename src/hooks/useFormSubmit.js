@@ -10,24 +10,32 @@ function useFormSubmit(url, onSuccess) {
       setLoading(true);
       setError(null);
 
+      const isFormData = formData instanceof FormData;
+
       const res = await fetchInstance(url, {
         method: "POST",
-        body: JSON.stringify(formData),
+        body: isFormData ? formData : JSON.stringify(formData),
+        headers: isFormData ? {} : { "Content-Type": "application/json" },
         ...options,
       });
 
-      // backend validation (same logic as yours)
+      console.log("📡 RAW RESPONSE FROM API:", res);
+
       if (res?.success === false) {
-        throw new Error(res.message || "Request failed");
+        throw res;
       }
 
       onSuccess?.(res);
       return res;
     } catch (err) {
-      const message = err?.message || "Something went wrong during submission.";
+      console.error("🚨 FULL ERROR:", err);
 
-      setError(message);
-      throw new Error(message);
+      console.log("📛 MESSAGE:", err?.message);
+      console.log("🔥 BACKEND ERROR:", err?.error);
+
+      setError(err?.message || "Unknown error");
+
+      throw err;
     } finally {
       setLoading(false);
     }

@@ -1,3 +1,3 @@
 export const uploadUrl = {
-  uploadurl: "http://localhost/OSYUSO_R/backend/uploads/",
+  uploadurl: "http://localhost/OSYUSO26/backend/uploads/",
 };

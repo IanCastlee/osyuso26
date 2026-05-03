@@ -5,9 +5,11 @@ import { useNavigate } from "react-router-dom";
 import { RxQuestionMarkCircled } from "react-icons/rx";
 import { PiShoppingCartSimpleFill } from "react-icons/pi";
 import useFormSubmit from "../hooks/useFormSubmit";
+import { useToast } from "../context/ToastContext";
 
 function SignUp() {
   const navigate = useNavigate();
+  const { showToast } = useToast();
 
   const [form, setForm] = useState({
     fname: "",
@@ -35,7 +37,11 @@ function SignUp() {
   const { submit, loading, error } = useFormSubmit(
     "auth/sign-up.php",
     (res) => {
-      console.log("Success:", res);
+      showToast({
+        type: "success",
+        message: "Account created!",
+        duration: 5000,
+      });
       navigate("/signin");
     },
   );
@@ -63,6 +69,11 @@ function SignUp() {
           password: form.password,
         });
       } catch (err) {
+        showToast({
+          type: "error",
+          message: err?.message || "Something went wrong",
+          duration: 5000,
+        });
         console.error(err.message);
       }
     }

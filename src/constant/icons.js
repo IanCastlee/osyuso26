@@ -12,6 +12,7 @@ import { TbMenu2 } from "react-icons/tb";
 import { RiHomeLine } from "react-icons/ri";
 import { BiSolidShoppingBags } from "react-icons/bi";
 import { FiTrendingUp } from "react-icons/fi";
+import { FaPhoneAlt } from "react-icons/fa";
 
 import { HiUserGroup } from "react-icons/hi2";
 
@@ -40,4 +41,5 @@ export const icons = {
   CiCircleInfo,
   CiCalendar,
   CiSettings,
+  FaPhoneAlt,
 };

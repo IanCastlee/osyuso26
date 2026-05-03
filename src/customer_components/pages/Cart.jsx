@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import meatImage from "../../../../assets_osyuso/meatProduct.jpeg";
+import meatImage from "../../assets/assets_osyuso/meatProduct.jpeg";
 import { LazyLoadImage } from "react-lazy-load-image-component";
 import { BsCart4 } from "react-icons/bs";
 

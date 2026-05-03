@@ -1,6 +1,6 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
-import meat from "../../../../assets_osyuso/meat.png";
+import meat from "../../assets/assets_osyuso/meat.png";
 
 function CategoryCard() {
   const navigate = useNavigate();
