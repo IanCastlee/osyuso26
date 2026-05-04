@@ -15,11 +15,13 @@ import { FiTrendingUp } from "react-icons/fi";
 import { FaPhoneAlt } from "react-icons/fa";
 
 import { HiUserGroup } from "react-icons/hi2";
+import { HiMiniUserCircle } from "react-icons/hi2";
 
 import { CiUser } from "react-icons/ci";
 import { CiCircleInfo } from "react-icons/ci";
 import { CiCalendar } from "react-icons/ci";
 import { CiSettings } from "react-icons/ci";
+import { MdKeyboardArrowDown } from "react-icons/md";
 
 export const icons = {
   BsCart4,
@@ -42,4 +44,6 @@ export const icons = {
   CiCalendar,
   CiSettings,
   FaPhoneAlt,
+  MdKeyboardArrowDown,
+  HiMiniUserCircle,
 };

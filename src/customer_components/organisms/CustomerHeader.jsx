@@ -2,9 +2,12 @@ import React, { useState } from "react";
 import { icons } from "../../constant/icons";
 import { useNavigate } from "react-router-dom";
 import CustomerSidebar from "./CustomerSidebar";
+import { useAuth } from "../../context/AuthContext";
 
 function CustomerHeader() {
   const [isOpen, setIsOpen] = useState(false);
+  const [openUserMenu, setOpenUserMenu] = useState(false);
+
   const {
     BsCart4,
     IoMdNotificationsOutline,
@@ -17,6 +20,8 @@ function CustomerHeader() {
 
   const navigate = useNavigate();
 
+  //  AUTH
+  const { user, logout } = useAuth();
   return (
     <>
       <header className="w-full bg-secondary text-white shadow-md">
@@ -51,16 +56,56 @@ function CustomerHeader() {
 
             <span className="text-white/50">|</span>
 
-            <button onClick={() => navigate("/signin")}>Sign In</button>
+            {/* AUTH SECTION */}
+            {user ? (
+              <div className="relative">
+                <div className="flex items-center gap-1">
+                  <icons.HiMiniUserCircle className="text-2xl" />
+                  <button
+                    onClick={() => setOpenUserMenu(!openUserMenu)}
+                    className="flex items-center font-semibold hover:opacity-80"
+                  >
+                    {user?.fullname?.split(" ")[0] || "User"}{" "}
+                    <icons.MdKeyboardArrowDown />
+                  </button>
+                </div>
 
-            <span className="text-white/50">|</span>
+                {openUserMenu && (
+                  <div className="absolute right-0 mt-2 w-44 bg-white text-black rounded-md shadow-lg overflow-hidden z-50">
+                    <button
+                      onClick={() => {
+                        navigate("/account");
+                        setOpenUserMenu(false);
+                      }}
+                      className="w-full text-left px-4 py-2 hover:bg-gray-100"
+                    >
+                      My Account
+                    </button>
 
-            <button
-              onClick={() => navigate("/signup")}
-              className="font-semibold"
-            >
-              Sign Up
-            </button>
+                    <button
+                      onClick={() => {
+                        logout();
+                        navigate("/signin");
+                      }}
+                      className="w-full text-left px-4 py-2 hover:bg-gray-100 text-red-600"
+                    >
+                      Logout
+                    </button>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <>
+                <button onClick={() => navigate("/signin")}>Sign In</button>
+                <span className="text-white/50">|</span>
+                <button
+                  onClick={() => navigate("/signup")}
+                  className="font-semibold"
+                >
+                  Sign Up
+                </button>
+              </>
+            )}
           </div>
         </div>
 
@@ -111,6 +156,7 @@ function CustomerHeader() {
           </div>
         </div>
       </header>
+
       <CustomerSidebar isOpen={isOpen} onClose={() => setIsOpen(false)} />
     </>
   );

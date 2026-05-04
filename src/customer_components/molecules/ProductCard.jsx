@@ -14,7 +14,7 @@ function ProductCard() {
       setLoading(true);
 
       // backend check (token validation)
-      await fetchInstance("auth/me.php");
+      await fetchInstance("auth/user.php");
 
       navigate("/reserve");
     } catch (err) {
@@ -43,9 +43,7 @@ function ProductCard() {
           Premium Pork Belly
         </h3>
 
-        <p className="text-secondary font-bold text-xs sm:text-sm">
-          ₱280 / kg
-        </p>
+        <p className="text-secondary font-bold text-xs sm:text-sm">₱280 / kg</p>
 
         <p className="text-[10px] sm:text-xs text-gray-500 line-clamp-1">
           Seller: Juan Meat Shop
@@ -54,15 +52,15 @@ function ProductCard() {
         {/* BUTTON */}
         <div className="flex items-center justify-end mt-2">
           <button
-  disabled={loading}
-  onClick={(e) => {
-    e.stopPropagation();
-    handleProtectedNav();
-  }}
-  className="text-[10px] sm:text-xs bg-secondary text-white px-3 sm:px-4 py-1 rounded-xs hover:opacity-90 transition flex items-center justify-center"
->
-  {loading ? <ButtonLoader /> : "Buy"}
-</button>
+            disabled={loading}
+            onClick={(e) => {
+              e.stopPropagation();
+              handleProtectedNav();
+            }}
+            className="text-[10px] sm:text-xs bg-secondary text-white px-3 sm:px-4 py-1 rounded-xs hover:opacity-90 transition flex items-center justify-center"
+          >
+            {loading ? <ButtonLoader /> : "Buy"}
+          </button>
         </div>
       </div>
     </div>

@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { RxDashboard } from "react-icons/rx";
 import { LuCircleUserRound } from "react-icons/lu";
+import { icons } from "../../constant/icons";
 
 import { FiTrendingUp, FiShoppingCart, FiUsers, FiBox } from "react-icons/fi";
 
@@ -12,9 +13,17 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from "recharts";
+import { useAuth } from "../../context/AuthContext";
+import { useNavigate } from "react-router-dom";
 
 function DashboardVendor() {
+  const navigate = useNavigate();
+
+  const [openUserMenu, setOpenUserMenu] = useState(false);
   const [active, setActive] = useState("Daily");
+
+  //  AUTH
+  const { user, logout } = useAuth();
 
   // Dummy Data
   const dataMap = {
@@ -57,9 +66,41 @@ function DashboardVendor() {
           DASHBOARD
         </h1>
 
-        <div className="flex flex-col justify-center items-center">
-          <LuCircleUserRound className="inline-block mr-1 text-2xl" />
-          <span className="text-sm">John Doe</span>
+        <div className="relative">
+          <div className="flex items-center gap-1">
+            <icons.HiMiniUserCircle className="text-2xl" />
+            <button
+              onClick={() => setOpenUserMenu(!openUserMenu)}
+              className="flex items-center font-semibold hover:opacity-80"
+            >
+              {user?.fullname?.split(" ")[0] || "User"}{" "}
+              <icons.MdKeyboardArrowDown />
+            </button>
+          </div>
+
+          {openUserMenu && (
+            <div className="absolute right-0 mt-2 w-44 bg-white text-black rounded-md shadow-lg overflow-hidden z-50">
+              <button
+                onClick={() => {
+                  navigate("/account");
+                  setOpenUserMenu(false);
+                }}
+                className="w-full text-left px-4 py-2 hover:bg-gray-100"
+              >
+                My Account
+              </button>
+
+              <button
+                onClick={() => {
+                  logout();
+                  navigate("/signin");
+                }}
+                className="w-full text-left px-4 py-2 hover:bg-gray-100 text-red-600"
+              >
+                Logout
+              </button>
+            </div>
+          )}
         </div>
       </div>
       {/* CARDS */}

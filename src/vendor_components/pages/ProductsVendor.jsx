@@ -1,10 +1,12 @@
-import React from "react";
+import React, { useState } from "react";
 import { FaBox } from "react-icons/fa";
 import Table from "../organisms/Table";
 import { IoMdTrash } from "react-icons/io";
 import { FiEdit } from "react-icons/fi";
+import AddVendorProduct_Form from "../molecules/AddVendorProduct_Form";
 
 function ProductsVendor() {
+  const [openForm, setOpenForm] = useState(false);
   const columns = [
     {
       header: "Product Name",
@@ -61,16 +63,36 @@ function ProductsVendor() {
           />
 
           {/* ADD BUTTON */}
-          <button className="bg-green-500 text-white text-xs px-3 py-2 rounded-md hover:bg-green-600 transition">
+          <button
+            onClick={() => setOpenForm(true)}
+            className="bg-green-500 text-white text-xs px-3 py-2 rounded-md hover:bg-green-600 transition"
+          >
             + Add Product
           </button>
         </div>
       </div>
-
       {/* TABLE */}
       <div className="bg-white rounded-lg shadow p-4">
         <Table columns={columns} data={data} />
       </div>
+
+      {/* //ADD PRODUCT FORM */}
+      {openForm && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+          <div className="bg-white w-full max-w-2xl rounded-lg shadow-lg p-4 relative">
+            {/* CLOSE BUTTON */}
+            <button
+              onClick={() => setOpenForm(false)}
+              className="absolute top-2 right-3 text-gray-500 hover:text-red-500"
+            >
+              ✕
+            </button>
+
+            {/* FORM */}
+            <AddVendorProduct_Form />
+          </div>
+        </div>
+      )}
     </div>
   );
 }
