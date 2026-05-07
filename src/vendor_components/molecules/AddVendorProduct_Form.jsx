@@ -2,9 +2,14 @@ import React, { useEffect, useState } from "react";
 import InputField from "../atoms/InputField";
 import { FaBox, FaMoneyBill } from "react-icons/fa";
 import useGetData from "../../hooks/useGetData";
+import useFormSubmit from "../../hooks/useFormSubmit";
 import LoaderWithText from "../../reusable_components/LoaderWithText";
+import SelectField from "../../reusable_components/SelectField";
+import { useToast } from "../../context/ToastContext";
 
 function AddVendorProduct_Form() {
+  const { showToast } = useToast();
+
   const [form, setForm] = useState({
     name: "",
     description: "",
@@ -12,23 +17,50 @@ function AddVendorProduct_Form() {
     stock: "",
     category_id: "",
     subcategory_id: "",
-    unit_type: "", // ✅ NEW FIELD
-    image: null,
+    unit_type: "",
+    images: [],
   });
 
   const [errors, setErrors] = useState({});
-  const [loading, setLoading] = useState(false);
+  const [preview, setPreview] = useState([]);
 
-  // ================= FETCH CATEGORIES =================
+  // ================= API =================
   const { data: categories } = useGetData("product/get-categories.php");
 
-  // ================= FETCH SUBCATEGORIES =================
   const { data: subcategories, refetch: fetchSubcategories } = useGetData(
     form.category_id
       ? `product/get-subcategories.php?category_id=${form.category_id}`
       : null,
     {},
     false,
+  );
+
+  const { submit, loading } = useFormSubmit(
+    "product/add-products.php",
+    (res) => {
+      // SUCCESS TOAST
+      showToast({
+        type: "success",
+        message: "Product Added!",
+        duration: 3000,
+      });
+
+      console.log("SUCCESS:", res);
+
+      //  CLEAR FORM AFTER SUCCESS
+      setForm({
+        name: "",
+        description: "",
+        price: "",
+        stock: "",
+        category_id: "",
+        subcategory_id: "",
+        unit_type: "",
+        images: [],
+      });
+
+      setPreview([]);
+    },
   );
 
   // ================= CATEGORY CHANGE =================
@@ -43,78 +75,84 @@ function AddVendorProduct_Form() {
     }
   }, [form.category_id]);
 
-  // ================= HANDLE INPUT =================
+  // ================= INPUT =================
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
-  const handleFile = (e) => {
-    setForm({ ...form, image: e.target.files[0] });
+  // ================= MULTI IMAGE =================
+  const handleImages = (e) => {
+    const files = Array.from(e.target.files);
+
+    setForm((prev) => ({
+      ...prev,
+      images: files,
+    }));
+
+    // preview images
+    const previews = files.map((file) => URL.createObjectURL(file));
+    setPreview(previews);
   };
 
   // ================= VALIDATION =================
   const validate = () => {
-    let newErrors = {};
+    let err = {};
 
-    if (!form.name) newErrors.name = "Product name required";
-    if (!form.price) newErrors.price = "Price required";
-    if (!form.stock) newErrors.stock = "Stock required";
-    if (!form.category_id) newErrors.category_id = "Select category";
-    if (!form.subcategory_id) newErrors.subcategory_id = "Select subcategory";
-    if (!form.unit_type) newErrors.unit_type = "Select unit type";
-    if (!form.image) newErrors.image = "Image required";
+    if (!form.name) err.name = "Required";
+    if (!form.price) err.price = "Required";
+    if (!form.stock) err.stock = "Required";
+    if (!form.category_id) err.category_id = "Required";
+    if (!form.subcategory_id) err.subcategory_id = "Required";
+    if (!form.unit_type) err.unit_type = "Required";
+    if (form.images.length === 0) err.images = "Upload at least 1 image";
 
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+    setErrors(err);
+    return Object.keys(err).length === 0;
   };
 
   // ================= SUBMIT =================
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
     if (!validate()) return;
 
-    setLoading(true);
-
     const data = new FormData();
-    Object.entries(form).forEach(([key, value]) => {
-      data.append(key, value);
+
+    // normal fields
+    data.append("name", form.name);
+    data.append("description", form.description);
+    data.append("price", form.price);
+    data.append("stock", form.stock);
+    data.append("category_id", form.category_id);
+    data.append("subcategory_id", form.subcategory_id);
+    data.append("unit_type", form.unit_type);
+
+    // multiple images
+    form.images.forEach((file) => {
+      data.append("images[]", file);
     });
 
-    setTimeout(() => {
-      console.log("SUBMIT DATA:", Object.fromEntries(data));
-      setLoading(false);
-
-      // optional reset
-      // setForm({
-      //   name: "",
-      //   description: "",
-      //   price: "",
-      //   stock: "",
-      //   category_id: "",
-      //   subcategory_id: "",
-      //   unit_type: "",
-      //   image: null,
-      // });
-    }, 1200);
+    try {
+      await submit(data);
+    } catch (err) {
+      console.error(err);
+    }
   };
-
   return (
-    <div className="w-full max-w-4xl mx-auto bg-white p-6 rounded-xl shadow-md">
-      <h2 className="text-xl font-bold text-primary mb-6">Add Product</h2>
+    <div className="w-full max-w-5xl mx-auto bg-white p-6 rounded-xl shadow-md">
+      <h2 className="text-xl font-bold mb-5">Add Product</h2>
 
       <form
         onSubmit={handleSubmit}
         className="grid grid-cols-1 md:grid-cols-2 gap-6"
       >
-        {/* LEFT SIDE */}
+        {/* LEFT */}
         <div className="space-y-4">
           <InputField
             label="Product Name"
             name="name"
             value={form.name}
             onChange={handleChange}
-            placeholder="Enter product name"
             icon={FaBox}
             error={errors.name}
           />
@@ -124,7 +162,6 @@ function AddVendorProduct_Form() {
             name="description"
             value={form.description}
             onChange={handleChange}
-            placeholder="Enter description"
             error={errors.description}
           />
 
@@ -134,7 +171,6 @@ function AddVendorProduct_Form() {
             type="number"
             value={form.price}
             onChange={handleChange}
-            placeholder="Enter price"
             icon={FaMoneyBill}
             error={errors.price}
           />
@@ -145,116 +181,90 @@ function AddVendorProduct_Form() {
             type="number"
             value={form.stock}
             onChange={handleChange}
-            placeholder="Enter stock"
             error={errors.stock}
           />
         </div>
 
-        {/* RIGHT SIDE */}
+        {/* RIGHT */}
         <div className="space-y-4">
           {/* CATEGORY */}
-          <div>
-            <label className="text-sm font-medium text-primary">Category</label>
-
-            <select
-              name="category_id"
-              value={form.category_id}
-              onChange={handleChange}
-              className="w-full border p-2 rounded-md text-sm mt-1"
-            >
-              <option value="">Select category</option>
-
-              {categories?.map((cat) => (
-                <option key={cat.id} value={cat.id}>
-                  {cat.name}
-                </option>
-              ))}
-            </select>
-
-            {errors.category_id && (
-              <span className="text-xs text-red-500">{errors.category_id}</span>
-            )}
-          </div>
+          <SelectField
+            label="Category"
+            name="category_id"
+            value={form.category_id}
+            onChange={handleChange}
+            options={
+              categories?.map((c) => ({
+                value: c.id,
+                label: c.name,
+              })) || []
+            }
+            error={errors.category_id}
+          />
 
           {/* SUBCATEGORY */}
+          <SelectField
+            label="Subcategory"
+            name="subcategory_id"
+            value={form.subcategory_id}
+            onChange={handleChange}
+            disabled={!form.category_id}
+            options={
+              subcategories?.map((s) => ({
+                value: s.id,
+                label: s.name,
+              })) || []
+            }
+            error={errors.subcategory_id}
+          />
+
+          {/* UNIT TYPE */}
+          <SelectField
+            label="Unit Type"
+            name="unit_type"
+            value={form.unit_type}
+            onChange={handleChange}
+            options={[
+              { value: "pcs", label: "Per Piece" },
+              { value: "kg", label: "Per Kilogram" },
+            ]}
+            error={errors.unit_type}
+          />
+
+          {/* MULTI IMAGE UPLOAD */}
           <div>
-            <label className="text-sm font-medium text-primary">
-              Subcategory
-            </label>
-
-            <select
-              name="subcategory_id"
-              value={form.subcategory_id}
-              onChange={handleChange}
-              className="w-full border p-2 rounded-md text-sm mt-1"
-              disabled={!form.category_id}
-            >
-              <option value="">Select subcategory</option>
-
-              {subcategories?.map((sub) => (
-                <option key={sub.id} value={sub.id}>
-                  {sub.name}
-                </option>
-              ))}
-            </select>
-
-            {errors.subcategory_id && (
-              <span className="text-xs text-red-500">
-                {errors.subcategory_id}
-              </span>
-            )}
-          </div>
-
-          {/* UNIT TYPE (NEW) */}
-          <div>
-            <label className="text-sm font-medium text-primary">
-              Unit Type
-            </label>
-
-            <select
-              name="unit_type"
-              value={form.unit_type}
-              onChange={handleChange}
-              className="w-full border p-2 rounded-md text-sm mt-1"
-            >
-              <option value="">Select unit type</option>
-              <option value="pcs">Per Piece (pcs)</option>
-              <option value="kg">Per Kilogram (kg)</option>
-            </select>
-
-            {errors.unit_type && (
-              <span className="text-xs text-red-500">{errors.unit_type}</span>
-            )}
-          </div>
-
-          {/* IMAGE */}
-          <div>
-            <label className="text-sm font-medium text-primary">
-              Product Image
-            </label>
+            <label className="text-sm font-medium">Product Images</label>
 
             <input
               type="file"
-              onChange={handleFile}
+              multiple
+              onChange={handleImages}
               className="w-full border p-2 rounded-md mt-1"
             />
 
-            {errors.image && (
-              <span className="text-xs text-red-500">{errors.image}</span>
+            {errors.images && (
+              <p className="text-xs text-red-500">{errors.images}</p>
             )}
+
+            {/* PREVIEW */}
+            <div className="flex gap-2 mt-2 flex-wrap">
+              {preview.map((img, i) => (
+                <img
+                  key={i}
+                  src={img}
+                  className="w-16 h-16 object-cover rounded-md border"
+                />
+              ))}
+            </div>
           </div>
 
           {/* SUBMIT */}
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-secondary text-white py-2 rounded-md font-semibold mt-2 flex items-center justify-center gap-2 disabled:opacity-70"
+            className="w-full bg-secondary text-white py-2 rounded-md font-semibold flex items-center justify-center gap-2"
           >
-            {loading ? (
-              <LoaderWithText text="Adding Product..." />
-            ) : (
-              "Add Product"
-            )}
+            {loading ? <LoaderWithText text="Uploading..." /> : "Add Product"}
           </button>
         </div>
       </form>

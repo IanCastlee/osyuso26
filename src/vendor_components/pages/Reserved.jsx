@@ -5,34 +5,25 @@ import { FiEdit } from "react-icons/fi";
 import AddVendorProduct_Form from "../molecules/AddVendorProduct_Form";
 import useGetData from "../../hooks/useGetData";
 import VendorTable from "../organisms/VendorTable";
-import noImage from "../../assets/assets_osyuso/no-image.png";
 
-function ProductsVendor() {
+function Reserved() {
   const [openForm, setOpenForm] = useState(false);
 
-  // ================= STATE =================
+  // ================= PAGINATION STATE =================
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(10);
-  const [search, setSearch] = useState("");
 
-  // ================= FETCH =================
-  const { data, loading } = useGetData(
-    `product/get-products.php?page=${page}&limit=${limit}&search=${search}`,
+  // ================= FETCH DATA =================
+  const { data, loading, refetch } = useGetData(
+    `product/get-products.php?page=${page}&limit=${limit}`,
   );
-
-  console.log(data);
-
-  // backend format: data.rows
-  const products = data?.data?.rows || [];
-
-  const totalPages = data?.data?.total_pages || 1;
 
   const columns = [
     {
       header: "Image",
       render: (row) => (
         <img
-          src={row.image || noImage}
+          src={row.image || "https://via.placeholder.com/40"}
           className="w-10 h-10 object-cover rounded"
         />
       ),
@@ -66,28 +57,25 @@ function ProductsVendor() {
     },
   ];
 
+  const products = Array.isArray(data?.data)
+    ? data.data
+    : Array.isArray(data)
+      ? data
+      : [];
+
+  console.log("DATA : ", data);
+
   return (
     <div className="w-full min-h-full p-4 flex flex-col gap-4 bg-gray-100">
       {/* HEADER */}
       <div className="bg-white rounded-lg h-15 flex justify-between items-center px-6 shadow">
         <h1 className="flex items-center text-lg font-bold">
           <FaBox className="mr-2 text-secondary text-2xl" />
-          Products
+          Reservation
         </h1>
 
         <div className="flex items-center gap-2">
-          {/* SEARCH */}
-          <input
-            value={search}
-            onChange={(e) => {
-              setSearch(e.target.value);
-              setPage(1);
-            }}
-            placeholder="Search product..."
-            className="border px-2 py-1 text-xs rounded"
-          />
-
-          {/* LIMIT */}
+          {/* LIMIT SELECT */}
           <select
             value={limit}
             onChange={(e) => {
@@ -99,6 +87,7 @@ function ProductsVendor() {
             <option value={10}>10</option>
             <option value={20}>20</option>
             <option value={50}>50</option>
+            <option value={100}>100</option>
           </select>
 
           <button
@@ -116,29 +105,29 @@ function ProductsVendor() {
       </div>
 
       {/* PAGINATION */}
-      <div className="flex items-center justify-between text-xs">
+      <div className="flex items-center justify-between">
         <button
           disabled={page === 1}
-          onClick={() => setPage((p) => p - 1)}
+          onClick={() => setPage(page - 1)}
           className="px-3 py-1 border rounded disabled:opacity-50"
         >
           Prev
         </button>
 
-        <span>
-          Page {page} of {totalPages}
+        <span className="text-xs">
+          Page {page} of {data?.meta?.total_pages || 1}
         </span>
 
         <button
-          disabled={page >= totalPages}
-          onClick={() => setPage((p) => p + 1)}
+          disabled={page === data?.meta?.total_pages}
+          onClick={() => setPage(page + 1)}
           className="px-3 py-1 border rounded disabled:opacity-50"
         >
           Next
         </button>
       </div>
 
-      {/* MODAL */}
+      {/* FORM MODAL */}
       {openForm && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
           <div className="bg-white w-full max-w-2xl rounded-lg shadow p-4 relative">
@@ -157,4 +146,4 @@ function ProductsVendor() {
   );
 }
 
-export default ProductsVendor;
+export default Reserved;

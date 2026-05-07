@@ -39,9 +39,9 @@ export function AuthProvider({ children }) {
   //  LOGOUT
   const logout = () => {
     sessionStorage.removeItem("auth-storage");
+    localStorage.removeItem("auth-storage");
     setUser(null);
   };
-
   return (
     <AuthContext.Provider value={{ user, login, logout, loading }}>
       {children}

@@ -26,7 +26,23 @@ import DashboardVendor from "./vendor_components/pages/DashboardVendor";
 import ProductsVendor from "./vendor_components/pages/ProductsVendor";
 import DashboardAdmin from "./admin_components/pages/DashboardAdmin";
 import SidebarAdmin from "./admin_components/organisms/SidebarAdmin";
-import ActiveVendor from "./admin_components/pages/ActiveVendor";
+import Reserved from "./vendor_components/pages/Reserved";
+import ReservationHistory from "./vendor_components/pages/ReservationHistory";
+import ActiveShop from "./admin_components/pages/ActiveShop";
+import NotActiveShop from "./admin_components/pages/NotActiveShop";
+import VerifiedAccount from "./admin_components/pages/VerifiedAccount";
+import NotVerifiedAccount from "./admin_components/pages/NotVerifiedAccount";
+import NotActiveAccount from "./admin_components/pages/NotActiveAccount";
+import MainCategory from "./admin_components/pages/MainCategory";
+import SubCategory from "./admin_components/pages/SubCategory";
+import TodaysSales from "./admin_components/pages/TodaysSales";
+import SalesLog from "./admin_components/pages/SalesLog";
+import Payout from "./admin_components/pages/Payout";
+import PayoutLog from "./admin_components/pages/PayoutLog";
+import Products from "./admin_components/pages/Products";
+import SpecialOffer from "./admin_components/pages/SpecialOffer";
+import NewArrival from "./admin_components/pages/NewArrival";
+import AllSpecialOffer from "./customer_components/pages/AllSpecialOffer";
 
 const CustomerLayout = () => {
   const location = useLocation();
@@ -58,6 +74,9 @@ const CustomerLayout = () => {
           <Route path="faq" element={<FAQ />} />
           <Route path="about" element={<AboutCostumer />} />
 
+          {/* special offer */}
+          <Route path="all-special-offers" element={<AllSpecialOffer />} />
+
           {/* auths */}
           <Route path="signin" element={<SignIn />} />
           <Route path="signup" element={<SignUp />} />
@@ -84,6 +103,8 @@ const VendorLayout = () => {
         <Routes>
           <Route index element={<DashboardVendor />} />
           <Route path="/vendor-products" element={<ProductsVendor />} />
+          <Route path="/reserved" element={<Reserved />} />
+          <Route path="/reservation-log" element={<ReservationHistory />} />
           <Route path="about" element={<AboutVendor />} />
         </Routes>
       </div>
@@ -104,8 +125,31 @@ const AdminLayout = () => {
         <Routes>
           <Route index element={<DashboardAdmin />} />
 
-          {/* USERS */}
-          <Route path="active-vendors" element={<ActiveVendor />} />
+          {/* shop */}
+          <Route path="active-shop" element={<ActiveShop />} />
+          <Route path="not-active-shop" element={<NotActiveShop />} />
+
+          {/* customer accnt */}
+          <Route path="verified-account" element={<VerifiedAccount />} />
+          <Route path="not-verified-account" element={<NotVerifiedAccount />} />
+          <Route path="not-active-account" element={<NotActiveAccount />} />
+
+          {/* categories */}
+          <Route path="main-categories" element={<MainCategory />} />
+          <Route path="sub-categories" element={<SubCategory />} />
+
+          {/* sales */}
+          <Route path="todays-sales" element={<TodaysSales />} />
+          <Route path="sales-log" element={<SalesLog />} />
+
+          {/* payout */}
+          <Route path="payout" element={<Payout />} />
+          <Route path="payout-log" element={<PayoutLog />} />
+
+          {/* products */}
+          <Route path="products" element={<Products />} />
+          <Route path="special-offer" element={<SpecialOffer />} />
+          <Route path="new-arrival" element={<NewArrival />} />
         </Routes>
       </div>
     </div>

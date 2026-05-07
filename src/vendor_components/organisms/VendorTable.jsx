@@ -1,6 +1,6 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 
-function Table({ columns = [], data = [], rowsPerPage = 5 }) {
+function VendorTable({ columns = [], data = [], rowsPerPage = 5 }) {
   const [page, setPage] = useState(1);
 
   const safeData = Array.isArray(data) ? data : [];
@@ -8,15 +8,17 @@ function Table({ columns = [], data = [], rowsPerPage = 5 }) {
   const totalPages = Math.max(1, Math.ceil(safeData.length / rowsPerPage));
 
   const startIndex = (page - 1) * rowsPerPage;
-
   const paginatedData = safeData.slice(startIndex, startIndex + rowsPerPage);
+
+  //  reset page if data changes
+  useEffect(() => {
+    setPage(1);
+  }, [data]);
 
   return (
     <div className="w-full bg-white rounded-lg border border-gray-200 overflow-hidden">
-      {/* TABLE */}
       <div className="overflow-x-auto">
         <table className="w-full text-sm text-left border-collapse">
-          {/* HEADER */}
           <thead className="bg-gray-50 text-gray-600 text-xs uppercase tracking-wide">
             <tr>
               {columns.map((col, index) => (
@@ -27,34 +29,32 @@ function Table({ columns = [], data = [], rowsPerPage = 5 }) {
             </tr>
           </thead>
 
-          {/* BODY */}
           <tbody>
-            {paginatedData.map((row, rowIndex) => (
-              <tr
-                key={rowIndex}
-                className="hover:bg-gray-50 transition border-b border-gray-100"
-              >
-                {columns.map((col, colIndex) => (
-                  <td
-                    key={colIndex}
-                    className={`px-4 py-2 border-r border-gray-100 last:border-r-0 ${
-                      col.align === "right" ? "text-right" : ""
-                    }`}
-                  >
-                    {col.render ? col.render(row) : row[col.accessor]}
-                  </td>
-                ))}
-              </tr>
-            ))}
-
-            {/* EMPTY STATE */}
-            {paginatedData.length === 0 && (
+            {paginatedData.length > 0 ? (
+              paginatedData.map((row, rowIndex) => (
+                <tr
+                  key={rowIndex}
+                  className="hover:bg-gray-50 transition border-b border-gray-100"
+                >
+                  {columns.map((col, colIndex) => (
+                    <td
+                      key={colIndex}
+                      className={`px-4 py-2 border-r border-gray-100 last:border-r-0 ${
+                        col.align === "right" ? "text-right" : ""
+                      }`}
+                    >
+                      {col.render ? col.render(row) : row[col.accessor]}
+                    </td>
+                  ))}
+                </tr>
+              ))
+            ) : (
               <tr>
                 <td
                   colSpan={columns.length}
                   className="text-center py-6 text-gray-400"
                 >
-                  No data available
+                  No products found
                 </td>
               </tr>
             )}
@@ -72,7 +72,7 @@ function Table({ columns = [], data = [], rowsPerPage = 5 }) {
           <button
             onClick={() => setPage((p) => Math.max(p - 1, 1))}
             disabled={page === 1}
-            className="px-3 py-1 text-xs rounded border border-gray-300 disabled:opacity-50 hover:bg-gray-100"
+            className="px-3 py-1 text-xs rounded border disabled:opacity-50"
           >
             Prev
           </button>
@@ -80,7 +80,7 @@ function Table({ columns = [], data = [], rowsPerPage = 5 }) {
           <button
             onClick={() => setPage((p) => Math.min(p + 1, totalPages))}
             disabled={page >= totalPages}
-            className="px-3 py-1 text-xs rounded border border-gray-300 disabled:opacity-50 hover:bg-gray-100"
+            className="px-3 py-1 text-xs rounded border disabled:opacity-50"
           >
             Next
           </button>
@@ -90,4 +90,4 @@ function Table({ columns = [], data = [], rowsPerPage = 5 }) {
   );
 }
 
-export default Table;
+export default VendorTable;

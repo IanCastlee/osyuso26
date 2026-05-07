@@ -3,8 +3,14 @@ import SpecialOfferCard from "../molecules/SpecialOfferCard";
 import adobo from "../../assets/hero_images/adobo.jpg";
 import milkTea from "../../assets/hero_images/milktea2.webp";
 import { LazyLoadImage } from "react-lazy-load-image-component";
+import { useNavigate } from "react-router-dom";
 
 function CustomerHero() {
+  const navigate = useNavigate();
+
+  const handleViewAll = () => {
+    navigate("/all-special-offers");
+  };
   return (
     <div className="w-full h-auto  lg:h-[300px] flex flex-col lg:flex-row mt-1.5 gap-1">
       <div className="w-[100%] h-full bg-primary">
@@ -13,6 +19,13 @@ function CustomerHero() {
           description="Limited time offer from Juan Meat Shop in Bulusan."
           tag="🔥 FLASH SALE"
         />
+
+        <button
+          onClick={handleViewAll}
+          className="fixed b-0 z-20 text-xs text-primary px-2 py-2 cursor-pointer"
+        >
+          View All
+        </button>
       </div>
 
       <div className="mt-2 lg:w-[20%]">

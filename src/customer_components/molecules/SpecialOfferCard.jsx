@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import offer1 from "../../assets/hero_images/offer3.png";
 import offer2 from "../../assets/hero_images/offer2.png";
 import offer3 from "../../assets/hero_images/offer1.png";
+import { useNavigate } from "react-router-dom";
 
 const offers = [
   {

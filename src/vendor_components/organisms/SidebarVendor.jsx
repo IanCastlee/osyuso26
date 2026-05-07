@@ -69,7 +69,7 @@ function SidebarVendor() {
           </button>
 
           <button
-            onClick={() => go("/vendor/history")}
+            onClick={() => go("/vendor/reservation-log")}
             className="text-left px-3 py-2 text-sm rounded-md hover:bg-white/10 transition min-w-0"
           >
             <span className="truncate">Order History</span>
