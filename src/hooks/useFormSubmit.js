@@ -29,6 +29,19 @@ function useFormSubmit(url, onSuccess) {
         ...options,
       });
 
+      // const res = await fetchInstance(url, {
+      //   method: "POST",
+      //   body: isFormData ? formData : JSON.stringify(formData),
+      //   ...(isFormData
+      //     ? {}
+      //     : {
+      //         headers: {
+      //           "Content-Type": "application/json",
+      //         },
+      //       }),
+      //   ...options,
+      // });
+
       console.log("📡 RAW RESPONSE FROM API:", res);
 
       const message = res?.message || "Unknown response";

@@ -20,18 +20,19 @@ function CustomerHero() {
           tag="🔥 FLASH SALE"
         />
 
-        <button
+        {/* <button
           onClick={handleViewAll}
-          className="fixed b-0 z-20 text-xs text-primary px-2 py-2 cursor-pointer"
+          className="sticky b-0 z-20 text-xs text-primary px-2 py-2 cursor-pointer"
         >
           View All
-        </button>
+        </button> */}
       </div>
 
       <div className="mt-2 lg:w-[20%]">
-        <h2 className="flex lg:hidden text-[10px] text-secondary mb-1">
+        <h2 className="lex lg:hidden text-sm font-bold text-secondary mb-2">
           NEW ARRIVAL
         </h2>
+
         <div className="flex flex-row lg:flex-col w-full lg:w-full h-[80px] lg:h-full gap-1">
           {/* ITEM 1 */}
           <div className="h-full lg:h-[49%] w-[80px] lg:w-full rounded-lg lg:rounded-xl overflow-hidden relative group">

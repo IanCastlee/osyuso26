@@ -29,7 +29,7 @@ function AddVendorProduct_Form() {
 
   const { data: subcategories, refetch: fetchSubcategories } = useGetData(
     form.category_id
-      ? `product/get-subcategories.php?category_id=${form.category_id}`
+      ? `product/get-subcategories_v.php?category_id=${form.category_id}`
       : null,
     {},
     false,

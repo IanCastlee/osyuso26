@@ -22,9 +22,18 @@ import { CiCircleInfo } from "react-icons/ci";
 import { CiCalendar } from "react-icons/ci";
 import { CiSettings } from "react-icons/ci";
 import { MdKeyboardArrowDown } from "react-icons/md";
+import { MdSort } from "react-icons/md";
+
+import { MdOutlineChevronRight } from "react-icons/md";
+import { MdOutlineChevronLeft } from "react-icons/md";
+import { IoChevronDownCircleOutline } from "react-icons/io5";
 
 export const icons = {
   BsCart4,
+  MdOutlineChevronLeft,
+  IoChevronDownCircleOutline,
+  MdOutlineChevronRight,
+  MdSort,
   IoMdNotificationsOutline,
   CiShop,
   RxQuestionMarkCircled,

@@ -43,6 +43,7 @@ import Products from "./admin_components/pages/Products";
 import SpecialOffer from "./admin_components/pages/SpecialOffer";
 import NewArrival from "./admin_components/pages/NewArrival";
 import AllSpecialOffer from "./customer_components/pages/AllSpecialOffer";
+import MarketSetting from "./vendor_components/pages/MarketSetting";
 
 const CustomerLayout = () => {
   const location = useLocation();
@@ -64,7 +65,7 @@ const CustomerLayout = () => {
       <main className="flex-1">
         <Routes>
           <Route index element={<CustomerHomePage />} />
-          <Route path="categories" element={<Categories />} />
+          <Route path="categories/:categoryId" element={<Categories />} />{" "}
           <Route path="all-categories" element={<AllCategories />} />
           <Route path="market" element={<Market />} />
           <Route path="all-markets" element={<AllMarkets />} />
@@ -73,10 +74,8 @@ const CustomerLayout = () => {
           <Route path="notification" element={<Notifcation />} />
           <Route path="faq" element={<FAQ />} />
           <Route path="about" element={<AboutCostumer />} />
-
           {/* special offer */}
           <Route path="all-special-offers" element={<AllSpecialOffer />} />
-
           {/* auths */}
           <Route path="signin" element={<SignIn />} />
           <Route path="signup" element={<SignUp />} />
@@ -106,6 +105,7 @@ const VendorLayout = () => {
           <Route path="/reserved" element={<Reserved />} />
           <Route path="/reservation-log" element={<ReservationHistory />} />
           <Route path="about" element={<AboutVendor />} />
+          <Route path="market-settings" element={<MarketSetting />} />
         </Routes>
       </div>
     </div>

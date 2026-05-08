@@ -87,11 +87,11 @@ function SidebarVendor() {
 
         {/* SETTINGS */}
         <button
-          onClick={() => go("/vendor/settings")}
+          onClick={() => go("/vendor/market-settings")}
           className="w-full flex items-center gap-2 px-3 py-2 rounded-md hover:bg-white/10 transition min-w-0"
         >
           <FaCog />
-          <span className="truncate">Settings</span>
+          <span className="truncate">Market Settings</span>
         </button>
       </div>
 

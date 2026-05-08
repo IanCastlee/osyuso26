@@ -26,104 +26,114 @@ try {
     $vendor_id = $user->user_id;
 
     // ================= INPUT =================
-    $limit  = max((int)($_GET['limit'] ?? 10), 1);
-    $page   = max((int)($_GET['page'] ?? 1), 1);
-    $offset = ($page - 1) * $limit;
-    $search = $_GET['search'] ?? null;
+    $limit = max((int)($_GET['limit'] ?? 10), 1);
+    $cursor = $_GET['cursor'] ?? null;
+    $search = trim($_GET['search'] ?? '');
 
-    // ================= WHERE =================
+    // ================= BASE CONDITIONS =================
     $conditions = ["p.vendor_id = ?"];
     $params = [$vendor_id];
     $types = "i";
 
+    // ================= SEARCH =================
     if (!empty($search)) {
         $conditions[] = "(p.name LIKE ? OR p.description LIKE ?)";
-        $like = "%$search%";
+        $like = "%{$search}%";
+
         $params[] = $like;
         $params[] = $like;
         $types .= "ss";
     }
 
+    // ================= CURSOR (STABLE: created_at + id) =================
+    if (!empty($cursor)) {
+
+        $conditions[] = "(
+            p.created_at < (
+                SELECT created_at FROM products WHERE id = ?
+            )
+            OR (
+                p.created_at = (
+                    SELECT created_at FROM products WHERE id = ?
+                )
+                AND p.id < ?
+            )
+        )";
+
+        $params[] = $cursor;
+        $params[] = $cursor;
+        $params[] = $cursor;
+
+        $types .= "iii";
+    }
+
     $whereSql = "WHERE " . implode(" AND ", $conditions);
 
-    // ================= COUNT =================
-    $countSql = "SELECT COUNT(*) as total FROM products p $whereSql";
-    $countStmt = $conn->prepare($countSql);
-    $countStmt->bind_param($types, ...$params);
-    $countStmt->execute();
-    $total = $countStmt->get_result()->fetch_assoc()['total'];
-
-    // ================= STEP 1: GET IDS =================
-    $idSql = "
-        SELECT p.id
-        FROM products p
-        $whereSql
-        ORDER BY p.created_at DESC
-        LIMIT ? OFFSET ?
-    ";
-
-    $idParams = $params;
-    $idTypes = $types . "ii";
-    $idParams[] = $limit;
-    $idParams[] = $offset;
-
-    $stmt = $conn->prepare($idSql);
-    $stmt->bind_param($idTypes, ...$idParams);
-    $stmt->execute();
-
-    $result = $stmt->get_result();
-    $productIds = [];
-
-    while ($row = $result->fetch_assoc()) {
-        $productIds[] = $row['id'];
-    }
-
-    if (empty($productIds)) {
-        response(true, "No products", [
-            "rows" => [],
-            "total" => 0,
-            "page" => $page,
-            "limit" => $limit
-        ]);
-    }
-
-    // ================= STEP 2: FETCH FULL DATA =================
-    $placeholders = implode(',', array_fill(0, count($productIds), '?'));
-    $types = str_repeat('i', count($productIds));
-
-    $dataSql = "
+    // ================= MAIN QUERY =================
+    $sql = "
         SELECT 
             p.id,
             p.name,
+            p.description,
             p.price,
             p.stock,
+            p.created_at,
             pi.image_path AS image
+
         FROM products p
+
         LEFT JOIN product_images pi 
-            ON p.id = pi.product_id AND pi.is_primary = 1
-        WHERE p.id IN ($placeholders)
-        ORDER BY p.created_at DESC
+            ON p.id = pi.product_id 
+            AND pi.is_primary = 1
+
+        $whereSql
+
+        ORDER BY p.created_at DESC, p.id DESC
+
+        LIMIT ?
     ";
 
-    $stmt = $conn->prepare($dataSql);
-    $stmt->bind_param($types, ...$productIds);
+    $params[] = $limit + 1; // overfetch for has_more
+    $types .= "i";
+
+    $stmt = $conn->prepare($sql);
+    $stmt->bind_param($types, ...$params);
+
     $stmt->execute();
 
     $result = $stmt->get_result();
 
     $products = [];
+
     while ($row = $result->fetch_assoc()) {
         $products[] = $row;
     }
 
-    response(true, "Products fetched", [
+    // ================= HAS MORE =================
+    $has_more = count($products) > $limit;
+
+    if ($has_more) {
+        array_pop($products);
+    }
+
+    // ================= NEXT CURSOR =================
+    $next_cursor = null;
+
+    if (!empty($products)) {
+        $last = end($products);
+        $next_cursor = $last['id'];
+    }
+
+    // ================= RESPONSE =================
+    response(true, "Products fetched successfully", [
         "rows" => $products,
-        "total" => $total,
-        "page" => $page,
         "limit" => $limit,
-        "total_pages" => ceil($total / $limit)
+        "has_more" => $has_more,
+        "next_cursor" => $next_cursor
     ]);
 
 } catch (Exception $e) {
+
     response(false, $e->getMessage());
+
 }
