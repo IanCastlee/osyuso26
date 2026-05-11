@@ -1,8 +1,8 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import { FaStore } from "react-icons/fa";
-import { FiChevronRight } from "react-icons/fi";
 import defaultLogo from "../../assets/assets_osyuso/shop.png";
+import defaultCover from "../../assets/assets_osyuso/defaultCover.png";
 
 function MarketCard({ market }) {
   const navigate = useNavigate();
@@ -36,25 +36,37 @@ function MarketCard({ market }) {
       <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-primary/10 opacity-0 group-hover:opacity-100 transition duration-300" />
 
       {/* Content */}
-      <div className="relative z-10 flex flex-col items-center justify-center h-full px-4">
-        {/* Logo */}
-        <div className="relative">
+      <div className="relative z-10 flex flex-col items-center justify-center h-full px-0">
+        <div
+          className="relative flex justify-center items-end w-full h-[110px] p-2 bg-gray-200 overflow-hidden"
+          style={{
+            backgroundImage: `url(${market.shop_cover_photo || defaultCover})`,
+            backgroundSize: "cover",
+            backgroundPosition: "center",
+          }}
+        >
+          {/* Dark overlay */}
+          <div className="absolute inset-0 bg-black/20" />
+
+          {/* Glow effect */}
           <div className="absolute inset-0 rounded-full bg-primary/20 blur-lg scale-110 group-hover:scale-125 transition duration-300" />
 
+          {/* Profile */}
           <img
-            src={market.profile_picture || defaultLogo}
+            src={market.shop_logo || defaultLogo}
             alt={market.shop_name}
             className="
-              relative
-              h-[78px] w-[78px]
-              object-cover rounded-full
-              border-4 border-white
-              shadow-lg
-              group-hover:scale-105
-              transition-transform duration-300
-            "
+      relative z-10
+      h-[78px] w-[78px]
+      object-cover rounded-full
+      border-4 border-white
+      shadow-lg
+      group-hover:scale-105
+      transition-transform duration-300
+    "
           />
         </div>
+        {/* Logo */}
 
         {/* Shop Info */}
         <div className="mt-4 text-center">
@@ -71,15 +83,14 @@ function MarketCard({ market }) {
         {/* CTA */}
         <div
           className="
-            mt-4 flex items-center gap-1
-            text-primary text-xs font-semibold
+            mt-4 flex items-center
+            text-secondary text-[10px] font-semibold
             opacity-0 group-hover:opacity-100
             translate-y-2 group-hover:translate-y-0
             transition-all duration-300
           "
         >
           Visit Shop
-          <FiChevronRight className="text-[14px]" />
         </div>
       </div>
     </div>

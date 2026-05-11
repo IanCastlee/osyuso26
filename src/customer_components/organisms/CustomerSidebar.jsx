@@ -1,8 +1,10 @@
-import React from "react";
+import React, { useState } from "react";
 import { icons } from "../../constant/icons";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "../../context/AuthContext";
 
 function CustomerSidebar({ isOpen, onClose }) {
+  const [openUserMenu, setOpenUserMenu] = useState(false);
   const {
     BsCart4,
     IoMdNotificationsOutline,
@@ -19,6 +21,8 @@ function CustomerSidebar({ isOpen, onClose }) {
     navigate(path);
     onClose(); // ✅ closes when clicking menu item
   };
+
+  const { user, logout } = useAuth();
 
   return (
     <>
@@ -96,19 +100,61 @@ function CustomerSidebar({ isOpen, onClose }) {
 
           <div className="border-t border-white/10 my-2"></div>
 
-          <button
-            onClick={() => go("/signin")}
-            className="p-2 text-left rounded-md hover:bg-white/10 transition"
-          >
-            Sign In
-          </button>
+          {/* AUTH SECTION */}
+          {user ? (
+            <div className="relative">
+              <div className="flex items-center gap-1">
+                <icons.HiMiniUserCircle className="text-3xl" />
+                <button
+                  onClick={() => setOpenUserMenu(!openUserMenu)}
+                  className="flex items-center font-semibold hover:opacity-80"
+                >
+                  {user?.fullname?.split(" ")[0] || "User"}{" "}
+                  <icons.MdKeyboardArrowDown />
+                </button>
+              </div>
 
-          <button
-            onClick={() => go("/signup")}
-            className="p-2 text-left bg-white text-secondary font-semibold rounded-md hover:bg-gray-100 transition"
-          >
-            Sign Up
-          </button>
+              {openUserMenu && (
+                <div className="absolute right-0 mt-2 w-44 bg-secondary text-black  overflow-hidden z-50">
+                  <button
+                    onClick={() => {
+                      navigate("/account");
+                      setOpenUserMenu(false);
+                    }}
+                    className="w-full text-white text-left px-4 py-2 hover:bg-white/10 transition rounded-md"
+                  >
+                    My Account
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      logout();
+                      navigate("/signin");
+                    }}
+                    className="w-full text-left px-4 py-2 hover:bg-white/10 transition rounded-md text-white"
+                  >
+                    Logout
+                  </button>
+                </div>
+              )}
+            </div>
+          ) : (
+            <>
+              <button
+                onClick={() => go("/signin")}
+                className="p-2 text-left rounded-md hover:bg-white/10 transition"
+              >
+                Sign In
+              </button>
+
+              <button
+                onClick={() => go("/signup")}
+                className="p-2 text-left bg-white text-secondary font-semibold rounded-md hover:bg-gray-100 transition"
+              >
+                Sign Up
+              </button>
+            </>
+          )}
         </div>
       </div>
     </>

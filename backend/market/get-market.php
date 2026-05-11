@@ -3,7 +3,6 @@ include("../header.php");
 header("Content-Type: application/json");
 
 require_once "../dbConn.php";
-require_once "../auth/middleware.php";
 
 function response($success, $message, $data = null) {
     echo json_encode([
@@ -16,8 +15,11 @@ function response($success, $message, $data = null) {
 
 try {
 
-    $user = requireRole(["vendor", "admin"]);
-    $user_id = $user->user_id;
+    $id = $_GET['id'] ?? null;
+
+    if (!$id) {
+        response(false, "Market ID is required");
+    }
 
     $stmt = $conn->prepare("
         SELECT 
@@ -25,26 +27,38 @@ try {
             u.fullname,
             u.address,
             u.nearby,
+            u.status,
 
             vp.shop_name,
             vp.shop_description,
             vp.phone,
             vp.shop_logo,
-            vp.shop_cover_photo
+            vp.shop_cover_photo,
+
+            bp.permit_image,
+            bp.status AS permit_status
+
         FROM users u
-        LEFT JOIN vendor_profiles vp 
+        INNER JOIN vendor_profiles vp 
             ON vp.user_id = u.user_id
+        LEFT JOIN business_permits bp 
+            ON bp.user_id = u.user_id
+
         WHERE u.user_id = ?
         LIMIT 1
     ");
 
-    $stmt->bind_param("i", $user_id);
+    $stmt->bind_param("i", $id);
+
     $stmt->execute();
 
     $result = $stmt->get_result();
-    $data = $result->fetch_assoc();
 
-    response(true, "Fetched successfully", $data);
+    $market = $result->fetch_assoc();
+
+    response(true, "Market fetched successfully", [
+        "market" => $market
+    ]);
 
 } catch (Exception $e) {
     response(false, $e->getMessage());

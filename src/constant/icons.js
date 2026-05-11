@@ -27,10 +27,12 @@ import { MdSort } from "react-icons/md";
 import { MdOutlineChevronRight } from "react-icons/md";
 import { MdOutlineChevronLeft } from "react-icons/md";
 import { IoChevronDownCircleOutline } from "react-icons/io5";
+import { CiLocationArrow1 } from "react-icons/ci";
 
 export const icons = {
   BsCart4,
   MdOutlineChevronLeft,
+  CiLocationArrow1,
   IoChevronDownCircleOutline,
   MdOutlineChevronRight,
   MdSort,

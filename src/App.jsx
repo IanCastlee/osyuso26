@@ -67,9 +67,9 @@ const CustomerLayout = () => {
           <Route index element={<CustomerHomePage />} />
           <Route path="categories/:categoryId" element={<Categories />} />{" "}
           <Route path="all-categories" element={<AllCategories />} />
-          <Route path="market" element={<Market />} />
+          <Route path="market/:id" element={<Market />} />{" "}
           <Route path="all-markets" element={<AllMarkets />} />
-          <Route path="reserve" element={<ReserveDetails />} />
+          <Route path="reserve/:productId" element={<ReserveDetails />} />
           <Route path="cart" element={<Cart />} />
           <Route path="notification" element={<Notifcation />} />
           <Route path="faq" element={<FAQ />} />

@@ -49,8 +49,8 @@ function MarketSetting() {
       phone: data.phone || "",
     });
 
-    setProfilePreview(data.profile_picture || null);
-    setCoverPreview(data.cover_photo || null);
+    setProfilePreview(data.shop_logo || null);
+    setCoverPreview(data.shop_cover_photo || null);
   }, [data]);
 
   // ================= INPUT HANDLER =================
@@ -81,30 +81,6 @@ function MarketSetting() {
 
     await submit(formData);
   };
-  // const handleSubmit = async () => {
-  //   const formData = new FormData();
-
-  //   Object.keys(form).forEach((key) => {
-  //     formData.append(key, form[key]);
-  //   });
-
-  //   if (profileFile) {
-  //     console.log("ADDING PROFILE:", profileFile);
-  //     formData.append("profile_picture", profileFile);
-  //   }
-
-  //   if (coverFile) {
-  //     console.log("ADDING COVER:", coverFile);
-  //     formData.append("cover_photo", coverFile);
-  //   }
-
-  //   // 🔥 DEBUG THIS
-  //   for (let pair of formData.entries()) {
-  //     console.log("FD:", pair[0], pair[1]);
-  //   }
-
-  //   await submit(formData);
-  // };
 
   // ================= PROFILE =================
   const handleProfileClick = () => {

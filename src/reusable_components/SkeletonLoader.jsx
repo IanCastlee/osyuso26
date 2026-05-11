@@ -2,7 +2,7 @@ import React from "react";
 
 function SkeletonLoader({ count = 10 }) {
   return (
-    <div className="w-full grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-5">
+    <div className="w-full grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-5 px-1">
       {Array.from({ length: count }).map((_, index) => (
         <div
           key={index}

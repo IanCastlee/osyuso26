@@ -180,8 +180,8 @@ try {
             $profileUrl = $upload['secure_url'];
 
             $stmt = $conn->prepare("
-                UPDATE users 
-                SET profile_picture=?, updated_at=NOW()
+                UPDATE vendor_profiles 
+                SET shop_logo=?, updated_at=NOW()
                 WHERE user_id=?
             ");
 
@@ -211,8 +211,8 @@ try {
             $coverUrl = $upload['secure_url'];
 
             $stmt = $conn->prepare("
-                UPDATE users 
-                SET cover_photo=?, updated_at=NOW()
+                UPDATE vendor_profiles 
+                SET shop_cover_photo=?, updated_at=NOW()
                 WHERE user_id=?
             ");
 

@@ -4,6 +4,7 @@ import { useParams, useSearchParams } from "react-router-dom";
 import useGetData from "../../hooks/useGetData";
 import { icons } from "../../constant/icons";
 import SkeletonLoader from "../../reusable_components/SkeletonLoader";
+import { URL } from "../../utils/URL";
 
 function Categories() {
   const { categoryId } = useParams();
@@ -63,9 +64,7 @@ function Categories() {
         params.append("direction", direction);
       }
 
-      const res = await fetch(
-        `http://localhost/OSYUSO26/backend/product/get-products_c.php?${params}`,
-      );
+      const res = await fetch(`${URL.URL}product/get-products_c.php?${params}`);
 
       const json = await res.json();
 
@@ -218,7 +217,7 @@ function Categories() {
               }
               className="w-full text-xs text-secondary py-3"
             >
-              {loadingMore ? "Loading..." : "Load More"}
+              {loadingMore ? <SkeletonLoader /> : "Load More"}
             </button>
           )}
         </div>

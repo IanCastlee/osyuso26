@@ -21,7 +21,6 @@ try {
             u.user_id,
             u.fullname,
             u.profile_picture,
-            u.cover_photo,
             u.address,
             u.nearby,
             u.status,
@@ -29,6 +28,8 @@ try {
             vp.shop_name,
             vp.shop_description,
             vp.phone,
+            vp.shop_logo,
+            vp.shop_cover_photo,
 
             bp.permit_image,
             bp.status AS permit_status

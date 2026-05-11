@@ -29,7 +29,7 @@ function CustomerHero() {
       </div>
 
       <div className="mt-2 lg:w-[20%]">
-        <h2 className="lex lg:hidden text-sm font-bold text-secondary mb-2">
+        <h2 className="flex lg:hidden text-xs font-bold text-secondary my-2">
           NEW ARRIVAL
         </h2>
 
@@ -67,7 +67,7 @@ function CustomerHero() {
 
         <div className="w-full flex justify-end">
           <button className=" text-[10px] text-primary px-4 rounded  hover:text-secondary transition duration-300">
-            Show All
+            View All
           </button>
         </div>
       </div>

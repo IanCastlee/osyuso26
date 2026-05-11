@@ -6,7 +6,7 @@ function Loader({ size = 10, color = "blue-400", fullScreen = false }) {
       }`}
     >
       <div
-        className={`w-${size} h-${size} border-4 border-${color} border-t-transparent rounded-full animate-spin`}
+        className={`w-${size} h-${size} border-4 border-orange-500 border-t-transparent rounded-full animate-spin`}
       ></div>
     </div>
   );

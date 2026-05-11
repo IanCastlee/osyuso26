@@ -2,6 +2,7 @@ import React from "react";
 import CategoryCard from "../molecules/CategoryCard";
 import { useNavigate } from "react-router-dom";
 import useGetData from "../../hooks/useGetData";
+import SkeletonLoader from "../../reusable_components/SkeletonLoader";
 
 function CategorySection() {
   const navigate = useNavigate();
@@ -14,12 +15,12 @@ function CategorySection() {
 
   return (
     <div className="w-full flex flex-col gap-3 px-1 lg:p-4 bg-primary mt-2">
-      <h2 className="text-sm font-bold text-secondary mt-2">CATEGORIES</h2>
+      <h2 className="text-xs font-bold text-secondary mt-2">CATEGORIES</h2>
 
       <div>
         <div className="flex justify-around lg:justify-start flex-wrap gap-2 lg:gap-4 border-t border-gray-200 px-0 lg:pt-2">
           {loading ? (
-            <p>Loading...</p>
+            <SkeletonLoader />
           ) : (
             data?.map((category) => (
               <CategoryCard
@@ -37,7 +38,7 @@ function CategorySection() {
             onClick={handleViewAll}
             className="text-[10px] lg:text-xs text-primary px-4 rounded hover:text-secondary transition duration-300"
           >
-            View All Categories
+            View All
           </button>
         </div>
       </div>
