@@ -5,15 +5,66 @@ import { LazyLoadImage } from "react-lazy-load-image-component";
 import { CiLocationOn, CiShop } from "react-icons/ci";
 import { BsCartPlus } from "react-icons/bs";
 
+import noShopLogo from "../../assets/icons/noShopLogo.png";
+
 import useGetData from "../../hooks/useGetData";
 import Loader from "../../reusable_components/Loader";
 import SingleSkeletonLoader from "../../reusable_components/SingleSkeletonLoader";
 import NoData from "../../reusable_components/NoData";
+import useFormSubmit from "../../hooks/useFormSubmit";
+import { useToast } from "../../context/ToastContext";
 
 function ReserveDetails() {
   const { productId } = useParams();
+  const { showToast } = useToast();
+
+  // ================= MODAL =================
+  const [showDevModal, setShowDevModal] = useState(false);
 
   const [weight, setWeight] = useState(0.5);
+
+  //ADD TO CART
+  const { submit, loading: cartLoading } = useFormSubmit(
+    "cart/add-to-cart.php",
+    (res) => {
+      console.log("Added to cart:", res);
+
+      showToast({
+        type: "success",
+        message: "Added to cart",
+        duration: 5000,
+      });
+
+      setShowDevModal(false);
+    },
+  );
+
+  const handleAddToCart = async () => {
+    try {
+      if (!product?.id) return;
+
+      const formData = new FormData();
+      formData.append("product_id", product.id);
+
+      if (product.unit_type === "kg") {
+        formData.append("weight", weight);
+        formData.append("quantity", 0);
+      } else {
+        formData.append("quantity", quantity || 1);
+        formData.append("weight", 0);
+      }
+
+      await submit(formData);
+
+      showToast({
+        type: "success",
+        message: "Added to cart!",
+        duration: 5000,
+      });
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
   // FETCH PRODUCT DETAILS
   const { data, loading } = useGetData(
@@ -106,13 +157,32 @@ function ReserveDetails() {
 
           {/* ACTIONS */}
           <div className="flex justify-end gap-3 mt-5 flex-wrap sm:flex-nowrap">
-            <button className="px-4 sm:px-5 py-1 text-[11px] lg:text-sm bg-secondary text-white hover:opacity-90 transition">
+            <button
+              onClick={() => setShowDevModal(true)}
+              className="px-4 sm:px-5 py-1 text-[11px] lg:text-sm bg-secondary text-white hover:opacity-90 transition"
+            >
               Buy Now
             </button>
 
-            <button className="flex items-center gap-1 px-4 sm:px-5 py-1 text-[11px] lg:text-sm border border-gray-300 text-secondary hover:bg-secondary hover:text-white transition">
+            <button
+              onClick={handleAddToCart}
+              disabled={cartLoading || !product?.id}
+              className="
+    flex items-center gap-1
+    px-4 sm:px-5 py-1
+    text-[11px] lg:text-sm
+    border border-gray-300
+    text-secondary
+    hover:bg-secondary
+    hover:text-white
+    transition
+    disabled:opacity-50
+    disabled:cursor-not-allowed
+  "
+            >
               <BsCartPlus />
-              Add to Cart
+
+              {cartLoading ? "Adding..." : "Add to Cart"}
             </button>
           </div>
         </div>
@@ -123,7 +193,7 @@ function ReserveDetails() {
         <div className="w-full flex flex-col md:flex-row gap-4">
           {/* PROFILE */}
           <LazyLoadImage
-            src={product.profile_picture || "/placeholder.png"}
+            src={product.profile_picture || noShopLogo}
             alt={product.shop_name}
             effect="opacity"
             className="w-[70px] h-[70px] sm:w-[90px] sm:h-[90px] object-cover"
@@ -179,6 +249,56 @@ function ReserveDetails() {
           </p>
         </div>
       </div>
+
+      {/* ================= DEV MODAL ================= */}
+      {showDevModal && (
+        <div
+          onClick={() => setShowDevModal(false)}
+          className="
+            fixed inset-0 z-[999]
+            bg-black/50
+            flex items-center justify-center
+            px-4
+          "
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="
+              w-full max-w-sm
+              bg-white
+              rounded-lg
+              p-5
+              shadow-xl
+              animate-fadeIn
+            "
+          >
+            {/* TITLE */}
+            <h2 className="text-lg font-semibold text-primary">Ih?</h2>
+
+            {/* MESSAGE */}
+            <p className="text-sm text-gray-600 mt-2 leading-relaxed">
+              Exited yarn! Under development pa tabi.
+            </p>
+
+            {/* BUTTON */}
+            <div className="flex justify-end mt-5">
+              <button
+                onClick={() => setShowDevModal(false)}
+                className="
+                  px-4 py-2
+                  text-sm
+                  bg-secondary
+                  text-white
+                  hover:opacity-90
+                  transition
+                "
+              >
+                Okay
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

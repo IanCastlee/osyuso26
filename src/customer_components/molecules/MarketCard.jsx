@@ -11,7 +11,6 @@ function MarketCard({ market }) {
     navigate(`/market/${market.user_id}`);
   };
 
-  // Limit shop name
   const shopName =
     market.shop_name && market.shop_name.length > 16
       ? market.shop_name.slice(0, 16) + "..."
@@ -22,7 +21,8 @@ function MarketCard({ market }) {
       onClick={handleClick}
       className="
         relative overflow-hidden
-        w-[48%] sm:w-[180px] h-[210px]
+        w-full
+        h-[210px]
         bg-white/80 backdrop-blur-md
         border border-gray-200/70
         rounded-2xl
@@ -56,17 +56,16 @@ function MarketCard({ market }) {
             src={market.shop_logo || defaultLogo}
             alt={market.shop_name}
             className="
-      relative z-10
-      h-[78px] w-[78px]
-      object-cover rounded-full
-      border-4 border-white
-      shadow-lg
-      group-hover:scale-105
-      transition-transform duration-300
-    "
+              relative z-10
+              h-[78px] w-[78px]
+              object-cover rounded-full
+              border-4 border-white
+              shadow-lg
+              group-hover:scale-105
+              transition-transform duration-300
+            "
           />
         </div>
-        {/* Logo */}
 
         {/* Shop Info */}
         <div className="mt-4 text-center">

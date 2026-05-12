@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { FaEnvelope, FaLock } from "react-icons/fa";
+import { FaEnvelope, FaLock, FaEye, FaEyeSlash } from "react-icons/fa";
 import { RxQuestionMarkCircled } from "react-icons/rx";
 import { useNavigate } from "react-router-dom";
 import { PiShoppingCartSimpleFill } from "react-icons/pi";
@@ -21,6 +21,7 @@ function SignIn() {
   });
 
   const [errors, setErrors] = useState({});
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -71,7 +72,19 @@ function SignIn() {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
+    // CHECK INTERNET CONNECTION
+    if (!navigator.onLine) {
+      showToast({
+        type: "error",
+        message: "No internet connection. Please check your network.",
+        duration: 5000,
+      });
+
+      return;
+    }
+
     let newErrors = {};
+
     if (!form.email) newErrors.email = "Email is required";
     if (!form.password) newErrors.password = "Password is required";
 
@@ -85,6 +98,22 @@ function SignIn() {
         });
       } catch (err) {
         console.error(err.message);
+        //  HANDLE NETWORK ERRORS DURING REQUEST
+        if (!navigator.onLine) {
+          showToast({
+            type: "error",
+            message: "No internet connection. Please check your network.",
+            duration: 5000,
+          });
+        } else {
+          showToast({
+            type: "error",
+            message: err?.message || "Something went wrong",
+
+            duration: 5000,
+          });
+        }
+        console.er;
         alert(err.message || "Login failed");
       }
     }
@@ -134,16 +163,27 @@ function SignIn() {
               error={errors.email}
             />
 
-            <InputField
-              label="Password"
-              name="password"
-              type="password"
-              value={form.password}
-              onChange={handleChange}
-              placeholder="Enter password"
-              icon={FaLock}
-              error={errors.password}
-            />
+            {/* PASSWORD FIELD */}
+            <div className="relative">
+              <InputField
+                label="Password"
+                name="password"
+                type={showPassword ? "text" : "password"}
+                value={form.password}
+                onChange={handleChange}
+                placeholder="Enter password"
+                icon={FaLock}
+                error={errors.password}
+              />
+
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-[38px] text-gray-500 hover:text-gray-700"
+              >
+                {showPassword ? <FaEyeSlash /> : <FaEye />}
+              </button>
+            </div>
 
             {/* BUTTON */}
             <button

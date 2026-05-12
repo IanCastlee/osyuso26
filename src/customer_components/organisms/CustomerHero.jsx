@@ -28,10 +28,10 @@ function CustomerHero() {
         </button> */}
       </div>
 
-      <div className="mt-2 lg:w-[20%]">
-        <h2 className="flex lg:hidden text-xs font-bold text-secondary my-2">
-          NEW ARRIVAL
-        </h2>
+      <div className="mt-2 lg:mt-0 lg:w-[20%]">
+        <div className="flex lg:hidden items-center justify-between p-2">
+          <h2 className="text-xs font-bold text-secondary">NEW ARRIVAL</h2>
+        </div>
 
         <div className="flex flex-row lg:flex-col w-full lg:w-full h-[80px] lg:h-full gap-1">
           {/* ITEM 1 */}
@@ -64,12 +64,16 @@ function CustomerHero() {
             </div>
           </div>
         </div>
-
-        <div className="w-full flex justify-end">
-          <button className=" text-[10px] text-primary px-4 rounded  hover:text-secondary transition duration-300">
-            View All
+        {/* {hasMore && ( */}
+        <div className="w-full flex lg:hidden justify-end mt-2">
+          <button
+            onClick={() => navigate("/all-markets")}
+            className="text-xs text-orange-500 font-semibold"
+          >
+            See all →
           </button>
         </div>
+        {/* )} */}
       </div>
     </div>
   );

@@ -50,6 +50,17 @@ function SignUp() {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
+    // CHECK INTERNET CONNECTION
+    if (!navigator.onLine) {
+      showToast({
+        type: "error",
+        message: "No internet connection. Please check your network.",
+        duration: 5000,
+      });
+
+      return;
+    }
+
     let newErrors = {};
 
     if (!form.fname) newErrors.fname = "First name is required";
@@ -69,11 +80,21 @@ function SignUp() {
           password: form.password,
         });
       } catch (err) {
-        showToast({
-          type: "error",
-          message: err?.message || "Something went wrong",
-          duration: 5000,
-        });
+        //  HANDLE NETWORK ERRORS DURING REQUEST
+        if (!navigator.onLine) {
+          showToast({
+            type: "error",
+            message: "No internet connection. Please check your network.",
+            duration: 5000,
+          });
+        } else {
+          showToast({
+            type: "error",
+            message: err?.message || "Something went wrong",
+
+            duration: 5000,
+          });
+        }
         console.error(err.message);
       }
     }

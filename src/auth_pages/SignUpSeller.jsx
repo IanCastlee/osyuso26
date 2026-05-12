@@ -118,6 +118,17 @@ function SignUpSeller() {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
+    // CHECK INTERNET CONNECTION
+    if (!navigator.onLine) {
+      showToast({
+        type: "error",
+        message: "No internet connection. Please check your network.",
+        duration: 5000,
+      });
+
+      return;
+    }
+
     const submitErrors = validateStep(3);
     setErrors(submitErrors);
 
@@ -132,10 +143,22 @@ function SignUpSeller() {
     try {
       await submit(data);
     } catch (err) {
-      showToast({
-        type: "error",
-        message: err?.message || "Something went wrong",
-      });
+      //  HANDLE NETWORK ERRORS DURING REQUEST
+      if (!navigator.onLine) {
+        showToast({
+          type: "error",
+          message: "No internet connection. Please check your network.",
+          duration: 5000,
+        });
+      } else {
+        showToast({
+          type: "error",
+          message: err?.message || "Something went wrong",
+
+          duration: 5000,
+        });
+      }
+      console.er;
     }
   };
   // ================= UI =================

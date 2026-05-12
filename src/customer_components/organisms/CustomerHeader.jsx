@@ -144,15 +144,17 @@ function CustomerHeader() {
               </span>
             </button>
 
-            <button
-              onClick={() => navigate("/cart")}
-              className="p-2 rounded-full hover:bg-white/20 relative"
-            >
-              <BsCart4 />
-              <span className="absolute -top-1 -right-1 bg-red-500 text-[10px] w-4 h-4 flex items-center justify-center rounded-full">
-                2
-              </span>
-            </button>
+            {user && (
+              <button
+                onClick={() => navigate("/cart")}
+                className="p-2 rounded-full hover:bg-white/20 relative"
+              >
+                <BsCart4 />
+                <span className="absolute -top-1 -right-1 bg-red-500 text-[10px] w-4 h-4 flex items-center justify-center rounded-full">
+                  2
+                </span>
+              </button>
+            )}
           </div>
         </div>
       </header>

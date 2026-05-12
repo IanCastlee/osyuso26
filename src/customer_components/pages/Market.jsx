@@ -6,7 +6,7 @@ import { CiLocationOn } from "react-icons/ci";
 import ProductCard from "../molecules/ProductCard";
 import useGetData from "../../hooks/useGetData";
 import { icons } from "../../constant/icons";
-import bgImage from "../../assets/assets_osyuso/bg.webp";
+import bgImage from "../../assets/assets_osyuso/defaultCover.png";
 import profileImage from "../../assets/assets_osyuso/shop.png";
 import MarketSkeletonLoader from "../../reusable_components/MarketSkeletonLoader";
 import SkeletonLoader from "../../reusable_components/SkeletonLoader";
@@ -207,10 +207,17 @@ function Market() {
         <div className="pl-3 sm:pl-28 md:pl-36 mt-2">
           <h2 className="text-xl font-semibold">{market?.shop_name}</h2>
 
-          <div className="text-xs text-gray-600 flex items-center gap-1">
+          <a
+            href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+              market?.address,
+            )}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-xs text-gray-600 flex items-center gap-1 hover:text-blue-600 hover:underline"
+          >
             <CiLocationOn />
             {market?.address}
-          </div>
+          </a>
 
           <div className="text-xs text-gray-600 flex items-center gap-1">
             <icons.CiLocationArrow1 />

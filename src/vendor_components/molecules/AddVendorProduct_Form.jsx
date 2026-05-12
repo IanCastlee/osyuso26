@@ -45,8 +45,6 @@ function AddVendorProduct_Form() {
         duration: 3000,
       });
 
-      console.log("SUCCESS:", res);
-
       //  CLEAR FORM AFTER SUCCESS
       setForm({
         name: "",
@@ -114,6 +112,17 @@ function AddVendorProduct_Form() {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
+    // CHECK INTERNET CONNECTION
+    if (!navigator.onLine) {
+      showToast({
+        type: "error",
+        message: "No internet connection. Please check your network.",
+        duration: 5000,
+      });
+
+      return;
+    }
+
     if (!validate()) return;
 
     const data = new FormData();
@@ -136,6 +145,23 @@ function AddVendorProduct_Form() {
       await submit(data);
     } catch (err) {
       console.error(err);
+
+      //  HANDLE NETWORK ERRORS DURING REQUEST
+      if (!navigator.onLine) {
+        showToast({
+          type: "error",
+          message: "No internet connection. Please check your network.",
+          duration: 5000,
+        });
+      } else {
+        showToast({
+          type: "error",
+          message: err?.message || "Something went wrong",
+
+          duration: 5000,
+        });
+      }
+      console.er;
     }
   };
   return (

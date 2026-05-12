@@ -14,8 +14,10 @@ function CategorySection() {
   };
 
   return (
-    <div className="w-full flex flex-col gap-3 px-1 lg:p-4 bg-primary mt-2">
-      <h2 className="text-xs font-bold text-secondary mt-2">CATEGORIES</h2>
+    <div className="w-full flex flex-col lg:gap-4 p-1 lg:p-4 bg-primary mt-4 mb-6">
+      <div className="flex items-center justify-between p-2">
+        <h2 className="text-xs font-bold text-secondary">CATEGORIES</h2>
+      </div>
 
       <div>
         <div className="flex justify-around lg:justify-start flex-wrap gap-2 lg:gap-4 border-t border-gray-200 px-0 lg:pt-2">
@@ -33,14 +35,16 @@ function CategorySection() {
           )}
         </div>
 
-        <div className="w-full flex justify-end my-2 lg:my-0">
+        {/* {hasMore && ( */}
+        <div className="w-full flex justify-end mt-3">
           <button
-            onClick={handleViewAll}
-            className="text-[10px] lg:text-xs text-primary px-4 rounded hover:text-secondary transition duration-300"
+            onClick={() => navigate("/all-markets")}
+            className="text-xs text-orange-500 font-semibold"
           >
-            View All
+            See all →
           </button>
         </div>
+        {/* )} */}
       </div>
     </div>
   );

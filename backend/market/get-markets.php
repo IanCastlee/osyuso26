@@ -15,56 +15,67 @@ function response($success, $message, $data = null) {
 
 try {
 
-    // ================= GET 6 MARKETS =================
-    $stmt = $conn->prepare("
+    $limit = isset($_GET['limit']) ? intval($_GET['limit']) : 12;
+    $cursor = isset($_GET['cursor']) ? intval($_GET['cursor']) : null;
+
+    $sql = "
         SELECT 
             u.user_id,
-            u.fullname,
-            u.profile_picture,
-            u.address,
-            u.nearby,
-            u.status,
-
             vp.shop_name,
-            vp.shop_description,
-            vp.phone,
             vp.shop_logo,
-            vp.shop_cover_photo,
-
-            bp.permit_image,
-            bp.status AS permit_status
-
+            vp.shop_cover_photo
         FROM users u
         INNER JOIN vendor_profiles vp 
             ON vp.user_id = u.user_id
-        LEFT JOIN business_permits bp 
-            ON bp.user_id = u.user_id
-
         WHERE u.role = 'vendor'
-        AND u.status = 'pending'
+    ";
 
-        ORDER BY u.created_at DESC
-        LIMIT 6
-    ");
+    $params = [];
+    $types = "";
 
-    $stmt->execute();
-    $result = $stmt->get_result();
-
-    $markets = [];
-
-    while ($row = $result->fetch_assoc()) {
-        $markets[] = $row;
+    // ✅ FIXED CURSOR CHECK
+    if ($cursor !== null) {
+        $sql .= " AND u.user_id < ?";
+        $params[] = $cursor;
+        $types .= "i";
     }
 
-    // ================= DETECT IF MORE THAN 5 =================
-    $hasMore = count($markets) > 5;
+    $sql .= " ORDER BY u.user_id DESC LIMIT ?";
 
-    // only return 5 items to frontend display
-    $visibleMarkets = array_slice($markets, 0, 5);
+    $params[] = $limit + 1;
+    $types .= "i";
 
-    response(true, "Markets fetched successfully", [
-        "markets" => $visibleMarkets,
-        "hasMore" => $hasMore
+    $stmt = $conn->prepare($sql);
+
+    if (!$stmt) {
+        throw new Exception($conn->error);
+    }
+
+    $stmt->bind_param($types, ...$params);
+    $stmt->execute();
+
+    $result = $stmt->get_result();
+
+    $data = [];
+
+    while ($row = $result->fetch_assoc()) {
+        $data[] = $row;
+    }
+
+    // ✅ detect extra row
+    $hasMore = count($data) > $limit;
+
+    if ($hasMore) {
+        array_pop($data);
+    }
+
+    // ✅ safe next cursor
+    $nextCursor = !empty($data) ? end($data)['user_id'] : null;
+
+    response(true, "Markets fetched", [
+        "data" => $data,
+        "next_cursor" => $nextCursor,
+        "has_more" => $hasMore
     ]);
 
 } catch (Exception $e) {
