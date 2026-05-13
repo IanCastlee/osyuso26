@@ -1,5 +1,9 @@
 import React, { createContext, useContext, useState } from "react";
-import { IoIosCloseCircle, IoIosCheckmarkCircle } from "react-icons/io";
+import {
+  IoIosCloseCircle,
+  IoIosCheckmarkCircle,
+  IoIosInformationCircle,
+} from "react-icons/io";
 
 const ToastContext = createContext();
 
@@ -32,15 +36,18 @@ function ToastContainer({ toast }) {
   const config = {
     success: {
       icon: <IoIosCheckmarkCircle />,
-      iconBg: "bg-green-100 text-green-600",
+      bg: "bg-green-500",
+      iconBg: "bg-white/20 text-white",
     },
     error: {
       icon: <IoIosCloseCircle />,
-      iconBg: "bg-red-100 text-red-600",
+      bg: "bg-red-500",
+      iconBg: "bg-white/20 text-white",
     },
     info: {
-      icon: <IoIosCheckmarkCircle />,
-      iconBg: "bg-blue-100 text-blue-600",
+      icon: <IoIosInformationCircle />,
+      bg: "bg-blue-500",
+      iconBg: "bg-white/20 text-white",
     },
   };
 
@@ -49,32 +56,35 @@ function ToastContainer({ toast }) {
   return (
     <div className="fixed top-4 right-3 sm:top-5 sm:right-5 z-50 animate-fadeIn">
       <div
-        className="
-          flex items-center gap-2 sm:gap-3
-          bg-white
+        className={`
+          flex items-center
+          gap-2
+          px-3 py-2
+          rounded-lg
           shadow-lg
-          rounded-xl
-          px-3 py-2 sm:px-4 sm:py-3
-          min-w-[200px] sm:min-w-[260px]
+          text-white
+          ${current.bg}
           max-w-[90vw]
-        "
+        `}
       >
         {/* ICON */}
         <div
           className={`
-            w-7 h-7 sm:w-9 sm:h-9
+            w-8 h-8
             flex items-center justify-center
             rounded-full
             ${current.iconBg}
-            text-base sm:text-lg
             shrink-0
+            leading-none
           `}
         >
-          {current.icon}
+          <span className="text-lg leading-none flex items-center justify-center">
+            {current.icon}
+          </span>
         </div>
 
-        {/* MESSAGE */}
-        <div className="text-xs sm:text-sm text-gray-700 font-medium leading-snug">
+        {/* MESSAGE (FIXED SPACING) */}
+        <div className="text-xs sm:text-sm leading-tight m-0 p-0">
           {toast.message}
         </div>
       </div>

@@ -30,10 +30,8 @@ function MarketSection() {
 
   if (loading) return <SkeletonLoader />;
 
-  console.log("DATA:", data);
-
   return (
-    <div className="w-full flex flex-col p-2 lg:p-4 bg-primary mt-4 mb-6">
+    <div className="w-full flex flex-col p-2 lg:p-4 bg-primary  mb-6">
       <div className="flex items-center justify-between p-2">
         <h2 className="text-xs font-bold text-secondary">MARKETS</h2>
       </div>

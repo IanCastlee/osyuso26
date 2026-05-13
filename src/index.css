@@ -133,3 +133,36 @@ code {
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
+
+/* animation toster */
+@keyframes iconPop {
+  0% {
+    transform: scale(0.4) rotate(-10deg);
+    opacity: 0;
+  }
+  60% {
+    transform: scale(1.2) rotate(5deg);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1) rotate(0);
+  }
+}
+
+@keyframes toastIcon {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-2px);
+  }
+}
+
+.animate-iconPop {
+  animation: iconPop 0.35s ease-out;
+}
+
+.animate-toastIcon {
+  animation: toastIcon 1.2s ease-in-out infinite;
+}

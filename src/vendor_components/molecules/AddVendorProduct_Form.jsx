@@ -25,7 +25,7 @@ function AddVendorProduct_Form() {
   const [preview, setPreview] = useState([]);
 
   // ================= API =================
-  const { data: categories } = useGetData("product/get-categories.php");
+  const { data: categories } = useGetData("product/get-categories_v.php");
 
   const { data: subcategories, refetch: fetchSubcategories } = useGetData(
     form.category_id

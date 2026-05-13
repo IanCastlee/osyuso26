@@ -70,12 +70,16 @@ function AllMarkets() {
 
   // ================= LOADING =================
   if (loading && markets.length === 0) {
-    return <SkeletonLoader />;
+    return (
+      <div className="w-full px-1 lg:px-[150px]">
+        <SkeletonLoader />
+      </div>
+    );
   }
 
   return (
     <div className="w-full bg-gray-100 px-1 lg:px-28">
-      <div className="w-full flex flex-col bg-primary py-6 px-2 lg:px-4">
+      <div className="w-full  min-h-screen flex flex-col bg-primary py-6 px-2 lg:px-4">
         {/* TITLE */}
         <h2 className="text-xs lg:text-sm font-bold text-secondary mb-2">
           MARKETS
