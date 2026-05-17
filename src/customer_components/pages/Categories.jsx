@@ -13,7 +13,7 @@ function Categories() {
   const urlName = searchParams.get("name");
 
   const [subCategories, setSubCategories] = useState([]);
-  const [active, setActive] = useState("");
+  const [active, setActive] = useState("all");
   const [openDropdown, setOpenDropdown] = useState(false);
 
   const [products, setProducts] = useState([]);
@@ -36,10 +36,7 @@ function Categories() {
         ? data.data
         : [];
 
-    if (list.length > 0) {
-      setSubCategories(list);
-      setActive(Number(list[0].id));
-    }
+    setSubCategories(list);
   }, [data]);
 
   // ================= FETCH PRODUCTS =================
@@ -49,16 +46,23 @@ function Categories() {
     reset = false,
   } = {}) => {
     if (loadingMore) return;
-    if (!active) return;
+    if (!active && active !== "all") return;
 
     setLoadingMore(true);
 
     try {
       const params = new URLSearchParams({
-        subcategory_id: active,
         limit: 20,
       });
 
+      // ================= FILTER =================
+      if (active === "all") {
+        params.append("category_id", categoryId);
+      } else {
+        params.append("subcategory_id", active);
+      }
+
+      // ================= CURSOR =================
       if (cursor) {
         params.append("cursor", cursor);
         params.append("direction", direction);
@@ -84,9 +88,9 @@ function Categories() {
     }
   };
 
-  // ================= RESET ON SUBCATEGORY CHANGE =================
+  // ================= RESET ON FILTER CHANGE =================
   useEffect(() => {
-    if (!active) return;
+    if (!active && active !== "all") return;
 
     setProducts([]);
     setNextCursor(null);
@@ -116,10 +120,11 @@ function Categories() {
   }, [nextCursor, hasMore, loadingMore, active]);
 
   console.log("PROD : ", products);
+
   // ================= UI =================
   return (
-    <div className="w-full bg-gray-100 min-h-[calc(100vh-4rem)]">
-      <div className="w-full h-full flex flex-col bg-primary px-3 sm:px-6 lg:px-28 py-3">
+    <div className="w-full bg-gray-100 min-h-[calc(100vh-4rem)] px-1 lg:px-[150px]">
+      <div className="w-full h-full flex  flex-col bg-primary px-1 lg:px-3  py-6 ">
         {/* TITLE */}
         <h1 className="text-lg sm:text-xl lg:text-2xl font-bold text-primary">
           {urlName || "Category"}
@@ -127,7 +132,22 @@ function Categories() {
 
         {/* DESKTOP TABS */}
         <div className="mt-3 border-b border-white/10 hidden lg:block mb-2">
-          <div className="flex gap-12 overflow-x-auto no-scrollbar py-2">
+          <div className="flex gap-12 overflow-x-auto no-scrollbar py-2  border-b border-gray-200">
+            {/* ALL */}
+            <button
+              onClick={() => setActive("all")}
+              className={`pb-2 cursor-pointer px-4 text-xs sm:text-sm whitespace-nowrap transition-all flex-shrink-0
+                ${
+                  active === "all"
+                    ? "text-orange-500 font-semibold border-b-2 border-orange-500"
+                    : "text-gray-500 hover:text-orange-500 hover:border-orange-500"
+                }
+              `}
+            >
+              All
+            </button>
+
+            {/* SUBCATEGORIES */}
             {loading ? (
               <p className="text-gray-500 text-xs">Loading...</p>
             ) : (
@@ -135,11 +155,11 @@ function Categories() {
                 <button
                   key={item.id}
                   onClick={() => setActive(Number(item.id))}
-                  className={`pb-2 text-xs sm:text-sm whitespace-nowrap transition-all flex-shrink-0
+                  className={`pb-2 cursor-pointer  px-4 text-xs sm:text-sm whitespace-nowrap transition-all flex-shrink-0
                     ${
-                      active === item.id
-                        ? "text-secondary font-semibold border-b-2 border-secondary"
-                        : "text-gray-500 hover:text-secondary"
+                      active === Number(item.id)
+                        ? "text-orange-500 font-semibold border-b-2 border-orange-500"
+                        : "text-gray-500 hover:text-orange-500 hover:border-orange-500"
                     }
                   `}
                 >
@@ -157,13 +177,30 @@ function Categories() {
             className="flex items-center gap-2 text-xs text-secondary"
           >
             <icons.MdSort />
-            {subCategories.find((s) => Number(s.id) === Number(active))?.name ||
-              "Select"}
+
+            {active === "all"
+              ? "All"
+              : subCategories.find((s) => Number(s.id) === Number(active))
+                  ?.name || "Select"}
           </button>
 
           {openDropdown && (
             <div className="absolute top-8 right-0 w-48 bg-white shadow-lg rounded-md z-50">
               <div className="max-h-48 overflow-y-auto">
+                {/* ALL */}
+                <button
+                  onClick={() => {
+                    setActive("all");
+                    setOpenDropdown(false);
+                  }}
+                  className={`w-full text-left px-3 py-2 text-xs hover:bg-gray-100
+                    ${active === "all" ? "text-secondary font-semibold" : ""}
+                  `}
+                >
+                  All
+                </button>
+
+                {/* SUBCATEGORIES */}
                 {subCategories.map((item) => (
                   <button
                     key={item.id}
@@ -215,7 +252,7 @@ function Categories() {
                   direction: "next",
                 })
               }
-              className="w-full text-xs text-secondary py-3"
+              className="w-full text-xs text-orange-500 font-semibold py-3"
             >
               {loadingMore ? <SkeletonLoader /> : "Load More"}
             </button>

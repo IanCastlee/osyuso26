@@ -69,82 +69,91 @@ function FAQ() {
   };
 
   return (
-    <div>
-      <div className="flex justify-between  bg-secondary px-2 lg:px-20 py-6 items-center">
-        <div>
-          <h1 className="text-sm lg:text-2xl font-bold text-white flex items-center gap-2">
-            <AiOutlineQuestionCircle className="text-white" />
-            Frequently Asked Questions
-          </h1>
+    <div className="min-h-screen w-full bg-gray-100">
+      <section className="bg-secondary px-4 py-8 text-white sm:px-6 md:px-10 lg:px-28">
+        <div className="mx-auto flex max-w-5xl flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
+          <div className="max-w-2xl">
+            <div className="flex items-center gap-3">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white/15">
+                <AiOutlineQuestionCircle className="text-2xl" />
+              </div>
 
-          <p className="text-[10px] lg:text-sm text-gray-200 mt-1 leading-relaxed">
-            Find quick answers about ordering, payments, and OSYUSO.
-          </p>
-        </div>
-
-        {/* LANGUAGE TOGGLE */}
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => setLang("en")}
-            className={`px-3 py-1 text-xs rounded-md border transition ${
-              lang === "en"
-                ? "bg-secondary text-white border-secondary"
-                : "bg-white text-gray-600"
-            }`}
-          >
-            EN
-          </button>
-
-          <button
-            onClick={() => setLang("tl")}
-            className={`px-3 py-1 text-xs rounded-md border transition ${
-              lang === "tl"
-                ? "bg-secondary text-white border-secondary"
-                : "bg-white text-gray-600"
-            }`}
-          >
-            TL
-          </button>
-        </div>
-      </div>
-      <div className="w-full bg-gray-100 min-h-[calc(100vh-4rem)] px-6 md:px-28 py-8 pt-10">
-        {/* HEADER */}
-
-        {/* FAQ LIST */}
-        <div className="flex flex-col gap-3">
-          {faqs.map((faq) => (
-            <div
-              key={faq.id}
-              className="bg-white rounded-xs shadow-xs border border-gray-100 overflow-hidden"
-            >
-              {/* QUESTION */}
-              <button
-                onClick={() => toggle(faq.id)}
-                className="w-full flex justify-between items-center p-4 text-left hover:bg-gray-50 transition"
-              >
-                <span className="font-medium text-primary">
-                  {faq.question[lang]}
-                </span>
-
-                <IoIosArrowDown
-                  className={`text-secondary transition-transform duration-300 ${
-                    openId === faq.id ? "rotate-180" : ""
-                  }`}
-                />
-              </button>
-
-              {/* ANSWER */}
-              <div
-                className={`px-4 pb-4 text-sm text-gray-600 transition-all duration-300 ${
-                  openId === faq.id ? "block" : "hidden"
-                }`}
-              >
-                {faq.answer[lang]}
+              <div>
+                <h1 className="text-xl font-bold sm:text-2xl">
+                  Frequently Asked Questions
+                </h1>
+                <p className="mt-1 text-sm leading-6 text-white/80">
+                  Find quick answers about ordering, payments, and OSYUSO.
+                </p>
               </div>
             </div>
-          ))}
+          </div>
+
+          <div className="inline-flex w-fit rounded-lg bg-white/10 p-1">
+            <button
+              onClick={() => setLang("en")}
+              className={`rounded-md px-4 py-2 text-xs font-semibold transition ${
+                lang === "en"
+                  ? "bg-white text-secondary shadow-sm"
+                  : "text-white/75 hover:text-white"
+              }`}
+            >
+              EN
+            </button>
+
+            <button
+              onClick={() => setLang("tl")}
+              className={`rounded-md px-4 py-2 text-xs font-semibold transition ${
+                lang === "tl"
+                  ? "bg-white text-secondary shadow-sm"
+                  : "text-white/75 hover:text-white"
+              }`}
+            >
+              TL
+            </button>
+          </div>
         </div>
-      </div>
+      </section>
+
+      <main className="mx-auto w-full max-w-5xl px-4 py-6 sm:px-6 md:px-10 lg:px-0 lg:py-10">
+        <div className="space-y-3">
+          {faqs.map((faq) => {
+            const isOpen = openId === faq.id;
+
+            return (
+              <div
+                key={faq.id}
+                className="overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-gray-100"
+              >
+                <button
+                  onClick={() => toggle(faq.id)}
+                  className="flex w-full items-center justify-between gap-4 px-4 py-4 text-left transition hover:bg-gray-50 sm:px-5"
+                >
+                  <span className="text-sm font-semibold text-gray-900 sm:text-base">
+                    {faq.question[lang]}
+                  </span>
+
+                  <span
+                    className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-orange-50 text-secondary transition-transform duration-300 ${
+                      isOpen ? "rotate-180" : ""
+                    }`}
+                  >
+                    <IoIosArrowDown />
+                  </span>
+                </button>
+
+                {isOpen && (
+                  <div className="border-t border-gray-100 px-4 pb-5 pt-4 sm:px-5">
+                    <p className="text-sm leading-7 text-gray-600">
+                      {faq.answer[lang]}
+                    </p>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </main>
     </div>
   );
 }

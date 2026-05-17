@@ -8,74 +8,74 @@ import { useNavigate } from "react-router-dom";
 function CustomerHero() {
   const navigate = useNavigate();
 
-  const handleViewAll = () => {
-    navigate("/all-special-offers");
-  };
+  const promos = [
+    {
+      id: 1,
+      image: adobo,
+      title: "Fresh Meals",
+      subtitle: "Local favorites",
+    },
+    {
+      id: 2,
+      image: milkTea,
+      title: "New Shops",
+      subtitle: "Explore arrivals",
+    },
+  ];
+
   return (
-    <div className="w-full h-auto  lg:h-[300px] flex flex-col lg:flex-row mt-1.5 gap-1">
-      <div className="w-[100%] h-full bg-primary">
-        <SpecialOfferCard
-          title="50% OFF Pork Belly Today!"
-          description="Limited time offer from Juan Meat Shop in Bulusan."
-          tag="🔥 FLASH SALE"
-        />
-
-        {/* <button
-          onClick={handleViewAll}
-          className="sticky b-0 z-20 text-xs text-primary px-2 py-2 cursor-pointer"
-        >
-          View All
-        </button> */}
-      </div>
-
-      <div className="mt-2 lg:mt-0 lg:w-[20%]">
-        <div className="flex lg:hidden items-center justify-between p-2">
-          <h2 className="text-xs font-bold text-secondary">NEW ARRIVAL</h2>
+    <section className="mt-3 w-full">
+      <div className="grid gap-3 lg:grid-cols-[1fr_240px]">
+        <div className="min-w-0">
+          <SpecialOfferCard />
         </div>
 
-        <div className="flex flex-row lg:flex-col w-full lg:w-full h-[80px] lg:h-full gap-1">
-          {/* ITEM 1 */}
-          <div className="h-full lg:h-[49%] w-[80px] lg:w-full rounded-lg lg:rounded-xl overflow-hidden relative group">
-            <LazyLoadImage
-              src={adobo}
-              className="w-full h-full object-cover object-center block"
-            />
-
-            {/* OVERLAY */}
-            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-all duration-300 flex items-center justify-center">
-              <button className="text-[10px] lg:text-sm opacity-0 group-hover:opacity-100 transition-all duration-300 px-1 lg:px-3 py-1 text-xs bg-white text-primary font-semibold rounded-md">
-                Visit Shop
-              </button>
+        <aside className="lg:h-[331px] rounded-t-xl lg:rounded-xl bg-white p-3 shadow-sm">
+          <div className="mb-3 flex items-center justify-between">
+            <div>
+              <h2 className="text-sm font-bold text-gray-900">New Arrival</h2>
             </div>
+
+            <button
+              onClick={() => navigate("/all-markets")}
+              className="text-xs font-semibold text-orange-500 hover:opacity-80"
+            >
+              See all
+            </button>
           </div>
 
-          {/* ITEM 2 */}
-          <div className="h-full lg:h-[49%] w-[80px] lg:w-full rounded-lg lg:rounded-xl overflow-hidden relative group">
-            <LazyLoadImage
-              src={milkTea}
-              className="w-full h-full object-cover object-center block"
-            />
+          <div className="grid grid-cols-2 gap-3 lg:grid-cols-1">
+            {promos.map((promo) => (
+              <button
+                key={promo.id}
+                type="button"
+                onClick={() => navigate("/all-markets")}
+                className="group relative h-28 overflow-hidden rounded-lg text-left shadow-sm lg:h-[121px]"
+              >
+                <LazyLoadImage
+                  src={promo.image}
+                  alt={promo.title}
+                  className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
+                />
 
-            {/* OVERLAY */}
-            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-all duration-300 flex items-center justify-center">
-              <button className="text-[10px] lg:text-sm opacity-0 group-hover:opacity-100 transition-all duration-300 px-1 lg:px-3 py-1 text-xs bg-white text-primary font-semibold rounded-md">
-                Visit Shop
+                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
+
+                <div className="absolute inset-x-0 bottom-0 p-3">
+                  <p className="text-sm font-bold text-white">{promo.title}</p>
+                  <p className="mt-0.5 text-xs text-white/80">
+                    {promo.subtitle}
+                  </p>
+                </div>
+
+                <span className="absolute right-3 top-3 rounded-full bg-white/90 px-2 py-1 text-[10px] font-semibold text-secondary opacity-0 shadow-sm transition group-hover:opacity-100">
+                  Visit
+                </span>
               </button>
-            </div>
+            ))}
           </div>
-        </div>
-        {/* {hasMore && ( */}
-        <div className="w-full flex lg:hidden justify-end mt-2">
-          <button
-            onClick={() => navigate("/all-markets")}
-            className="text-xs text-orange-500 font-semibold"
-          >
-            See all →
-          </button>
-        </div>
-        {/* )} */}
+        </aside>
       </div>
-    </div>
+    </section>
   );
 }
 

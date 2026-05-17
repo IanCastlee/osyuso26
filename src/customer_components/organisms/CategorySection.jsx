@@ -7,21 +7,21 @@ import SkeletonLoader from "../../reusable_components/SkeletonLoader";
 function CategorySection() {
   const navigate = useNavigate();
 
-  // ================= FETCH =================
   const { data, loading } = useGetData("product/get-categories.php?limit=15");
-
-  // ================= SAFE DATA =================
   const categories = data?.categories || [];
 
-  // ================= RESPONSIVE LIMIT =================
-  const [limit, setLimit] = useState(9);
+  const [limit, setLimit] = useState(8);
 
   useEffect(() => {
     const updateLimit = () => {
-      if (window.innerWidth >= 1024) {
-        setLimit(15);
+      if (window.innerWidth >= 1280) {
+        setLimit(12);
+      } else if (window.innerWidth >= 1024) {
+        setLimit(10);
+      } else if (window.innerWidth >= 768) {
+        setLimit(6);
       } else {
-        setLimit(7);
+        setLimit(6);
       }
     };
 
@@ -34,69 +34,52 @@ function CategorySection() {
     };
   }, []);
 
-  // ================= DISPLAY =================
   const visibleCategories = categories.slice(0, limit);
-
   const hasMore = categories.length > limit;
 
-  // ================= LOADING =================
   if (loading) {
-    return <SkeletonLoader />;
+    return (
+      <div className="mt-4 rounded-xl bg-white p-4 shadow-sm">
+        <SkeletonLoader />
+      </div>
+    );
+  }
+
+  if (!categories.length) {
+    return null;
   }
 
   return (
-    <div className="w-full flex flex-col p-0 lg:p-4 bg-primary mt-4  mb-2 lg:mb-4">
-      <div className="flex items-center justify-between p-2">
-        <h2 className="text-xs font-bold text-secondary">CATEGORIES</h2>
-      </div>
+    <section className="mt-4 w-full rounded-xl bg-white shadow-sm mb-4">
+      <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3">
+        <div className="mb-1">
+          <h2 className="text-sm font-bold text-gray-900">Categories</h2>
+          <p className="mt-0.5 hidden text-xs text-gray-500 sm:block">
+            Browse fresh products by category
+          </p>
+        </div>
 
-      {/* CATEGORY GRID */}
-      <div
-        className="
-            grid
-            grid-cols-3
-            md:grid-cols-5
-            lg:grid-cols-8
-            border-t
-            border-gray-200
-          "
-      >
-        {visibleCategories.map((category) => (
-          <div
-            key={category.id}
-            className="
-                border-r
-                border-b
-                border-gray-200
-              "
-          >
-            <CategoryCard
-              id={category.id}
-              name={category.name}
-              image={category.image}
-            />
-          </div>
-        ))}
-      </div>
-
-      {/* SEE ALL */}
-      {hasMore && (
-        <div className="flex justify-end p-3">
+        {hasMore && (
           <button
             onClick={() => navigate("/all-categories")}
-            className="
-              text-xs
-              font-semibold
-              text-orange-500
-              hover:text-orange-600
-              transition
-            "
+            className="text-xs font-semibold text-secondary transition hover:opacity-80"
           >
-            See all →
+            See all
           </button>
-        </div>
-      )}
-    </div>
+        )}
+      </div>
+
+      <div className="grid grid-cols-3 gap-px bg-gray-100 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8">
+        {visibleCategories.map((category) => (
+          <CategoryCard
+            key={category.id}
+            id={category.id}
+            name={category.name}
+            image={category.image}
+          />
+        ))}
+      </div>
+    </section>
   );
 }
 

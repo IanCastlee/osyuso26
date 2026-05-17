@@ -93,7 +93,7 @@ try {
         LIMIT ?
     ";
 
-    $params[] = $limit + 1; // overfetch for has_more
+    $params[] = $limit + 1;
     $types .= "i";
 
     $stmt = $conn->prepare($sql);

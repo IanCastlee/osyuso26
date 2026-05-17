@@ -10,6 +10,9 @@ function ProductCard({ id, name, price, image, seller, stock }) {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
 
+  const isAvailable = Number(stock) > 0;
+  const formattedPrice = Number(price || 0).toFixed(2);
+
   const handleProtectedNav = async (e) => {
     e.stopPropagation();
 
@@ -27,139 +30,63 @@ function ProductCard({ id, name, price, image, seller, stock }) {
   };
 
   return (
-    <div
+    <article
       onClick={() => navigate(`/product/${id}`)}
-      className="
-        w-full
-        bg-white
-        overflow-hidden
-        border border-gray-100
-        shadow-sm
-        hover:shadow-lg
-        transition-all duration-300
-        cursor-pointer
-        group
-      "
+      className="group flex h-full cursor-pointer flex-col overflow-hidden rounded-xl border border-gray-100 bg-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
     >
-      {/* IMAGE */}
-      <div className="relative w-full aspect-[4/3] overflow-hidden bg-gray-100">
-        {/* STOCK BADGE */}
-        <div className="absolute top-2 left-2 z-10">
-          {stock > 0 ? (
-            <span
-              className="
-                bg-emerald-500
-                text-white
-                text-[8px] sm:text-[10px]
-                font-semibold
-                px-2 py-[3px]
-                shadow-sm
-              "
-            >
-              {stock} STOCK
-            </span>
-          ) : (
-            <span
-              className="
-                bg-red-500
-                text-white
-                text-[8px] sm:text-[10px]
-                font-semibold
-                px-2 py-[3px]
-                shadow-sm
-              "
-            >
-              SOLD OUT
-            </span>
-          )}
+      <div className="relative aspect-[4/3] w-full overflow-hidden bg-gray-100">
+        <div className="absolute left-2 top-2 z-10">
+          <span
+            className={`rounded-full px-2 py-1 text-[9px] font-semibold shadow-sm sm:text-[10px] ${
+              isAvailable
+                ? "bg-emerald-500 text-white"
+                : "bg-red-500 text-white"
+            }`}
+          >
+            {isAvailable ? `${stock} STOCK` : "SOLD OUT"}
+          </span>
         </div>
 
-        {/* IMAGE */}
         <LazyLoadImage
           src={image || "/placeholder.png"}
           alt={name}
           effect="opacity"
-          wrapperClassName="w-full h-full"
-          className="
-            w-full
-            h-full
-            min-w-full
-            min-h-full
-            object-cover
-            group-hover:scale-105
-            transition-transform duration-500
-          "
+          wrapperClassName="h-full w-full block"
+          className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
         />
 
-        {/* OVERLAY */}
-        <div
-          className="
-            absolute inset-0
-            bg-black/10
-            opacity-0
-            group-hover:opacity-100
-            transition duration-300
-          "
-        />
+        <div className="absolute inset-0 bg-black/0 transition group-hover:bg-black/10" />
       </div>
 
-      {/* CONTENT */}
-      <div className="p-2 sm:p-3 flex flex-col gap-1">
-        {/* PRODUCT NAME */}
-        <h3
-          className="
-            text-[11px] sm:text-sm
-            font-semibold
-            text-primary
-            line-clamp-1
-            group-hover:text-primary/80
-            transition
-          "
-        >
+      <div className="flex flex-1 flex-col p-3">
+        <h3 className="line-clamp-2 min-h-[36px] text-xs font-semibold leading-5 text-gray-900 transition group-hover:text-secondary sm:text-sm">
           {name}
         </h3>
 
-        {/* PRICE */}
-        <p className="text-secondary font-bold text-[11px] sm:text-sm">
-          ₱{price}
+        <p className="mt-1 text-sm font-bold text-secondary sm:text-base">
+          ₱{formattedPrice}
         </p>
 
-        {/* SELLER */}
-        <p className="text-[9px] sm:text-xs text-gray-500 line-clamp-1">
-          Seller: {seller || "Unknown Seller"}
+        <p className="mt-1 line-clamp-1 text-[11px] text-gray-500 sm:text-xs">
+          {seller || "Unknown Seller"}
         </p>
 
-        {/* ACTIONS */}
-        <div className="flex items-center justify-end mt-2">
-          <button
-            disabled={loading || stock <= 0}
-            onClick={handleProtectedNav}
-            className="
-              h-[28px] sm:h-[34px]
-              flex items-center justify-center gap-1
-              text-[10px] sm:text-xs
-              bg-secondary
-              text-white
-              px-3 sm:px-4
-              hover:opacity-90
-              transition
-              disabled:opacity-50
-              disabled:cursor-not-allowed
-              shadow-sm
-            "
-          >
-            {loading ? (
-              <ButtonLoader />
-            ) : (
-              <>
-                <FiShoppingCart className="text-[11px] sm:text-sm" />
-                Buy
-              </>
-            )}
-          </button>
-        </div>
+        <button
+          disabled={loading || !isAvailable}
+          onClick={handleProtectedNav}
+          className="mt-3 flex h-9 w-full items-center justify-center gap-2 rounded-lg bg-secondary px-3 text-xs font-semibold text-white shadow-sm transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          {loading ? (
+            <ButtonLoader />
+          ) : (
+            <>
+              <FiShoppingCart className="text-sm" />
+              {isAvailable ? "Buy Now" : "Unavailable"}
+            </>
+          )}
+        </button>
       </div>
-    </div>
+    </article>
   );
 }
 

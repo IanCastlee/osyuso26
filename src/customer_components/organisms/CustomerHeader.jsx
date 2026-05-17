@@ -9,23 +9,26 @@ function CustomerHeader() {
   const [openUserMenu, setOpenUserMenu] = useState(false);
 
   const {
-    BsCart4,
     IoMdNotificationsOutline,
     CiShop,
     RxQuestionMarkCircled,
     PiShoppingCartSimpleFill,
+    PiShoppingCartSimpleLight,
     IoIosInformationCircleOutline,
     TbMenu2,
+    HiMiniUserCircle,
+    MdKeyboardArrowDown,
+    GoChecklist,
   } = icons;
 
-  const navigate = useNavigate();
+  const SearchIcon = icons.IoSearchOutline || icons.CiSearch || icons.FiSearch;
 
-  //  AUTH
+  const navigate = useNavigate();
   const { user, logout } = useAuth();
+
   return (
     <>
-      <header className="w-full bg-secondary text-white shadow-md">
-        {/* TOP BAR → HIDDEN ON MOBILE */}
+      <header className="w-full sticky top-0 z-20 bg-secondary text-white shadow-md">
         <div className="hidden md:flex w-full px-16 h-10 justify-between items-center border-b border-white/10">
           <button
             onClick={() => navigate("/signup-seller")}
@@ -56,17 +59,16 @@ function CustomerHeader() {
 
             <span className="text-white/50">|</span>
 
-            {/* AUTH SECTION */}
             {user ? (
               <div className="relative">
                 <div className="flex items-center gap-1">
-                  <icons.HiMiniUserCircle className="text-2xl" />
+                  <HiMiniUserCircle className="text-2xl" />
                   <button
                     onClick={() => setOpenUserMenu(!openUserMenu)}
                     className="flex items-center font-semibold hover:opacity-80"
                   >
-                    {user?.fullname?.split(" ")[0] || "User"}{" "}
-                    <icons.MdKeyboardArrowDown />
+                    {user?.fullname?.split(" ")[0] || "User"}
+                    <MdKeyboardArrowDown />
                   </button>
                 </div>
 
@@ -109,51 +111,88 @@ function CustomerHeader() {
           </div>
         </div>
 
-        {/* MAIN HEADER */}
-        <div className="w-full px-6 md:px-16 h-16 flex items-center justify-between">
-          {/* LEFT → LOGO */}
+        <div className="w-full px-6 md:px-16 h-16 flex items-center gap-5">
           <h2
             onClick={() => navigate("/")}
-            className="flex items-center font-bold text-xl md:text-[24px] tracking-wide cursor-pointer"
+            className="shrink-0 flex items-center font-bold lg:text-2xl md:text-[24px] tracking-wide cursor-pointer"
           >
             OSY <PiShoppingCartSimpleFill /> SO
           </h2>
 
-          {/* RIGHT → MOBILE MENU */}
+          <div className="hidden md:flex flex-1 px-5">
+            <div className="flex w-full overflow-hidden rounded-sm bg-white p-1 shadow-sm">
+              <input
+                type="text"
+                placeholder="Search products, shops, or markets"
+                className="min-w-0 flex-1 bg-white px-4 py-1 text-sm text-gray-800 placeholder:text-gray-400 outline-none"
+              />
+
+              <button
+                type="button"
+                className="flex w-16 items-center justify-center rounded-sm bg-orange-500 text-white transition hover:opacity-90"
+              >
+                <icons.IoSearchOutline className="text-xl" />
+              </button>
+            </div>
+          </div>
+
           <button
             onClick={() => setIsOpen(true)}
-            className="md:hidden p-2 hover:bg-white/20 rounded-md"
+            className="ml-auto md:hidden p-2 hover:bg-white/20 rounded-md"
           >
             <TbMenu2 className="text-2xl" />
           </button>
 
-          {/* RIGHT → DESKTOP ACTIONS */}
-          <div className="hidden md:flex items-center gap-4 text-xl">
-            <button className="flex items-center text-xs gap-1 hover:bg-white/20 px-2 py-1 rounded-md">
+          <div className="hidden md:flex shrink-0 items-center gap-3">
+            <button className="flex items-center gap-1 rounded-full px-3 py-2 text-xs hover:bg-white/20">
               <CiShop className="text-[22px]" />
-              View Markets
+              <span>View Markets</span>
             </button>
 
             <button
               onClick={() => navigate("/notification")}
-              className="p-2 rounded-full hover:bg-white/20 relative"
+              className="flex items-center gap-2 rounded-full px-3 py-2 hover:bg-white/20"
             >
-              <IoMdNotificationsOutline />
-              <span className="absolute -top-1 -right-1 bg-red-500 text-[10px] w-4 h-4 flex items-center justify-center rounded-full">
-                3
+              <span className="relative inline-flex">
+                <IoMdNotificationsOutline className="text-xl" />
+                <span className="absolute -top-2 -right-2 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-semibold leading-none text-white">
+                  3
+                </span>
               </span>
+
+              <span className="text-xs">Notification</span>
             </button>
 
             {user && (
-              <button
-                onClick={() => navigate("/cart")}
-                className="p-2 rounded-full hover:bg-white/20 relative"
-              >
-                <BsCart4 />
-                <span className="absolute -top-1 -right-1 bg-red-500 text-[10px] w-4 h-4 flex items-center justify-center rounded-full">
-                  2
-                </span>
-              </button>
+              <>
+                <button
+                  onClick={() => navigate("/cart")}
+                  className="flex items-center gap-2 rounded-full px-3 py-2 hover:bg-white/20"
+                >
+                  <span className="relative inline-flex">
+                    <PiShoppingCartSimpleLight className="text-xl" />
+                    <span className="absolute -top-2 -right-2 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-semibold leading-none text-white">
+                      2
+                    </span>
+                  </span>
+
+                  <span className="text-xs">Cart</span>
+                </button>
+
+                <button
+                  onClick={() => navigate("/orders")}
+                  className="flex items-center gap-2 rounded-full px-3 py-2 hover:bg-white/20"
+                >
+                  <span className="relative inline-flex">
+                    <GoChecklist className="text-xl" />
+                    <span className="absolute -top-2 -right-2 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-semibold leading-none text-white">
+                      2
+                    </span>
+                  </span>
+
+                  <span className="text-xs">Orders</span>
+                </button>
+              </>
             )}
           </div>
         </div>

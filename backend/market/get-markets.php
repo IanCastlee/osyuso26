@@ -21,12 +21,12 @@ try {
     $sql = "
         SELECT 
             u.user_id,
-            vp.shop_name,
-            vp.shop_logo,
-            vp.shop_cover_photo
+            s.shop_name,
+            s.shop_logo,
+            s.shop_cover_photo
         FROM users u
-        INNER JOIN vendor_profiles vp 
-            ON vp.user_id = u.user_id
+        INNER JOIN shops s 
+            ON s.owner_id = u.user_id
         WHERE u.role = 'vendor'
     ";
 

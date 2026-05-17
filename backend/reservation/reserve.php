@@ -8,22 +8,20 @@ error_reporting(E_ALL);
 ini_set('display_errors', 0);
 
 require_once "../dbConn.php";
-require_once "../config/cloudinary.php";
 require_once "../auth/middleware.php";
-
-// ================= AUTH CHECK =================
-$user = requireRole(["customer"]);
 
 try {
 
-    // CHECK PRODUCT ID
+    // AUTH (optional for viewing product, but ok to keep)
+    requireRole(["customer"]);
+
     if (!isset($_GET['product_id'])) {
         throw new Exception("Product ID is required");
     }
 
     $product_id = intval($_GET['product_id']);
 
-    // GET PRODUCT DETAILS
+    // ================= PRODUCT DETAILS (FIXED ARCHITECTURE) =================
     $query = "
         SELECT 
             p.id,
@@ -37,15 +35,16 @@ try {
 
             pi.image_path,
 
-            u.user_id,
-            u.profile_picture,
-            u.fullname,
+            s.id AS shop_id,
+            s.shop_name,
+            s.shop_description,
+            s.address,
+            s.nearby_landmark,
+            s.phone,
 
-            vp.shop_name,
-            vp.shop_description,
-            vp.address,
-            vp.nearby_landmark,
-            vp.phone
+            u.user_id,
+            u.fullname,
+            u.profile_picture
 
         FROM products p
 
@@ -53,11 +52,11 @@ try {
             ON p.id = pi.product_id 
             AND pi.is_primary = 1
 
-        LEFT JOIN users u
-            ON p.vendor_id = u.user_id
+        INNER JOIN shops s
+            ON p.shop_id = s.id
 
-        LEFT JOIN vendor_profiles vp
-            ON u.user_id = vp.user_id
+        INNER JOIN users u
+            ON s.owner_id = u.user_id
 
         WHERE p.id = ?
         AND p.status = 'active'

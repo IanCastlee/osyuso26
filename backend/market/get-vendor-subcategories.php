@@ -2,7 +2,7 @@
 include("../header.php");
 include("../dbConn.php");
 
-header("Content-Type: application/json");
+header("Content-Type: application/json; charset=UTF-8");
 
 function response($success, $message, $data = null) {
     echo json_encode([
@@ -14,33 +14,27 @@ function response($success, $message, $data = null) {
 }
 
 try {
+    $shop_id = filter_input(INPUT_GET, 'shop_id', FILTER_VALIDATE_INT);
+    $category_id = filter_input(INPUT_GET, 'category_id', FILTER_VALIDATE_INT);
 
-    $vendor_id = $_GET['vendor_id'] ?? null;
-    $category_id = $_GET['category_id'] ?? null;
-
-    if (!$vendor_id || !$category_id) {
-        response(false, "Missing vendor_id or category_id");
+    if (!$shop_id || !$category_id) {
+        response(false, "Missing shop_id or category_id");
     }
 
-    // ================= GET DISTINCT SUBCATEGORIES =================
     $stmt = $conn->prepare("
         SELECT DISTINCT
             sc.id,
             sc.name
         FROM products p
-
         INNER JOIN subcategories sc
             ON sc.id = p.subcategory_id
-
-        WHERE p.vendor_id = ?
-        AND p.category_id = ?
-        AND p.status = 'active'
-
+        WHERE p.shop_id = ?
+          AND p.category_id = ?
+          AND p.status = 'active'
         ORDER BY sc.name ASC
     ");
 
-    $stmt->bind_param("ii", $vendor_id, $category_id);
-
+    $stmt->bind_param("ii", $shop_id, $category_id);
     $stmt->execute();
 
     $result = $stmt->get_result();
@@ -48,11 +42,11 @@ try {
     $subcategories = [];
 
     while ($row = $result->fetch_assoc()) {
+        $row['id'] = (int) $row['id'];
         $subcategories[] = $row;
     }
 
     response(true, "Subcategories fetched successfully", $subcategories);
-
 } catch (Exception $e) {
     response(false, $e->getMessage());
 }

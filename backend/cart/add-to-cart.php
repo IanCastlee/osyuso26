@@ -1,7 +1,7 @@
 <?php
+ob_start();
 include("../header.php");
 
-ob_start();
 header("Content-Type: application/json; charset=UTF-8");
 
 error_reporting(E_ALL);
@@ -11,21 +11,31 @@ require_once "../dbConn.php";
 require_once "../auth/middleware.php";
 
 try {
-
-    // ================= AUTH =================
     $user = requireRole(["customer"]);
-    $user_id = $user->user_id ?? $user['user_id'];
 
-    // ================= INPUT =================
-    $product_id = $_POST['product_id'] ?? null;
-    $quantity   = $_POST['quantity'] ?? 0;
-    $weight     = $_POST['weight'] ?? 0;
+    if (is_object($user)) {
+        $user_id = $user->user_id ?? null;
+    } elseif (is_array($user)) {
+        $user_id = $user['user_id'] ?? null;
+    } else {
+        $user_id = null;
+    }
+
+    if (!$user_id) {
+        throw new Exception("Unauthorized user");
+    }
+
+    $product_id = filter_input(INPUT_POST, 'product_id', FILTER_VALIDATE_INT);
+    $quantity = filter_input(INPUT_POST, 'quantity', FILTER_VALIDATE_INT);
+    $weight = filter_input(INPUT_POST, 'weight', FILTER_VALIDATE_FLOAT);
 
     if (!$product_id) {
         throw new Exception("Product ID is required");
     }
 
-    // ================= GET PRODUCT =================
+    $quantity = $quantity ?: 0;
+    $weight = $weight ?: 0;
+
     $stmt = $conn->prepare("SELECT price, unit_type FROM products WHERE id = ?");
     $stmt->bind_param("i", $product_id);
     $stmt->execute();
@@ -35,10 +45,23 @@ try {
         throw new Exception("Product not found");
     }
 
-    $price = $product['price'];
+    $price = (float) $product['price'];
     $unit_type = $product['unit_type'];
 
-    // ================= CART =================
+    if ($unit_type === "kg") {
+        if ($weight <= 0) {
+            throw new Exception("Weight must be greater than zero");
+        }
+
+        $quantity = 0;
+    } else {
+        if ($quantity <= 0) {
+            throw new Exception("Quantity must be greater than zero");
+        }
+
+        $weight = 0;
+    }
+
     $stmt = $conn->prepare("SELECT cart_id FROM carts WHERE user_id = ? AND status = 'active'");
     $stmt->bind_param("i", $user_id);
     $stmt->execute();
@@ -53,10 +76,9 @@ try {
         $cart_id = $cart['cart_id'];
     }
 
-    // ================= CHECK EXISTING ITEM =================
     $stmt = $conn->prepare("
-        SELECT cart_item_id, quantity, weight 
-        FROM cart_items 
+        SELECT cart_item_id, quantity, weight
+        FROM cart_items
         WHERE cart_id = ? AND product_id = ?
     ");
     $stmt->bind_param("ii", $cart_id, $product_id);
@@ -64,22 +86,20 @@ try {
     $item = $stmt->get_result()->fetch_assoc();
 
     if ($item) {
-
-        // ================= UPDATE =================
         if ($unit_type === "kg") {
-            $newWeight = $item['weight'] + $weight;
+            $newWeight = (float) $item['weight'] + $weight;
 
             $stmt = $conn->prepare("
-                UPDATE cart_items 
+                UPDATE cart_items
                 SET weight = ?
                 WHERE cart_item_id = ?
             ");
             $stmt->bind_param("di", $newWeight, $item['cart_item_id']);
         } else {
-            $newQty = $item['quantity'] + $quantity;
+            $newQty = (int) $item['quantity'] + $quantity;
 
             $stmt = $conn->prepare("
-                UPDATE cart_items 
+                UPDATE cart_items
                 SET quantity = ?
                 WHERE cart_item_id = ?
             ");
@@ -87,12 +107,9 @@ try {
         }
 
         $stmt->execute();
-
     } else {
-
-        // ================= INSERT =================
         $stmt = $conn->prepare("
-            INSERT INTO cart_items 
+            INSERT INTO cart_items
             (cart_id, product_id, quantity, weight, price, unit_type)
             VALUES (?, ?, ?, ?, ?, ?)
         ");
@@ -115,10 +132,10 @@ try {
         "message" => "Added to cart successfully",
         "cart_id" => $cart_id
     ]);
-
 } catch (Exception $e) {
-
     error_log($e->getMessage());
+
+    http_response_code(400);
 
     echo json_encode([
         "success" => false,

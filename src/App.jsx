@@ -44,6 +44,15 @@ import SpecialOffer from "./admin_components/pages/SpecialOffer";
 import NewArrival from "./admin_components/pages/NewArrival";
 import AllSpecialOffer from "./customer_components/pages/AllSpecialOffer";
 import MarketSetting from "./vendor_components/pages/MarketSetting";
+import ForgotPassword from "./auth_pages/ForgotPassword";
+import ResetPassword from "./auth_pages/ResetPassword";
+import VerifyEmailSent from "./auth_pages/VerifyEmailSent";
+import FeaturedPromotion from "./vendor_components/pages/FeaturedPromotion";
+import FeaturedPromotionLogs from "./vendor_components/pages/FeaturedPromotionLogs";
+import CheckoutSummary from "./customer_components/pages/CheckoutSummary";
+import PaymentSuccess from "./customer_components/pages/PaymentSuccess";
+import PaymentFailed from "./customer_components/pages/PaymentFailed";
+import Orders from "./customer_components/pages/Orders";
 
 const CustomerLayout = () => {
   const location = useLocation();
@@ -54,6 +63,12 @@ const CustomerLayout = () => {
     "/faq",
     "/signup-seller",
     "/about",
+    "/verify-email-sent",
+    "/forgot-password",
+    "/reset-password",
+    "/checkout",
+    "/payment-success",
+    "/payment-failed",
   ].includes(location.pathname);
 
   return (
@@ -76,10 +91,17 @@ const CustomerLayout = () => {
           <Route path="about" element={<AboutCostumer />} />
           {/* special offer */}
           <Route path="all-special-offers" element={<AllSpecialOffer />} />
+          <Route path="checkout" element={<CheckoutSummary />} />
+          <Route path="payment-failed" element={<PaymentFailed />} />
+          <Route path="payment-success" element={<PaymentSuccess />} />
+          <Route path="orders" element={<Orders />} />
           {/* auths */}
           <Route path="signin" element={<SignIn />} />
           <Route path="signup" element={<SignUp />} />
+          <Route path="verify-email-sent" element={<VerifyEmailSent />} />
+          <Route path="forgot-password" element={<ForgotPassword />} />
           <Route path="signup-seller" element={<SignUpSeller />} />
+          <Route path="reset-password" element={<ResetPassword />} />
         </Routes>
       </main>
 
@@ -102,6 +124,11 @@ const VendorLayout = () => {
         <Routes>
           <Route index element={<DashboardVendor />} />
           <Route path="/vendor-products" element={<ProductsVendor />} />
+          <Route path="/featured-promotion" element={<FeaturedPromotion />} />
+          <Route
+            path="/featured-promotion-logs"
+            element={<FeaturedPromotionLogs />}
+          />
           <Route path="/reserved" element={<Reserved />} />
           <Route path="/reservation-log" element={<ReservationHistory />} />
           <Route path="about" element={<AboutVendor />} />

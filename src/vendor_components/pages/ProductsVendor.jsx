@@ -121,7 +121,7 @@ function ProductsVendor() {
         {/* TITLE */}
         <h1 className="flex items-center text-lg font-bold">
           <FaBox className="mr-2 text-secondary text-2xl" />
-          Products
+          PRODUCTS
         </h1>
 
         {/* ACTIONS */}
@@ -171,25 +171,39 @@ function ProductsVendor() {
       {/* TABLE */}
       <div className="bg-white rounded-xl shadow p-4">
         <VendorTable columns={columns} data={products} loading={loading} />
-      </div>
 
-      {/* PAGINATION */}
-      <div className="flex justify-end gap-10 items-center">
-        <button
-          onClick={handlePrev}
-          disabled={history.length === 0}
-          className="flex items-center px-4 py-1 text-xs border rounded disabled:opacity-40"
-        >
-          <icons.MdOutlineChevronLeft /> Prev
-        </button>
+        {/* PAGINATION */}
 
-        <button
-          onClick={handleNext}
-          disabled={!hasMore}
-          className="flex items-center px-4 py-1 text-xs border rounded disabled:opacity-40"
-        >
-          Next <icons.MdOutlineChevronRight />
-        </button>
+        <div className="flex justify-end gap-2 mt-4">
+          <button
+            onClick={handlePrev}
+            disabled={history.length === 0}
+            className="
+              px-4 py-2
+              text-xs
+              bg-gray-100
+              rounded-md
+              disabled:opacity-40
+            "
+          >
+            Prev
+          </button>
+
+          <button
+            onClick={handleNext}
+            disabled={!hasMore}
+            className="
+              px-4 py-2
+              text-xs
+              bg-secondary
+              text-white
+              rounded-md
+              disabled:opacity-40
+            "
+          >
+            Next
+          </button>
+        </div>
       </div>
 
       {/* MODAL */}

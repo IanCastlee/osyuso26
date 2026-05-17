@@ -6,7 +6,7 @@ import { CiLocationOn } from "react-icons/ci";
 import ProductCard from "../molecules/ProductCard";
 import useGetData from "../../hooks/useGetData";
 import { icons } from "../../constant/icons";
-import bgImage from "../../assets/assets_osyuso/defaultCover.png";
+import bgImage from "../../assets/assets_osyuso/defaultCover.webp";
 import profileImage from "../../assets/assets_osyuso/shop.png";
 import MarketSkeletonLoader from "../../reusable_components/MarketSkeletonLoader";
 import SkeletonLoader from "../../reusable_components/SkeletonLoader";
@@ -15,34 +15,31 @@ import { URL } from "../../utils/URL";
 function Market() {
   const { id } = useParams();
 
-  // ================= MARKET =================
   const { data, loading } = useGetData(`market/get-market.php?id=${id}`);
   const market = data?.market;
 
   const ALL = "all";
 
-  // ================= STATES =================
   const [categories, setCategories] = useState([]);
   const [subcategories, setSubcategories] = useState([]);
 
   const [activeCategory, setActiveCategory] = useState(null);
   const [activeSubcategory, setActiveSubcategory] = useState(ALL);
-
   const [activeMode, setActiveMode] = useState("all");
 
   const [products, setProducts] = useState([]);
-
   const [nextCursor, setNextCursor] = useState(null);
   const [loadingProducts, setLoadingProducts] = useState(false);
   const [hasMore, setHasMore] = useState(true);
 
   const [openDropdown, setOpenDropdown] = useState(false);
 
-  // ================= FETCH CATEGORIES =================
   const fetchCategories = async () => {
+    if (!market?.shop_id) return;
+
     try {
       const res = await fetch(
-        `${URL.URL}market/get-vendor-categories.php?vendor_id=${id}`,
+        `${URL.URL}market/get-vendor-categories.php?shop_id=${market.shop_id}`,
       );
 
       const json = await res.json();
@@ -58,13 +55,12 @@ function Market() {
     }
   };
 
-  // ================= FETCH SUBCATEGORIES =================
   const fetchSubcategories = async () => {
-    if (!activeCategory) return;
+    if (!market?.shop_id || !activeCategory) return;
 
     try {
       const res = await fetch(
-        `${URL.URL}market/get-vendor-subcategories.php?category_id=${activeCategory}&vendor_id=${id}`,
+        `${URL.URL}market/get-vendor-subcategories.php?category_id=${activeCategory}&shop_id=${market.shop_id}`,
       );
 
       const json = await res.json();
@@ -77,21 +73,20 @@ function Market() {
     }
   };
 
-  // ================= FETCH PRODUCTS =================
   const fetchProducts = async ({ cursor = null, reset = false } = {}) => {
-    if (loadingProducts) return;
+    if (!market?.shop_id || loadingProducts) return;
 
     setLoadingProducts(true);
 
     try {
       const params = new URLSearchParams({
-        vendor_id: id,
+        shop_id: market.shop_id,
         limit: 20,
       });
 
       if (activeMode === "sub" && activeSubcategory !== ALL) {
         params.append("subcategory_id", activeSubcategory);
-      } else if (activeMode === "category") {
+      } else if (activeMode === "category" && activeCategory) {
         params.append("category_id", activeCategory);
       }
 
@@ -106,15 +101,12 @@ function Market() {
       const json = await res.json();
       if (!json.success) return;
 
-      // ================= FIX DUPLICATES =================
       setProducts((prev) => {
         const merged = reset ? json.data : [...prev, ...json.data];
 
-        const unique = Array.from(
+        return Array.from(
           new Map(merged.map((item) => [item.id, item])).values(),
         );
-
-        return unique;
       });
 
       setNextCursor(json.next_cursor);
@@ -126,60 +118,63 @@ function Market() {
     }
   };
 
-  // ================= INIT =================
   useEffect(() => {
-    if (id) fetchCategories();
-  }, [id]);
+    if (market?.shop_id) {
+      fetchCategories();
+    }
+  }, [market?.shop_id]);
 
   useEffect(() => {
     fetchSubcategories();
-  }, [activeCategory]);
+  }, [market?.shop_id, activeCategory]);
 
-  // ================= MODE HANDLERS =================
   useEffect(() => {
+    if (!market?.shop_id) return;
+
     if (activeMode === "all") {
       setProducts([]);
       setNextCursor(null);
       setHasMore(true);
       fetchProducts({ reset: true });
     }
-  }, [activeMode]);
+  }, [market?.shop_id, activeMode]);
 
   useEffect(() => {
+    if (!market?.shop_id) return;
+
     if (activeMode === "category" && activeCategory) {
       setProducts([]);
       setNextCursor(null);
       setHasMore(true);
       fetchProducts({ reset: true });
     }
-  }, [activeCategory, activeMode]);
+  }, [market?.shop_id, activeCategory, activeMode]);
 
   useEffect(() => {
+    if (!market?.shop_id) return;
+
     if (activeMode === "sub" && activeSubcategory !== ALL) {
       setProducts([]);
       setNextCursor(null);
       setHasMore(true);
       fetchProducts({ reset: true });
     }
-  }, [activeSubcategory, activeMode]);
+  }, [market?.shop_id, activeSubcategory, activeMode]);
 
-  // ================= SCROLL =================
   useEffect(() => {
     const handleScroll = () => {
       const bottom =
         window.innerHeight + window.scrollY >= document.body.offsetHeight - 200;
 
       if (bottom && hasMore && !loadingProducts) {
-        setLoadingProducts(true); // 🔥 prevent double trigger
         fetchProducts({ cursor: nextCursor });
       }
     };
 
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
-  }, [nextCursor, hasMore, loadingProducts]);
+  }, [market?.shop_id, nextCursor, hasMore, loadingProducts]);
 
-  // ================= LOADING =================
   if (loading) {
     return <MarketSkeletonLoader />;
   }
@@ -187,7 +182,6 @@ function Market() {
   return (
     <div className="w-full bg-gray-100 lg:px-3 sm:px-6 lg:px-28">
       <div className="w-full flex flex-col bg-primary">
-        {/* ================= BANNER ================= */}
         <div className="w-full h-[160px] sm:h-[200px] md:h-[220px] relative">
           <LazyLoadImage
             src={market?.shop_cover_photo || bgImage}
@@ -203,13 +197,12 @@ function Market() {
           </div>
         </div>
 
-        {/* ================= SHOP INFO ================= */}
         <div className="pl-3 sm:pl-28 md:pl-36 mt-2">
           <h2 className="text-xl font-semibold">{market?.shop_name}</h2>
 
           <a
             href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
-              market?.address,
+              market?.address || "",
             )}`}
             target="_blank"
             rel="noopener noreferrer"
@@ -227,7 +220,6 @@ function Market() {
           </div>
         </div>
 
-        {/* ================= CATEGORY ================= */}
         <div className="flex gap-4 border-b border-gray-200 px-3 mt-8 lg:mt-12 overflow-x-auto">
           <button
             onClick={() => {
@@ -264,11 +256,10 @@ function Market() {
           ))}
         </div>
 
-        {/* ================= SUBCATEGORY ================= */}
         <div className="flex justify-end px-3 mt-3 relative">
           <icons.MdSort
             onClick={() => setOpenDropdown(!openDropdown)}
-            className="text-secondary mr-1"
+            className="text-secondary mr-1 cursor-pointer"
           />
 
           <button
@@ -279,7 +270,7 @@ function Market() {
               ? "All"
               : subcategories.find(
                   (s) => Number(s.id) === Number(activeSubcategory),
-                )?.name}
+                )?.name || "All"}
           </button>
 
           {openDropdown && (
@@ -308,7 +299,7 @@ function Market() {
                     setOpenDropdown(false);
                   }}
                   className={`w-full text-left px-3 py-2 text-xs hover:bg-gray-100 ${
-                    activeSubcategory === sub.id
+                    Number(activeSubcategory) === Number(sub.id)
                       ? "text-secondary font-semibold"
                       : ""
                   }`}
@@ -320,11 +311,10 @@ function Market() {
           )}
         </div>
 
-        {/* ================= PRODUCTS ================= */}
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 px-3 mt-4 pb-6">
-          {products.map((item, index) => (
+          {products.map((item) => (
             <ProductCard
-              key={`${item.id}-${index}`}
+              key={item.id}
               id={item.id}
               name={item.name}
               price={item.price}
@@ -335,11 +325,11 @@ function Market() {
           ))}
         </div>
 
-        {/* ================= LOAD MORE ================= */}
         {hasMore && (
           <button
             onClick={() => fetchProducts({ cursor: nextCursor })}
-            className="text-xs text-secondary py-4"
+            disabled={loadingProducts}
+            className="w-full text-xs text-orange-500 font-semibold py-3"
           >
             {loadingProducts ? <SkeletonLoader /> : "Load More"}
           </button>

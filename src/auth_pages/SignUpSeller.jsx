@@ -7,6 +7,7 @@ import {
   FaLock,
   FaMapMarkerAlt,
   FaPhoneAlt,
+  FaFileUpload,
 } from "react-icons/fa";
 
 import { PiShoppingCartSimpleFill } from "react-icons/pi";
@@ -18,10 +19,9 @@ import { useToast } from "../context/ToastContext";
 
 function SignUpSeller() {
   const navigate = useNavigate();
-
   const { showToast } = useToast();
-  const [step, setStep] = useState(1);
 
+  const [step, setStep] = useState(1);
   const [form, setForm] = useState({
     shopName: "",
     fname: "",
@@ -38,6 +38,12 @@ function SignUpSeller() {
 
   const [errors, setErrors] = useState({});
 
+  const steps = [
+    { id: 1, label: "Shop Info" },
+    { id: 2, label: "Permit" },
+    { id: 3, label: "Account" },
+  ];
+
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
@@ -46,17 +52,16 @@ function SignUpSeller() {
     setForm({ ...form, permit: e.target.files[0] });
   };
 
-  const { submit, loading } = useFormSubmit("auth/signup-seller.php", (res) => {
+  const { submit, loading } = useFormSubmit("auth/signup-seller.php", () => {
     showToast({
       type: "success",
-      message: "Account created!",
+      message: "Verification email sent. Please check your inbox.",
       duration: 5000,
     });
 
-    navigate("/signin");
+    navigate("/verify-email-sent");
   });
 
-  // ================= VALIDATION =================
   const validateStep = (step) => {
     let errors = {};
 
@@ -77,8 +82,9 @@ function SignUpSeller() {
 
     if (step === 2) {
       if (!form.permit) errors.permit = "Business permit is required";
-      if (!form.permit_number)
+      if (!form.permit_number) {
         errors.permit_number = "Permit number is required";
+      }
     }
 
     if (step === 3) {
@@ -102,7 +108,6 @@ function SignUpSeller() {
     return errors;
   };
 
-  // ================= STEP CONTROL =================
   const next = () => {
     const stepErrors = validateStep(step);
     setErrors(stepErrors);
@@ -114,18 +119,15 @@ function SignUpSeller() {
 
   const back = () => setStep((s) => s - 1);
 
-  // ================= SUBMIT =================
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // CHECK INTERNET CONNECTION
     if (!navigator.onLine) {
       showToast({
         type: "error",
         message: "No internet connection. Please check your network.",
         duration: 5000,
       });
-
       return;
     }
 
@@ -143,71 +145,106 @@ function SignUpSeller() {
     try {
       await submit(data);
     } catch (err) {
-      //  HANDLE NETWORK ERRORS DURING REQUEST
-      if (!navigator.onLine) {
-        showToast({
-          type: "error",
-          message: "No internet connection. Please check your network.",
-          duration: 5000,
-        });
-      } else {
-        showToast({
-          type: "error",
-          message: err?.message || "Something went wrong",
+      showToast({
+        type: "error",
+        message: navigator.onLine
+          ? err?.message || "Something went wrong"
+          : "No internet connection. Please check your network.",
+        duration: 5000,
+      });
 
-          duration: 5000,
-        });
-      }
-      console.er;
+      console.error(err);
     }
   };
-  // ================= UI =================
+
   return (
-    <>
-      <header className="w-full h-[70px] bg-secondary text-white flex justify-between items-center px-6">
-        <h2 className="flex items-center font-bold text-xl">
-          OSY <PiShoppingCartSimpleFill /> SO
+    <div className="min-h-screen bg-gray-100">
+      <header className="sticky top-0 z-20 flex h-16 w-full items-center justify-between bg-secondary px-4 text-white shadow-md sm:px-6 lg:px-12">
+        <h2
+          onClick={() => navigate("/")}
+          className="flex cursor-pointer items-center text-xl font-bold tracking-wide"
+        >
+          OSY <PiShoppingCartSimpleFill className="mx-1" /> SO
         </h2>
 
         <button
           onClick={() => navigate("/faq")}
-          className="flex items-center gap-1 text-xs"
+          className="flex items-center gap-1 rounded-full px-3 py-2 text-xs font-medium hover:bg-white/15"
         >
-          <RxQuestionMarkCircled /> FAQ
+          <RxQuestionMarkCircled className="text-base" />
+          FAQ
         </button>
       </header>
 
-      <div className="flex justify-center bg-primary min-h-screen p-4">
-        <div className="w-full max-w-xl bg-white p-6 rounded-xl shadow-md">
-          <h1 className="text-2xl font-bold text-center mb-2">
-            Seller Registration
-          </h1>
+      <main className="mx-auto grid w-full max-w-6xl gap-6 px-4 py-6 sm:px-6 lg:grid-cols-[360px_1fr] lg:px-8 lg:py-10">
+        <section className="rounded-2xl bg-secondary p-6 text-white shadow-sm lg:p-8">
+          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-white/15">
+            <FaStore className="text-xl" />
+          </div>
 
-          {/* STEP INDICATOR */}
-          <div className="flex gap-2 justify-center mb-5">
-            {[1, 2, 3].map((s) => (
+          <h1 className="mt-5 text-2xl font-bold">Become an OSYUSO seller</h1>
+
+          <p className="mt-3 text-sm leading-7 text-white/80">
+            Register your shop, submit your permit, and start reaching nearby
+            customers looking for fresh local products.
+          </p>
+
+          <div className="mt-8 space-y-4">
+            {steps.map((item) => (
+              <div key={item.id} className="flex items-center gap-3">
+                <div
+                  className={`flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold ${
+                    step >= item.id
+                      ? "bg-white text-secondary"
+                      : "bg-white/15 text-white/70"
+                  }`}
+                >
+                  {item.id}
+                </div>
+                <span className="text-sm font-medium">{item.label}</span>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <section className="rounded-2xl bg-white p-5 shadow-sm sm:p-6 lg:p-8">
+          <div className="mb-6">
+            <p className="text-xs font-semibold uppercase tracking-wide text-secondary">
+              Seller Registration
+            </p>
+            <h2 className="mt-2 text-2xl font-bold text-gray-900">
+              {steps.find((item) => item.id === step)?.label}
+            </h2>
+            <p className="mt-1 text-sm text-gray-500">
+              Step {step} of {steps.length}
+            </p>
+          </div>
+
+          <div className="mb-6 flex gap-2">
+            {steps.map((item) => (
               <div
-                key={s}
-                className={`h-1 w-10 rounded-full ${
-                  step >= s ? "bg-secondary" : "bg-gray-300"
+                key={item.id}
+                className={`h-1.5 flex-1 rounded-full ${
+                  step >= item.id ? "bg-secondary" : "bg-gray-200"
                 }`}
               />
             ))}
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
-            {/* STEP 1 */}
             {step === 1 && (
-              <>
-                <InputField
-                  label="Shop Name"
-                  name="shopName"
-                  value={form.shopName}
-                  onChange={handleChange}
-                  placeholder="Enter shop name"
-                  icon={FaStore}
-                  error={errors.shopName}
-                />
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="md:col-span-2">
+                  <InputField
+                    label="Shop Name"
+                    name="shopName"
+                    value={form.shopName}
+                    onChange={handleChange}
+                    placeholder="Enter shop name"
+                    icon={FaStore}
+                    error={errors.shopName}
+                  />
+                </div>
 
                 <InputField
                   label="First Name"
@@ -240,16 +277,6 @@ function SignUpSeller() {
                 />
 
                 <InputField
-                  label="Address"
-                  name="address"
-                  value={form.address}
-                  onChange={handleChange}
-                  placeholder="Shop address"
-                  icon={FaMapMarkerAlt}
-                  error={errors.address}
-                />
-
-                <InputField
                   label="Nearby Landmark"
                   name="nearby"
                   value={form.nearby}
@@ -258,35 +285,66 @@ function SignUpSeller() {
                   icon={FaMapMarkerAlt}
                   error={errors.nearby}
                 />
-              </>
+
+                <div className="md:col-span-2">
+                  <InputField
+                    label="Address"
+                    name="address"
+                    value={form.address}
+                    onChange={handleChange}
+                    placeholder="Shop address"
+                    icon={FaMapMarkerAlt}
+                    error={errors.address}
+                  />
+                </div>
+              </div>
             )}
 
-            {/* STEP 2 */}
             {step === 2 && (
-              <>
-                <input
-                  type="file"
-                  onChange={handleFile}
-                  className="w-full border p-2 rounded-md"
-                />
-                {errors.permit && (
-                  <p className="text-red-500 text-xs">{errors.permit}</p>
-                )}
+              <div className="space-y-4">
+                <div>
+                  <label className="mb-2 block text-sm font-medium text-gray-700">
+                    Business Permit
+                  </label>
+
+                  <label className="flex cursor-pointer flex-col items-center justify-center rounded-xl border border-dashed border-gray-300 bg-gray-50 px-4 py-8 text-center transition hover:border-secondary hover:bg-orange-50">
+                    <FaFileUpload className="text-2xl text-secondary" />
+
+                    <span className="mt-3 text-sm font-medium text-gray-800">
+                      {form.permit ? form.permit.name : "Upload permit file"}
+                    </span>
+
+                    <span className="mt-1 text-xs text-gray-500">
+                      JPG, PNG, or PDF file
+                    </span>
+
+                    <input
+                      type="file"
+                      onChange={handleFile}
+                      accept="image/*,.pdf"
+                      className="hidden"
+                    />
+                  </label>
+
+                  {errors.permit && (
+                    <p className="mt-2 text-xs text-red-500">{errors.permit}</p>
+                  )}
+                </div>
 
                 <InputField
                   label="Permit Number"
                   name="permit_number"
                   value={form.permit_number}
                   onChange={handleChange}
+                  placeholder="Enter permit number"
                   icon={FaLock}
                   error={errors.permit_number}
                 />
-              </>
+              </div>
             )}
 
-            {/* STEP 3 */}
             {step === 3 && (
-              <>
+              <div className="space-y-4">
                 <InputField
                   label="Email"
                   name="email"
@@ -318,49 +376,49 @@ function SignUpSeller() {
                   icon={FaLock}
                   error={errors.confirmPassword}
                 />
-              </>
+              </div>
             )}
 
-            {/* BUTTONS */}
-            <div className="flex justify-between pt-4">
-              {step > 1 && (
+            <div className="flex flex-col-reverse gap-3 pt-4 sm:flex-row sm:justify-between">
+              {step > 1 ? (
                 <button
                   type="button"
                   onClick={back}
-                  className="border px-4 py-2"
+                  disabled={loading}
+                  className="rounded-lg border border-gray-200 px-5 py-3 text-sm font-medium text-gray-700 transition hover:bg-gray-50 disabled:opacity-50"
                 >
                   Back
                 </button>
+              ) : (
+                <div />
               )}
 
               {step < 3 ? (
                 <button
                   type="button"
                   onClick={next}
-                  className="ml-auto bg-secondary text-white px-4 py-2 rounded"
+                  className="rounded-lg bg-secondary px-6 py-3 text-sm font-semibold text-white shadow-sm transition hover:opacity-90"
                 >
-                  Next
+                  Continue
                 </button>
               ) : (
                 <button
                   type="submit"
                   disabled={loading}
-                  className="ml-auto bg-secondary text-white px-4 py-2 rounded flex items-center gap-2 disabled:opacity-50"
+                  className="rounded-lg bg-secondary px-6 py-3 text-sm font-semibold text-white shadow-sm transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {loading ? (
-                    <>
-                      <LoaderWithText text="Processing..." size="w-3 h-3" />
-                    </>
+                    <LoaderWithText text="Processing..." size="w-3 h-3" />
                   ) : (
-                    "Submit"
+                    "Submit Registration"
                   )}
                 </button>
               )}
             </div>
           </form>
-        </div>
-      </div>
-    </>
+        </section>
+      </main>
+    </div>
   );
 }
 

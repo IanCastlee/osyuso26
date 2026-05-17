@@ -20,20 +20,24 @@ function SignIn() {
     password: "",
   });
 
+  const [rememberMe, setRememberMe] = useState(false);
   const [errors, setErrors] = useState({});
   const [showPassword, setShowPassword] = useState(false);
 
   const handleChange = (e) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
+    setForm({
+      ...form,
+      [e.target.name]: e.target.value,
+    });
   };
 
-  // ================= SIGN IN =================
   const { submit, loading } = useFormSubmit(
     "auth/sign-in.php",
     async (data) => {
       try {
-        // SAVE TOKEN
-        sessionStorage.setItem(
+        const storage = rememberMe ? localStorage : sessionStorage;
+
+        storage.setItem(
           "auth-storage",
           JSON.stringify({
             state: {
@@ -43,36 +47,32 @@ function SignIn() {
           }),
         );
 
-        // GET USER INFO
         const res = await fetchInstance("auth/user.php");
 
-        // UPDATE GLOBAL AUTH STATE
         login(res.user);
 
-        console.log("DJHHDFH", res);
-
-        // SUCCESS TOAST
         showToast({
           type: "success",
           message: "Login successful!",
           duration: 3000,
         });
 
-        // ROLE REDIRECT
-        if (data.role === "admin") navigate("/admin");
-        else if (data.role === "vendor") navigate("/vendor");
-        else navigate("/");
+        if (data.role === "admin") {
+          navigate("/admin");
+        } else if (data.role === "vendor") {
+          navigate("/vendor");
+        } else {
+          navigate("/");
+        }
       } catch (err) {
         console.error(err);
       }
     },
   );
 
-  // ================= HANDLE SUBMIT =================
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // CHECK INTERNET CONNECTION
     if (!navigator.onLine) {
       showToast({
         type: "error",
@@ -85,8 +85,13 @@ function SignIn() {
 
     let newErrors = {};
 
-    if (!form.email) newErrors.email = "Email is required";
-    if (!form.password) newErrors.password = "Password is required";
+    if (!form.email) {
+      newErrors.email = "Email is required";
+    }
+
+    if (!form.password) {
+      newErrors.password = "Password is required";
+    }
 
     setErrors(newErrors);
 
@@ -98,120 +103,161 @@ function SignIn() {
         });
       } catch (err) {
         console.error(err.message);
-        //  HANDLE NETWORK ERRORS DURING REQUEST
-        if (!navigator.onLine) {
-          showToast({
-            type: "error",
-            message: "No internet connection. Please check your network.",
-            duration: 5000,
-          });
-        } else {
-          showToast({
-            type: "error",
-            message: err?.message || "Something went wrong",
 
-            duration: 5000,
-          });
-        }
-        console.er;
-        alert(err.message || "Login failed");
+        showToast({
+          type: "error",
+          message: navigator.onLine
+            ? err?.message || "Login failed"
+            : "No internet connection. Please check your network.",
+          duration: 5000,
+        });
       }
     }
   };
 
   const handleFaqClick = () => navigate("/faq");
   const handleSignUpClick = () => navigate("/signup");
+  const handleForgotPassword = () => navigate("/forgot-password");
 
   return (
-    <>
-      {/* HEADER */}
-      <header className="w-full h-[70px] bg-secondary text-white shadow-xs px-8 flex justify-between items-center">
-        <h2 className="flex items-center font-bold text-2xl tracking-wide">
-          OSY <PiShoppingCartSimpleFill /> SO
+    <div className="min-h-screen bg-gray-100">
+      <header className="sticky top-0 z-20 flex h-16 w-full items-center justify-between bg-secondary px-4 text-white shadow-md sm:px-6 md:h-[70px] md:px-10">
+        <h2
+          onClick={() => navigate("/")}
+          className="flex cursor-pointer items-center text-xl font-bold tracking-wide sm:text-2xl"
+        >
+          OSY <PiShoppingCartSimpleFill className="mx-1" /> SO
         </h2>
 
         <button
           onClick={handleFaqClick}
-          className="flex items-center gap-1 text-xs"
+          className="flex items-center gap-1 rounded-full px-3 py-2 text-xs font-medium transition hover:bg-white/15"
         >
-          <RxQuestionMarkCircled className="text-sm" />
+          <RxQuestionMarkCircled className="text-base" />
           FAQ
         </button>
       </header>
 
-      {/* BODY */}
-      <div className="flex flex-col w-full bg-primary items-center justify-center px-1">
-        <div className="w-full max-w-md bg-white rounded-xl shadow-md p-6 space-y-4 my-10">
-          <h1 className="text-2xl font-bold text-primary text-center">
-            Welcome Back
-          </h1>
+      <main className="flex min-h-[calc(100vh-4rem)] w-full items-center justify-center px-4 py-8 sm:px-6">
+        <div className="grid w-full max-w-5xl overflow-hidden rounded-2xl bg-white shadow-sm lg:grid-cols-[0.9fr_1.1fr]">
+          <section className="hidden bg-secondary p-8 text-white lg:flex lg:flex-col lg:justify-between">
+            <div>
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-white/15">
+                <PiShoppingCartSimpleFill className="text-2xl" />
+              </div>
 
-          <p className="text-sm text-gray-500 text-center">
-            Sign in to continue shopping
-          </p>
+              <h1 className="mt-6 text-3xl font-bold leading-tight">
+                Welcome back to your local marketplace.
+              </h1>
 
-          {/* FORM */}
-          <form onSubmit={handleSubmit} className="space-y-4 mt-6">
-            <InputField
-              label="Email"
-              name="email"
-              type="email"
-              value={form.email}
-              onChange={handleChange}
-              placeholder="Enter your email"
-              icon={FaEnvelope}
-              error={errors.email}
-            />
-
-            {/* PASSWORD FIELD */}
-            <div className="relative">
-              <InputField
-                label="Password"
-                name="password"
-                type={showPassword ? "text" : "password"}
-                value={form.password}
-                onChange={handleChange}
-                placeholder="Enter password"
-                icon={FaLock}
-                error={errors.password}
-              />
-
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-[38px] text-gray-500 hover:text-gray-700"
-              >
-                {showPassword ? <FaEyeSlash /> : <FaEye />}
-              </button>
+              <p className="mt-4 text-sm leading-7 text-white/80">
+                Sign in to continue browsing fresh products, manage your cart,
+                and track your orders from nearby sellers.
+              </p>
             </div>
 
-            {/* BUTTON */}
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full bg-secondary text-white py-2 rounded-md font-semibold flex items-center justify-center gap-2"
-            >
-              {loading && (
-                <span className="animate-spin border-2 border-white border-t-transparent rounded-full w-4 h-4"></span>
-              )}
+            <div className="rounded-xl bg-white/10 p-4 text-sm leading-6 text-white/80">
+              Fresh meat, fruits, and vegetables from trusted local shops in
+              your community.
+            </div>
+          </section>
 
-              {loading ? "Signing in..." : "Sign In"}
-            </button>
-          </form>
+          <section className="p-5 sm:p-6 md:p-8">
+            <div className="mb-6 text-center sm:text-left">
+              <p className="text-xs font-semibold uppercase tracking-wide text-secondary">
+                Customer Login
+              </p>
 
-          {/* SIGNUP LINK */}
-          <p className="text-xs text-center text-gray-500">
-            Don’t have an account?{" "}
-            <span
-              onClick={handleSignUpClick}
-              className="text-secondary cursor-pointer"
-            >
-              Sign Up
-            </span>
-          </p>
+              <h1 className="mt-2 text-2xl font-bold text-gray-900">
+                Welcome Back
+              </h1>
+
+              <p className="mt-2 text-sm leading-6 text-gray-500">
+                Sign in to continue shopping with OSYUSO.
+              </p>
+            </div>
+
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <InputField
+                label="Email"
+                name="email"
+                type="email"
+                value={form.email}
+                onChange={handleChange}
+                placeholder="Enter your email"
+                icon={FaEnvelope}
+                error={errors.email}
+              />
+
+              <div className="relative">
+                <InputField
+                  label="Password"
+                  name="password"
+                  type={showPassword ? "text" : "password"}
+                  value={form.password}
+                  onChange={handleChange}
+                  placeholder="Enter password"
+                  icon={FaLock}
+                  error={errors.password}
+                />
+
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-[38px] text-gray-500 transition hover:text-gray-700"
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                >
+                  {showPassword ? <FaEyeSlash /> : <FaEye />}
+                </button>
+              </div>
+
+              <div className="flex items-center justify-between gap-3">
+                <label className="flex cursor-pointer select-none items-center gap-2 text-xs text-gray-600">
+                  <input
+                    type="checkbox"
+                    checked={rememberMe}
+                    onChange={(e) => setRememberMe(e.target.checked)}
+                    className="h-4 w-4 cursor-pointer accent-orange-500"
+                  />
+                  Remember me
+                </label>
+
+                <button
+                  type="button"
+                  onClick={handleForgotPassword}
+                  className="text-xs font-medium text-secondary hover:underline"
+                >
+                  Forgot Password?
+                </button>
+              </div>
+
+              <button
+                type="submit"
+                disabled={loading}
+                className="flex w-full items-center justify-center gap-2 rounded-lg bg-secondary px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {loading && (
+                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                )}
+
+                {loading ? "Signing in..." : "Sign In"}
+              </button>
+            </form>
+
+            <p className="mt-6 text-center text-xs text-gray-500">
+              Don’t have an account?{" "}
+              <button
+                type="button"
+                onClick={handleSignUpClick}
+                className="font-semibold text-secondary hover:underline"
+              >
+                Sign Up
+              </button>
+            </p>
+          </section>
         </div>
-      </div>
-    </>
+      </main>
+    </div>
   );
 }
 

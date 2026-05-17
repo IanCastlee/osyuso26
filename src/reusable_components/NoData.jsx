@@ -3,48 +3,26 @@ import nodataImage from "../assets/icons/nodata.png";
 function NoData({
   text = "No data found",
   subText = "There’s nothing to display right now.",
-  imageHeight = "h-32",
+  imageSize = "h-20 w-20",
+  className = "",
 }) {
   return (
     <div
-      className="
-        w-full
-        flex flex-col
-        items-center
-        justify-center
-        py-10 sm:py-16
-        px-4
-        text-center
-      "
+      className={`flex w-full flex-col items-center justify-center px-4 py-12 text-center sm:py-16 ${className}`}
     >
-      {/* IMAGE */}
-      <img
-        src={nodataImage}
-        alt="No Data"
-        className={`${imageHeight} object-contain opacity-90 h-[62px] w-[62px]`}
-      />
+      <div className="flex h-24 w-24 items-center justify-center rounded-full bg-gray-100">
+        <img
+          src={nodataImage}
+          alt="No Data"
+          className={`${imageSize} object-contain opacity-90`}
+        />
+      </div>
 
-      {/* TITLE */}
-      <h2
-        className="
-          mt-4
-          text-sm sm:text-lg
-          font-semibold
-          text-gray-500
-        "
-      >
+      <h2 className="mt-5 text-sm font-semibold text-gray-700 sm:text-lg">
         {text}
       </h2>
 
-      {/* SUBTEXT */}
-      <p
-        className="
-          mt-1
-          text-[11px] sm:text-sm
-          text-gray-500
-          max-w-md
-        "
-      >
+      <p className="mt-1 max-w-md text-xs leading-6 text-gray-500 sm:text-sm">
         {subText}
       </p>
     </div>

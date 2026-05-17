@@ -5,16 +5,19 @@ include("../dbConn.php");
 header("Content-Type: application/json");
 
 $subcategory_id = $_GET['subcategory_id'] ?? null;
+$category_id = $_GET['category_id'] ?? null;
+
 $cursor = $_GET['cursor'] ?? null;
 $direction = $_GET['direction'] ?? 'next';
 
 $limit = 20;
 $fetchLimit = $limit + 1;
 
-if (!$subcategory_id) {
+// ================= VALIDATION =================
+if (!$subcategory_id && !$category_id) {
     echo json_encode([
         "success" => false,
-        "message" => "Missing subcategory"
+        "message" => "Missing filter"
     ]);
     exit;
 }
@@ -27,20 +30,34 @@ SELECT
     p.price,
     p.stock,
     pi.image_path,
-    vp.shop_name
+    s.shop_name
 FROM products p
 
 LEFT JOIN product_images pi 
-    ON pi.product_id = p.id AND pi.is_primary = 1
+    ON pi.product_id = p.id 
+    AND pi.is_primary = 1
 
-LEFT JOIN vendor_profiles vp 
-    ON vp.user_id = p.vendor_id
+LEFT JOIN shops s 
+    ON s.id = p.shop_id
 
-WHERE p.subcategory_id = ?
+WHERE 1=1
 ";
 
-$params = [$subcategory_id];
-$types = "i";
+$params = [];
+$types = "";
+
+// ================= FILTER =================
+if ($subcategory_id) {
+    $sql .= " AND p.subcategory_id = ? ";
+    $params[] = $subcategory_id;
+    $types .= "i";
+}
+
+if ($category_id) {
+    $sql .= " AND p.category_id = ? ";
+    $params[] = $category_id;
+    $types .= "i";
+}
 
 // ================= CURSOR =================
 if ($cursor) {
@@ -64,12 +81,17 @@ $sql .= " LIMIT $fetchLimit";
 
 // ================= EXECUTE =================
 $stmt = $conn->prepare($sql);
-$stmt->bind_param($types, ...$params);
+
+if (!empty($params)) {
+    $stmt->bind_param($types, ...$params);
+}
+
 $stmt->execute();
 
 $result = $stmt->get_result();
 
 $data = [];
+
 while ($row = $result->fetch_assoc()) {
     $data[] = $row;
 }

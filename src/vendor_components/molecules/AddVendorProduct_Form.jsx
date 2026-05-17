@@ -5,6 +5,8 @@ import useGetData from "../../hooks/useGetData";
 import useFormSubmit from "../../hooks/useFormSubmit";
 import LoaderWithText from "../../reusable_components/LoaderWithText";
 import SelectField from "../../reusable_components/SelectField";
+import addImage from "../../assets/icons/addimage.png";
+
 import { useToast } from "../../context/ToastContext";
 
 function AddVendorProduct_Form() {
@@ -259,14 +261,62 @@ function AddVendorProduct_Form() {
 
           {/* MULTI IMAGE UPLOAD */}
           <div>
-            <label className="text-sm font-medium">Product Images</label>
-
-            <input
+            {/* <input
               type="file"
               multiple
               onChange={handleImages}
               className="w-full border p-2 rounded-md mt-1"
-            />
+            /> */}
+
+            <div className="flex flex-col">
+              <label className="text-sm font-medium">Product Images</label>
+
+              {/* HIDDEN INPUT */}
+              <input
+                id="banner-upload"
+                type="file"
+                multiple
+                accept="image/*"
+                onChange={handleImages}
+                className="hidden"
+              />
+
+              {/* CUSTOM IMAGE PICKER */}
+              <label
+                htmlFor="banner-upload"
+                className="
+      w-full h-[100px]
+      border-2 border-dashed border-gray-300
+      rounded-xl
+      overflow-hidden
+      cursor-pointer
+      hover:border-secondary
+      transition
+      bg-gray-50
+      flex items-center justify-center
+      relative
+      group
+    "
+              >
+                {/* PREVIEW IMAGE */}
+                <div className="flex flex-col items-center justify-center text-gray-400">
+                  <img
+                    src={addImage}
+                    alt="upload"
+                    className="w-12 h-12 object-contain opacity-70"
+                  />
+
+                  <span className="mt-2 text-xs sm:text-sm">
+                    Click to upload banner
+                  </span>
+                </div>
+              </label>
+
+              {/* ERROR */}
+              {errors.images && (
+                <p className="text-xs text-red-500 mt-1">{errors.images}</p>
+              )}
+            </div>
 
             {errors.images && (
               <p className="text-xs text-red-500">{errors.images}</p>

@@ -77,7 +77,7 @@ function AllCategories() {
 
   return (
     <div className="w-full bg-gray-100 px-1 lg:px-28">
-      <div className="w-full min-h-screen bg-primary py-4 px-1 lg:px-4 ">
+      <div className="w-full min-h-screen bg-white py-4 px-1 lg:px-4 ">
         {/* HEADER */}
         <div className="px-4 pb-3">
           <h2 className="text-sm font-bold text-gray-700">ALL CATEGORIES</h2>

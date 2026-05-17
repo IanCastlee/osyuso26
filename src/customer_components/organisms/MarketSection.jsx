@@ -8,15 +8,21 @@ function MarketSection() {
   const navigate = useNavigate();
 
   const { data, loading } = useGetData("market/get-markets.php?limit=10");
-
-  // ✅ FIX HERE
   const markets = Array.isArray(data?.data) ? data.data : [];
 
-  const [limit, setLimit] = useState(2);
+  const [limit, setLimit] = useState(4);
 
   useEffect(() => {
     const updateLimit = () => {
-      setLimit(window.innerWidth >= 1024 ? 6 : 2);
+      if (window.innerWidth >= 1280) {
+        setLimit(6);
+      } else if (window.innerWidth >= 1024) {
+        setLimit(5);
+      } else if (window.innerWidth >= 768) {
+        setLimit(4);
+      } else {
+        setLimit(2);
+      }
     };
 
     updateLimit();
@@ -28,31 +34,44 @@ function MarketSection() {
   const visibleMarkets = markets.slice(0, limit);
   const hasMore = markets.length > limit;
 
-  if (loading) return <SkeletonLoader />;
+  if (loading) {
+    return (
+      <section className="mt-4 rounded-xl bg-white p-4 shadow-sm">
+        <SkeletonLoader />
+      </section>
+    );
+  }
+
+  if (!markets.length) {
+    return null;
+  }
 
   return (
-    <div className="w-full flex flex-col p-2 lg:p-4 bg-primary  mb-6">
-      <div className="flex items-center justify-between p-2">
-        <h2 className="text-xs font-bold text-secondary">MARKETS</h2>
+    <section className="mb-2 w-full rounded-xl bg-white p-4 shadow-sm">
+      <div className="mb-4 flex items-center justify-between">
+        <div>
+          <h2 className="text-sm font-bold text-gray-900">Markets</h2>
+          <p className="mt-0.5 hidden text-xs text-gray-500 sm:block">
+            Discover local shops near your area
+          </p>
+        </div>
+
+        {hasMore && (
+          <button
+            onClick={() => navigate("/all-markets")}
+            className="text-xs font-semibold text-orange-500 cursor-pointer transition hover:opacity-80"
+          >
+            See all
+          </button>
+        )}
       </div>
 
-      <div className="grid grid-cols-2 lg:grid-cols-6 gap-2 lg:gap-4 border-t border-gray-200 pt-3">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
         {visibleMarkets.map((market) => (
           <MarketCard key={market.user_id} market={market} />
         ))}
       </div>
-
-      {hasMore && (
-        <div className="w-full flex justify-end mt-3">
-          <button
-            onClick={() => navigate("/all-markets")}
-            className="text-xs text-orange-500 font-semibold hover:text-secondary"
-          >
-            See all →
-          </button>
-        </div>
-      )}
-    </div>
+    </section>
   );
 }
 

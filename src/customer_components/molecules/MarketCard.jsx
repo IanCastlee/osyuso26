@@ -2,7 +2,7 @@ import React from "react";
 import { useNavigate } from "react-router-dom";
 import { FaStore } from "react-icons/fa";
 import defaultLogo from "../../assets/assets_osyuso/shop.png";
-import defaultCover from "../../assets/assets_osyuso/defaultCover.png";
+import defaultCover from "../../assets/assets_osyuso/defaultCover.webp";
 
 function MarketCard({ market }) {
   const navigate = useNavigate();
@@ -23,10 +23,10 @@ function MarketCard({ market }) {
         relative overflow-hidden
         w-full
         h-[210px]
-        bg-white/80 backdrop-blur-md
+        bg-white/60 backdrop-blur-md
         border border-gray-200/70
         rounded-2xl
-        shadow-sm hover:shadow-2xl
+        shadow-xs hover:shadow-sm
         hover:-translate-y-1
         transition-all duration-300
         cursor-pointer group

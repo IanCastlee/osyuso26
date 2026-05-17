@@ -28,9 +28,15 @@ import { MdOutlineChevronRight } from "react-icons/md";
 import { MdOutlineChevronLeft } from "react-icons/md";
 import { IoChevronDownCircleOutline } from "react-icons/io5";
 import { CiLocationArrow1 } from "react-icons/ci";
+import { GoChecklist } from "react-icons/go";
+import { PiShoppingCartSimpleLight } from "react-icons/pi";
+import { IoSearchOutline } from "react-icons/io5";
 
 export const icons = {
   BsCart4,
+  IoSearchOutline,
+  PiShoppingCartSimpleLight,
+  GoChecklist,
   MdOutlineChevronLeft,
   CiLocationArrow1,
   IoChevronDownCircleOutline,

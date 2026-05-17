@@ -142,14 +142,14 @@ try {
 
     // ================= UPDATE VENDOR PROFILE =================
     $stmt2 = $conn->prepare("
-        UPDATE vendor_profiles 
+        UPDATE shops 
         SET shop_name=?, 
             shop_description=?, 
             phone=?, 
             address=?, 
             nearby_landmark=?, 
             updated_at=NOW()
-        WHERE user_id=?
+        WHERE owner_id=?
     ");
 
     $stmt2->bind_param(
@@ -180,9 +180,9 @@ try {
             $profileUrl = $upload['secure_url'];
 
             $stmt = $conn->prepare("
-                UPDATE vendor_profiles 
+                UPDATE shops 
                 SET shop_logo=?, updated_at=NOW()
-                WHERE user_id=?
+                WHERE owner_id=?
             ");
 
             $stmt->bind_param(
@@ -211,9 +211,9 @@ try {
             $coverUrl = $upload['secure_url'];
 
             $stmt = $conn->prepare("
-                UPDATE vendor_profiles 
+                UPDATE shops 
                 SET shop_cover_photo=?, updated_at=NOW()
-                WHERE user_id=?
+                WHERE owner_id=?
             ");
 
             $stmt->bind_param(

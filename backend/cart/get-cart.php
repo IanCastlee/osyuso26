@@ -1,26 +1,36 @@
 <?php
-include("../header.php");
 
 ob_start();
-header("Content-Type: application/json; charset=UTF-8");
 
-error_reporting(E_ALL);
-ini_set('display_errors', 0);
+include("../header.php");
+
+header("Content-Type: application/json; charset=UTF-8");
 
 require_once "../dbConn.php";
 require_once "../auth/middleware.php";
 
 try {
-
     // ================= AUTH =================
     $user = requireRole(["customer"]);
-    $user_id = $user->user_id ?? $user['user_id'];
 
-    // ================= GET USER CART =================
+    if (is_object($user)) {
+        $user_id = $user->user_id ?? null;
+    } elseif (is_array($user)) {
+        $user_id = $user['user_id'] ?? null;
+    } else {
+        $user_id = null;
+    }
+
+    if (!$user_id) {
+        throw new Exception("Unauthorized user");
+    }
+
+    // ================= GET USER ACTIVE CART =================
     $stmt = $conn->prepare("
         SELECT cart_id
         FROM carts
         WHERE user_id = ?
+          AND status = 'active'
         LIMIT 1
     ");
 
@@ -31,7 +41,10 @@ try {
 
     // ================= EMPTY CART =================
     if (!$cart) {
-        echo json_encode([]);
+        echo json_encode([
+            "success" => true,
+            "data" => []
+        ]);
         exit;
     }
 
@@ -52,7 +65,7 @@ try {
 
             pi.image_path,
 
-            u.fullname AS shop_name
+            s.shop_name
 
         FROM cart_items ci
 
@@ -63,8 +76,8 @@ try {
             ON p.id = pi.product_id
             AND pi.is_primary = 1
 
-        INNER JOIN users u
-            ON p.vendor_id = u.user_id
+        INNER JOIN shops s
+            ON p.shop_id = s.id
 
         WHERE ci.cart_id = ?
 
@@ -79,10 +92,10 @@ try {
     $items = [];
 
     while ($row = $result->fetch_assoc()) {
-
-        $row['price'] = (float)$row['price'];
-        $row['weight'] = (float)$row['weight'];
-        $row['quantity'] = (int)$row['quantity'];
+        $row['price'] = (float) $row['price'];
+        $row['weight'] = (float) $row['weight'];
+        $row['quantity'] = (int) $row['quantity'];
+        $row['stock'] = (int) $row['stock'];
 
         // ================= COMPUTE SUBTOTAL =================
         if ($row['unit_type'] === "kg") {
@@ -99,10 +112,10 @@ try {
         "success" => true,
         "data" => $items
     ]);
-
 } catch (Exception $e) {
-
     error_log($e->getMessage());
+
+    http_response_code(400);
 
     echo json_encode([
         "success" => false,

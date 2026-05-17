@@ -41,6 +41,14 @@ function SidebarVendor() {
           <FaBox />
           <span className="truncate">Dashboard</span>
         </button>
+        {/* PRODUCTS */}
+        <button
+          onClick={() => go("/vendor/vendor-products")}
+          className="w-full flex items-center gap-2 px-3 py-2 rounded-md hover:bg-white/10 transition min-w-0"
+        >
+          <FaBox />
+          <span className="truncate">Products</span>
+        </button>
 
         {/* DASHBOARD / RESERVATION */}
         <button
@@ -76,14 +84,40 @@ function SidebarVendor() {
           </button>
         </div>
 
-        {/* PRODUCTS */}
+        {/* FEATURED PROMOTION */}
+
         <button
-          onClick={() => go("/vendor/vendor-products")}
-          className="w-full flex items-center gap-2 px-3 py-2 rounded-md hover:bg-white/10 transition min-w-0"
+          onClick={() => setOpenReservation(!openReservation)}
+          className="w-full flex items-center justify-between px-3 py-2 rounded-md hover:bg-white/10 transition min-w-0"
         >
-          <FaBox />
-          <span className="truncate">Products</span>
+          <div className="flex items-center gap-2 min-w-0">
+            <FaClipboardList />
+            <span className="truncate">Featured Promotion</span>
+          </div>
+
+          {openReservation ? <FaChevronDown /> : <FaChevronRight />}
         </button>
+
+        {/* SUB MENU */}
+        <div
+          className={`flex flex-col pl-6 overflow-hidden transition-all duration-300 min-w-0 ${
+            openReservation ? "max-h-40 mt-1" : "max-h-0"
+          }`}
+        >
+          <button
+            onClick={() => go("/vendor/featured-promotion")}
+            className="text-left px-3 py-2 text-sm rounded-md hover:bg-white/10 transition min-w-0"
+          >
+            <span className="truncate">Manage Promotions</span>
+          </button>
+
+          <button
+            onClick={() => go("/vendor/featured-promotion-logs")}
+            className="text-left px-3 py-2 text-sm rounded-md hover:bg-white/10 transition min-w-0"
+          >
+            <span className="truncate">Promotion Logs</span>
+          </button>
+        </div>
 
         {/* SETTINGS */}
         <button

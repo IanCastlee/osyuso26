@@ -27,7 +27,7 @@ try {
     $conn->begin_transaction();
 
     // ================= GET INPUT =================
-    $vendor_id = $user->user_id;
+    $owner_id = $user->user_id;
 
     $category_id = $_POST['category_id'] ?? null;
     $subcategory_id = $_POST['subcategory_id'] ?? null;
@@ -38,20 +38,56 @@ try {
     $unit_type = $_POST['unit_type'] ?? null;
 
     // ================= VALIDATION =================
-    if (!$category_id || !$subcategory_id || !$name) {
+    if (
+        !$category_id ||
+        !$subcategory_id ||
+        !$name ||
+        !$price ||
+        !$stock ||
+        !$unit_type
+    ) {
         throw new Exception("Missing required fields");
     }
 
+    // ================= GET SHOP =================
+    $shopStmt = $conn->prepare("
+        SELECT id
+        FROM shops
+        WHERE owner_id = ?
+        LIMIT 1
+    ");
+
+    $shopStmt->bind_param("i", $owner_id);
+    $shopStmt->execute();
+
+    $shop = $shopStmt->get_result()->fetch_assoc();
+
+    if (!$shop) {
+        throw new Exception("Shop not found");
+    }
+
+    $shop_id = $shop['id'];
+
     // ================= INSERT PRODUCT =================
     $stmt = $conn->prepare("
-        INSERT INTO products 
-        (vendor_id, category_id, subcategory_id, name, description, price, stock, unit_type, status, created_at)
+        INSERT INTO products (
+            shop_id,
+            category_id,
+            subcategory_id,
+            name,
+            description,
+            price,
+            stock,
+            unit_type,
+            status,
+            created_at
+        )
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'active', NOW())
     ");
 
     $stmt->bind_param(
         "iiissdis",
-        $vendor_id,
+        $shop_id,
         $category_id,
         $subcategory_id,
         $name,
@@ -77,7 +113,10 @@ try {
             // ================= FILE ERROR CHECK =================
             if ($_FILES['images']['error'][$key] !== UPLOAD_ERR_OK) {
 
-                error_log("Upload error code: " . $_FILES['images']['error'][$key]);
+                error_log(
+                    "Upload error code: " .
+                    $_FILES['images']['error'][$key]
+                );
 
                 throw new Exception(
                     "Image upload failed. Error code: " .
@@ -124,13 +163,10 @@ try {
             curl_setopt($ch, CURLOPT_TIMEOUT, 30);
             curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 10);
 
-            // LOCALHOST ONLY IF SSL ISSUE
-            // curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-
             curl_setopt($ch, CURLOPT_POSTFIELDS, [
                 "file" => new CURLFile($tmp_name),
                 "upload_preset" => "unsigned_upload",
-                "folder" => "products/{$vendor_id}"
+                "folder" => "products/{$shop_id}"
             ]);
 
             $response = curl_exec($ch);
@@ -142,7 +178,9 @@ try {
 
                 curl_close($ch);
 
-                throw new Exception("Cloudinary cURL Error: " . $curlError);
+                throw new Exception(
+                    "Cloudinary cURL Error: " . $curlError
+                );
             }
 
             curl_close($ch);
@@ -158,7 +196,8 @@ try {
             if (!empty($result['error'])) {
 
                 $cloudinaryError =
-                    $result['error']['message'] ?? 'Cloudinary upload failed';
+                    $result['error']['message']
+                    ?? 'Cloudinary upload failed';
 
                 throw new Exception($cloudinaryError);
             }
@@ -174,8 +213,11 @@ try {
 
             // ================= SAVE IMAGE =================
             $imgStmt = $conn->prepare("
-                INSERT INTO product_images 
-                (product_id, image_path, is_primary)
+                INSERT INTO product_images (
+                    product_id,
+                    image_path,
+                    is_primary
+                )
                 VALUES (?, ?, 1)
             ");
 
@@ -199,6 +241,7 @@ try {
         "message" => "Product added successfully",
         "data" => [
             "product_id" => $product_id,
+            "shop_id" => $shop_id,
             "images" => $imageUrls
         ]
     ]);

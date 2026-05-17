@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useState } from "react";
+import React, { createContext, useContext, useState, useRef } from "react";
+
 import {
   IoIosCloseCircle,
   IoIosCheckmarkCircle,
@@ -10,10 +11,21 @@ const ToastContext = createContext();
 export function ToastProvider({ children }) {
   const [toast, setToast] = useState(null);
 
+  // ================= TIMEOUT REF =================
+  const timeoutRef = useRef(null);
+
+  // ================= SHOW TOAST =================
   const showToast = ({ type = "success", message = "", duration = 3000 }) => {
+    // CLEAR PREVIOUS TIMEOUT
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+    }
+
+    // SHOW TOAST
     setToast({ type, message });
 
-    setTimeout(() => {
+    // AUTO HIDE
+    timeoutRef.current = setTimeout(() => {
       setToast(null);
     }, duration);
   };
@@ -21,6 +33,7 @@ export function ToastProvider({ children }) {
   return (
     <ToastContext.Provider value={{ showToast }}>
       {children}
+
       <ToastContainer toast={toast} />
     </ToastContext.Provider>
   );
@@ -39,11 +52,13 @@ function ToastContainer({ toast }) {
       bg: "bg-green-500",
       iconBg: "bg-white/20 text-white",
     },
+
     error: {
       icon: <IoIosCloseCircle />,
       bg: "bg-red-500",
       iconBg: "bg-white/20 text-white",
     },
+
     info: {
       icon: <IoIosInformationCircle />,
       bg: "bg-blue-500",
@@ -54,12 +69,24 @@ function ToastContainer({ toast }) {
   const current = config[toast.type] || config.success;
 
   return (
-    <div className="fixed top-4 right-3 sm:top-5 sm:right-5 z-50 animate-fadeIn">
+    <div
+      className="
+        fixed
+        top-4
+        right-3
+        sm:top-5
+        sm:right-5
+        z-50
+        animate-fadeIn
+      "
+    >
       <div
         className={`
-          flex items-center
+          flex
+          items-center
           gap-2
-          px-3 py-2
+          px-3
+          py-2
           rounded-lg
           shadow-lg
           text-white
@@ -70,21 +97,23 @@ function ToastContainer({ toast }) {
         {/* ICON */}
         <div
           className={`
-            w-8 h-8
-            flex items-center justify-center
+            w-8
+            h-8
+            flex
+            items-center
+            justify-center
             rounded-full
             ${current.iconBg}
             shrink-0
-            leading-none
           `}
         >
-          <span className="text-lg leading-none flex items-center justify-center">
+          <span className="text-lg flex items-center justify-center">
             {current.icon}
           </span>
         </div>
 
-        {/* MESSAGE (FIXED SPACING) */}
-        <div className="text-xs sm:text-sm leading-tight m-0 p-0">
+        {/* MESSAGE */}
+        <div className="text-xs sm:text-sm leading-tight break-words">
           {toast.message}
         </div>
       </div>

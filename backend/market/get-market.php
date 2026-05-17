@@ -29,18 +29,18 @@ try {
             u.nearby,
             u.status,
 
-            vp.shop_name,
-            vp.shop_description,
-            vp.phone,
-            vp.shop_logo,
-            vp.shop_cover_photo,
-
+            s.shop_name,
+            s.shop_description,
+            s.phone,
+            s.shop_logo,
+            s.shop_cover_photo,
+            s.id AS shop_id,
             bp.permit_image,
             bp.status AS permit_status
 
         FROM users u
-        INNER JOIN vendor_profiles vp 
-            ON vp.user_id = u.user_id
+        INNER JOIN shops s 
+            ON s.owner_id = u.user_id
         LEFT JOIN business_permits bp 
             ON bp.user_id = u.user_id
 
