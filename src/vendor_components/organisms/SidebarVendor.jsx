@@ -1,139 +1,233 @@
 import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { NavLink, useNavigate } from "react-router-dom";
 import {
   FaBox,
   FaCog,
   FaClipboardList,
   FaChevronDown,
   FaChevronRight,
+  FaChartLine,
+  FaTags,
 } from "react-icons/fa";
 import { PiShoppingCartSimpleFill } from "react-icons/pi";
 
 function SidebarVendor() {
   const navigate = useNavigate();
 
+  const [expanded, setExpanded] = useState(false);
   const [openReservation, setOpenReservation] = useState(false);
+  const [openProducts, setOpenProducts] = useState(false);
+  const [openPromotion, setOpenPromotion] = useState(false);
 
-  const go = (path) => {
-    navigate(path);
-  };
+  const itemClass = ({ isActive }) =>
+    `group flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition ${
+      isActive
+        ? "bg-white text-secondary shadow-sm"
+        : "text-white/85 hover:bg-white/10 hover:text-white"
+    }`;
+
+  const subItemClass = ({ isActive }) =>
+    `block rounded-lg px-3 py-2 text-sm transition ${
+      isActive
+        ? "bg-white/15 font-semibold text-white"
+        : "text-white/70 hover:bg-white/10 hover:text-white"
+    }`;
+
+  const labelClass = `truncate transition-all duration-200 ${
+    expanded ? "max-w-48 opacity-100" : "max-w-0 overflow-hidden opacity-0"
+  }`;
+
+  const chevronClass = `shrink-0 text-xs text-white/60 transition ${
+    expanded ? "opacity-100" : "opacity-0"
+  }`;
 
   return (
-    <div className="w-[260px] h-screen bg-secondary text-white flex flex-col overflow-hidden">
-      {/* HEADER */}
-      <div className="h-[70px] flex flex-col justify-center  items-center px-4 mb-5  border-b border-white/10">
-        <h2
+    <aside
+      onMouseEnter={() => setExpanded(true)}
+      onMouseLeave={() => setExpanded(false)}
+      onFocus={() => setExpanded(true)}
+      className={`flex h-screen shrink-0 flex-col overflow-hidden bg-secondary text-white transition-all duration-300 ${
+        expanded ? "w-[270px]" : "w-[76px]"
+      }`}
+    >
+      <div className="border-b border-white/10 px-3 py-5">
+        <button
           onClick={() => navigate("/")}
-          className="flex items-center font-bold text-xl md:text-[24px] tracking-wide cursor-pointer"
+          className={`flex w-full items-center font-bold tracking-wide transition ${
+            expanded ? "justify-center text-2xl" : "justify-center text-xl"
+          }`}
+          title="OSYUSO"
         >
-          OSY <PiShoppingCartSimpleFill /> SO
-        </h2>
-        <span className="text-sm text-gray-100">Vendor Panel</span>
-      </div>
-
-      {/* MENU */}
-      <div className="flex-1 overflow-y-auto p-2 flex flex-col gap-1">
-        {/* HOME */}
-        <button
-          onClick={() => go("/vendor")}
-          className="w-full flex items-center gap-2 px-3 py-2 rounded-md hover:bg-white/10 transition min-w-0"
-        >
-          <FaBox />
-          <span className="truncate">Dashboard</span>
-        </button>
-        {/* PRODUCTS */}
-        <button
-          onClick={() => go("/vendor/vendor-products")}
-          className="w-full flex items-center gap-2 px-3 py-2 rounded-md hover:bg-white/10 transition min-w-0"
-        >
-          <FaBox />
-          <span className="truncate">Products</span>
+          {expanded && <span>OSY</span>}
+          <PiShoppingCartSimpleFill className="mx-1 text-3xl" />
+          {expanded && <span>SO</span>}
         </button>
 
-        {/* DASHBOARD / RESERVATION */}
-        <button
-          onClick={() => setOpenReservation(!openReservation)}
-          className="w-full flex items-center justify-between px-3 py-2 rounded-md hover:bg-white/10 transition min-w-0"
-        >
-          <div className="flex items-center gap-2 min-w-0">
-            <FaClipboardList />
-            <span className="truncate">Reservation</span>
-          </div>
-
-          {openReservation ? <FaChevronDown /> : <FaChevronRight />}
-        </button>
-
-        {/* SUB MENU */}
         <div
-          className={`flex flex-col pl-6 overflow-hidden transition-all duration-300 min-w-0 ${
-            openReservation ? "max-h-40 mt-1" : "max-h-0"
+          className={`mt-3 overflow-hidden rounded-xl bg-white/10 text-center transition-all duration-300 ${
+            expanded
+              ? "max-h-24 px-3 py-2 opacity-100"
+              : "max-h-0 px-0 py-0 opacity-0"
           }`}
         >
-          <button
-            onClick={() => go("/vendor/reserved")}
-            className="text-left px-3 py-2 text-sm rounded-md hover:bg-white/10 transition min-w-0"
-          >
-            <span className="truncate">Reserved</span>
-          </button>
-
-          <button
-            onClick={() => go("/vendor/reservation-log")}
-            className="text-left px-3 py-2 text-sm rounded-md hover:bg-white/10 transition min-w-0"
-          >
-            <span className="truncate">Order History</span>
-          </button>
+          <p className="text-xs font-semibold uppercase tracking-wide text-white/60">
+            Vendor Panel
+          </p>
+          <p className="mt-0.5 text-sm font-medium text-white">
+            Store Management
+          </p>
         </div>
+      </div>
 
-        {/* FEATURED PROMOTION */}
+      <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-4">
+        <NavLink to="/vendor" end className={itemClass} title="Dashboard">
+          <FaChartLine className="shrink-0 text-lg" />
+          <span className={labelClass}>Dashboard</span>
+        </NavLink>
 
         <button
-          onClick={() => setOpenReservation(!openReservation)}
-          className="w-full flex items-center justify-between px-3 py-2 rounded-md hover:bg-white/10 transition min-w-0"
+          onClick={() => {
+            setExpanded(true);
+            setOpenProducts((prev) => !prev);
+          }}
+          className="flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-sm font-medium text-white/85 transition hover:bg-white/10 hover:text-white"
+          title="Products"
         >
-          <div className="flex items-center gap-2 min-w-0">
-            <FaClipboardList />
-            <span className="truncate">Featured Promotion</span>
-          </div>
+          <span className="flex min-w-0 items-center gap-3">
+            <FaBox className="shrink-0 text-lg" />
+            <span className={labelClass}>Products</span>
+          </span>
 
-          {openReservation ? <FaChevronDown /> : <FaChevronRight />}
+          {openProducts ? (
+            <FaChevronDown className={chevronClass} />
+          ) : (
+            <FaChevronRight className={chevronClass} />
+          )}
         </button>
 
-        {/* SUB MENU */}
         <div
-          className={`flex flex-col pl-6 overflow-hidden transition-all duration-300 min-w-0 ${
-            openReservation ? "max-h-40 mt-1" : "max-h-0"
+          className={`overflow-hidden transition-all duration-300 ${
+            expanded && openProducts ? "max-h-28 pb-1 pl-8" : "max-h-0"
           }`}
         >
-          <button
-            onClick={() => go("/vendor/featured-promotion")}
-            className="text-left px-3 py-2 text-sm rounded-md hover:bg-white/10 transition min-w-0"
-          >
-            <span className="truncate">Manage Promotions</span>
-          </button>
-
-          <button
-            onClick={() => go("/vendor/featured-promotion-logs")}
-            className="text-left px-3 py-2 text-sm rounded-md hover:bg-white/10 transition min-w-0"
-          >
-            <span className="truncate">Promotion Logs</span>
-          </button>
+          <div className="space-y-1 border-l border-white/10 pl-3">
+            <NavLink to="/vendor/vendor-products" className={subItemClass}>
+              Products
+            </NavLink>
+            <NavLink to="/vendor/archive-products" className={subItemClass}>
+              Archive Products
+            </NavLink>
+          </div>
         </div>
 
-        {/* SETTINGS */}
         <button
-          onClick={() => go("/vendor/market-settings")}
-          className="w-full flex items-center gap-2 px-3 py-2 rounded-md hover:bg-white/10 transition min-w-0"
+          onClick={() => {
+            setExpanded(true);
+            setOpenReservation((prev) => !prev);
+          }}
+          className="flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-sm font-medium text-white/85 transition hover:bg-white/10 hover:text-white"
+          title="Reservation"
         >
-          <FaCog />
-          <span className="truncate">Market Settings</span>
-        </button>
-      </div>
+          <span className="flex min-w-0 items-center gap-3">
+            <FaClipboardList className="shrink-0 text-lg" />
+            <span className={labelClass}>Reservation</span>
+          </span>
 
-      {/* FOOTER */}
-      <div className="p-3 text-center text-xs text-white/60 border-t border-white/10">
-        © OSYUSO Vendor
+          {openReservation ? (
+            <FaChevronDown className={chevronClass} />
+          ) : (
+            <FaChevronRight className={chevronClass} />
+          )}
+        </button>
+
+        <div
+          className={`overflow-hidden transition-all duration-300 ${
+            expanded && openReservation ? "max-h-28 pb-1 pl-8" : "max-h-0"
+          }`}
+        >
+          <div className="space-y-1 border-l border-white/10 pl-3">
+            <NavLink to="/vendor/reserved" className={subItemClass}>
+              Reserved
+            </NavLink>
+            <NavLink to="/vendor/pending" className={subItemClass}>
+              Pending
+            </NavLink>
+            <NavLink to="/vendor/reservation-log" className={subItemClass}>
+              Order History
+            </NavLink>
+          </div>
+        </div>
+
+        <button
+          onClick={() => {
+            setExpanded(true);
+            setOpenPromotion((prev) => !prev);
+          }}
+          className="flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-sm font-medium text-white/85 transition hover:bg-white/10 hover:text-white"
+          title="Featured Promotion"
+        >
+          <span className="flex min-w-0 items-center gap-3">
+            <FaTags className="shrink-0 text-lg" />
+            <span className={labelClass}>Featured Promotion</span>
+          </span>
+
+          {openPromotion ? (
+            <FaChevronDown className={chevronClass} />
+          ) : (
+            <FaChevronRight className={chevronClass} />
+          )}
+        </button>
+
+        <div
+          className={`overflow-hidden transition-all duration-300 ${
+            expanded && openPromotion ? "max-h-28 pb-1 pl-8" : "max-h-0"
+          }`}
+        >
+          <div className="space-y-1 border-l border-white/10 pl-3">
+            <NavLink to="/vendor/featured-promotion" className={subItemClass}>
+              Manage Promotions
+            </NavLink>
+
+            <NavLink
+              to="/vendor/featured-promotion-logs"
+              className={subItemClass}
+            >
+              Promotion Logs
+            </NavLink>
+          </div>
+        </div>
+
+        <NavLink
+          to="/vendor/market-settings"
+          className={itemClass}
+          title="Market Settings"
+        >
+          <FaCog className="shrink-0 text-lg" />
+          <span className={labelClass}>Market Settings</span>
+        </NavLink>
+      </nav>
+
+      <div className="border-t border-white/10 p-3">
+        <div
+          className={`overflow-hidden rounded-xl bg-white/10 text-center transition-all duration-300 ${
+            expanded
+              ? "max-h-24 px-3 py-3 opacity-100"
+              : "max-h-0 px-0 py-0 opacity-0"
+          }`}
+        >
+          <p className="text-xs text-white/60">Signed in as</p>
+          <p className="mt-0.5 text-sm font-semibold text-white">Vendor</p>
+        </div>
+
+        <p
+          className={`mt-3 text-center text-xs text-white/50 transition ${
+            expanded ? "opacity-100" : "opacity-0"
+          }`}
+        >
+          © OSYUSO Vendor
+        </p>
       </div>
-    </div>
+    </aside>
   );
 }
 

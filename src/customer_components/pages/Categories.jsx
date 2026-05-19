@@ -17,14 +17,11 @@ function Categories() {
   const [openDropdown, setOpenDropdown] = useState(false);
 
   const [products, setProducts] = useState([]);
-
   const [nextCursor, setNextCursor] = useState(null);
-  const [prevCursor, setPrevCursor] = useState(null);
-
   const [loadingMore, setLoadingMore] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
   const [hasMore, setHasMore] = useState(true);
 
-  // ================= SUBCATEGORIES =================
   const { data, loading } = useGetData(
     `product/get-subcategories.php?category_id=${categoryId}`,
   );
@@ -39,7 +36,12 @@ function Categories() {
     setSubCategories(list);
   }, [data]);
 
-  // ================= FETCH PRODUCTS =================
+  const activeName =
+    active === "all"
+      ? "All Products"
+      : subCategories.find((item) => Number(item.id) === Number(active))
+          ?.name || "Selected";
+
   const fetchProducts = async ({
     cursor = null,
     direction = "next",
@@ -48,65 +50,81 @@ function Categories() {
     if (loadingMore) return;
     if (!active && active !== "all") return;
 
+    if (reset) {
+      setInitialLoading(true);
+    }
+
     setLoadingMore(true);
 
     try {
       const params = new URLSearchParams({
-        limit: 20,
+        limit: "20",
       });
 
-      // ================= FILTER =================
       if (active === "all") {
         params.append("category_id", categoryId);
       } else {
         params.append("subcategory_id", active);
       }
 
-      // ================= CURSOR =================
       if (cursor) {
         params.append("cursor", cursor);
         params.append("direction", direction);
       }
 
       const res = await fetch(`${URL.URL}product/get-products_c.php?${params}`);
-
       const json = await res.json();
 
-      console.log("API RESPONSE:", json);
+      console.log("JSON : ", json);
 
-      if (!json.success) return;
+      if (!json.success) {
+        if (reset) setProducts([]);
+        setHasMore(false);
+        return;
+      }
 
-      setProducts((prev) => (reset ? json.data : [...prev, ...json.data]));
+      const rows = Array.isArray(json.data) ? json.data : [];
 
-      setNextCursor(json.next_cursor);
-      setPrevCursor(json.prev_cursor);
-      setHasMore(!!json.next_cursor);
+      setProducts((prev) => {
+        const merged = reset ? rows : [...prev, ...rows];
+
+        return Array.from(
+          new Map(merged.map((item) => [Number(item.id), item])).values(),
+        );
+      });
+
+      setNextCursor(json.next_cursor || null);
+      setHasMore(Boolean(json.next_cursor));
     } catch (err) {
       console.error("FETCH ERROR:", err);
+
+      if (reset) {
+        setProducts([]);
+      }
+
+      setHasMore(false);
     } finally {
       setLoadingMore(false);
+      setInitialLoading(false);
     }
   };
 
-  // ================= RESET ON FILTER CHANGE =================
   useEffect(() => {
     if (!active && active !== "all") return;
 
     setProducts([]);
     setNextCursor(null);
-    setPrevCursor(null);
     setHasMore(true);
 
     fetchProducts({ reset: true });
-  }, [active]);
+  }, [active, categoryId]);
 
-  // ================= INFINITE SCROLL =================
   useEffect(() => {
     const handleScroll = () => {
       const bottom =
-        window.innerHeight + window.scrollY >= document.body.offsetHeight - 200;
+        window.innerHeight + window.scrollY >= document.body.offsetHeight - 240;
 
-      if (bottom && hasMore && !loadingMore && active) {
+      if (bottom && hasMore && !loadingMore && nextCursor) {
         fetchProducts({
           cursor: nextCursor,
           direction: "next",
@@ -115,151 +133,189 @@ function Categories() {
     };
 
     window.addEventListener("scroll", handleScroll);
-
     return () => window.removeEventListener("scroll", handleScroll);
-  }, [nextCursor, hasMore, loadingMore, active]);
+  }, [nextCursor, hasMore, loadingMore, active, categoryId]);
 
-  console.log("PROD : ", products);
-
-  // ================= UI =================
   return (
-    <div className="w-full bg-gray-100 min-h-[calc(100vh-4rem)] px-1 lg:px-[150px]">
-      <div className="w-full h-full flex  flex-col bg-primary px-1 lg:px-3  py-6 ">
-        {/* TITLE */}
-        <h1 className="text-lg sm:text-xl lg:text-2xl font-bold text-primary">
-          {urlName || "Category"}
-        </h1>
+    <main className="min-h-[calc(100vh-4rem)] bg-slate-50">
+      <section className="mx-auto w-full max-w-7xl px-2 py-5 sm:px-6 lg:px-[100px]">
+        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wide text-secondary">
+                Category
+              </p>
 
-        {/* DESKTOP TABS */}
-        <div className="mt-3 border-b border-white/10 hidden lg:block mb-2">
-          <div className="flex gap-12 overflow-x-auto no-scrollbar py-2  border-b border-gray-200">
-            {/* ALL */}
-            <button
-              onClick={() => setActive("all")}
-              className={`pb-2 cursor-pointer px-4 text-xs sm:text-sm whitespace-nowrap transition-all flex-shrink-0
-                ${
+              <h1 className="mt-1 text-2xl font-bold text-slate-950 sm:text-3xl">
+                {urlName || "Products"}
+              </h1>
+
+              <p className="mt-2 text-sm text-slate-500">
+                Browse fresh picks and filter products by subcategory.
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2 rounded-full bg-slate-100 px-4 py-2 text-sm text-slate-600">
+              <span className="h-2 w-2 rounded-full bg-secondary" />
+              <span className="font-medium text-slate-900">
+                {products.length}
+              </span>
+              products shown
+            </div>
+          </div>
+
+          <div className="mt-5 hidden border-t border-slate-100 pt-4 lg:block">
+            <div className="flex gap-2 overflow-x-auto no-scrollbar">
+              <button
+                onClick={() => setActive("all")}
+                className={`shrink-0 rounded-full px-4 py-2 text-sm font-medium transition ${
                   active === "all"
-                    ? "text-orange-500 font-semibold border-b-2 border-orange-500"
-                    : "text-gray-500 hover:text-orange-500 hover:border-orange-500"
-                }
-              `}
+                    ? "bg-secondary text-white shadow-sm"
+                    : "bg-slate-100 text-slate-600 hover:bg-slate-200 hover:text-slate-950"
+                }`}
+              >
+                All Products
+              </button>
+
+              {loading ? (
+                <div className="flex items-center px-3 text-sm text-slate-400">
+                  Loading filters...
+                </div>
+              ) : (
+                subCategories.map((item) => (
+                  <button
+                    key={item.id}
+                    onClick={() => setActive(Number(item.id))}
+                    className={`shrink-0 rounded-full px-4 py-2 text-sm font-medium transition ${
+                      active === Number(item.id)
+                        ? "bg-secondary text-white shadow-sm"
+                        : "bg-slate-100 text-slate-600 hover:bg-slate-200 hover:text-slate-950"
+                    }`}
+                  >
+                    {item.name}
+                  </button>
+                ))
+              )}
+            </div>
+          </div>
+
+          <div className="relative mt-5 lg:hidden">
+            <button
+              onClick={() => setOpenDropdown(!openDropdown)}
+              className="flex w-full items-center justify-between rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-800"
             >
-              All
+              <span className="flex items-center gap-2">
+                <icons.MdSort className="text-secondary" />
+                {activeName}
+              </span>
+              <span className="text-xs text-slate-400">
+                {openDropdown ? "Close" : "Filter"}
+              </span>
             </button>
 
-            {/* SUBCATEGORIES */}
-            {loading ? (
-              <p className="text-gray-500 text-xs">Loading...</p>
-            ) : (
-              subCategories.map((item) => (
-                <button
-                  key={item.id}
-                  onClick={() => setActive(Number(item.id))}
-                  className={`pb-2 cursor-pointer  px-4 text-xs sm:text-sm whitespace-nowrap transition-all flex-shrink-0
-                    ${
-                      active === Number(item.id)
-                        ? "text-orange-500 font-semibold border-b-2 border-orange-500"
-                        : "text-gray-500 hover:text-orange-500 hover:border-orange-500"
-                    }
-                  `}
-                >
-                  {item.name}
-                </button>
-              ))
+            {openDropdown && (
+              <div className="absolute left-0 right-0 top-14 z-50 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl">
+                <div className="max-h-64 overflow-y-auto p-2">
+                  <button
+                    onClick={() => {
+                      setActive("all");
+                      setOpenDropdown(false);
+                    }}
+                    className={`w-full rounded-lg px-3 py-2 text-left text-sm transition hover:bg-slate-100 ${
+                      active === "all"
+                        ? "bg-orange-50 font-semibold text-secondary"
+                        : "text-slate-600"
+                    }`}
+                  >
+                    All Products
+                  </button>
+
+                  {subCategories.map((item) => (
+                    <button
+                      key={item.id}
+                      onClick={() => {
+                        setActive(Number(item.id));
+                        setOpenDropdown(false);
+                      }}
+                      className={`w-full rounded-lg px-3 py-2 text-left text-sm transition hover:bg-slate-100 ${
+                        Number(active) === Number(item.id)
+                          ? "bg-orange-50 font-semibold text-secondary"
+                          : "text-slate-600"
+                      }`}
+                    >
+                      {item.name}
+                    </button>
+                  ))}
+                </div>
+              </div>
             )}
           </div>
         </div>
 
-        {/* MOBILE DROPDOWN */}
-        <div className="flex justify-end w-full lg:hidden relative mt-2 mb-2">
-          <button
-            onClick={() => setOpenDropdown(!openDropdown)}
-            className="flex items-center gap-2 text-xs text-secondary"
-          >
-            <icons.MdSort />
-
-            {active === "all"
-              ? "All"
-              : subCategories.find((s) => Number(s.id) === Number(active))
-                  ?.name || "Select"}
-          </button>
-
-          {openDropdown && (
-            <div className="absolute top-8 right-0 w-48 bg-white shadow-lg rounded-md z-50">
-              <div className="max-h-48 overflow-y-auto">
-                {/* ALL */}
-                <button
-                  onClick={() => {
-                    setActive("all");
-                    setOpenDropdown(false);
-                  }}
-                  className={`w-full text-left px-3 py-2 text-xs hover:bg-gray-100
-                    ${active === "all" ? "text-secondary font-semibold" : ""}
-                  `}
-                >
-                  All
-                </button>
-
-                {/* SUBCATEGORIES */}
-                {subCategories.map((item) => (
-                  <button
-                    key={item.id}
-                    onClick={() => {
-                      setActive(Number(item.id));
-                      setOpenDropdown(false);
-                    }}
-                    className={`w-full text-left px-3 py-2 text-xs hover:bg-gray-100
-                      ${
-                        Number(active) === Number(item.id)
-                          ? "text-secondary font-semibold"
-                          : ""
-                      }
-                    `}
-                  >
-                    {item.name}
-                  </button>
-                ))}
-              </div>
+        <div className="mt-5">
+          <div className="mb-4 flex items-center justify-between pl-1">
+            <div>
+              <h2 className="text-sm font-semibold text-slate-900">
+                {activeName}
+              </h2>
+              <p className="mt-1 text-xs text-slate-500">
+                Showing available products in this category.
+              </p>
             </div>
-          )}
-        </div>
+          </div>
 
-        {/* PRODUCTS */}
-        <div className="flex-1 overflow-y-auto no-scrollbar">
-          {loading && products.length === 0 ? (
+          {initialLoading ? (
             <SkeletonLoader count={10} />
-          ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-5 pb-10 mt-1">
-              {[...products].map((item, index) => (
+          ) : products.length > 0 ? (
+            <div className="grid grid-cols-2 gap-3 pb-8 sm:grid-cols-3 sm:gap-4 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+              {products.map((item) => (
                 <ProductCard
-                  key={`${item.id}-${index}`}
+                  key={item.id}
                   id={item.id}
                   name={item.name}
-                  price={item.price}
+                  price={item.final_price ?? item.price}
+                  originalPrice={item.original_price ?? item.price}
+                  finalPrice={item.final_price ?? item.price}
+                  isOnSale={item.is_on_sale}
+                  saleLabel={item.sale_label}
                   image={item.image_path}
                   seller={item.shop_name}
                   stock={item.stock}
                 />
               ))}
             </div>
+          ) : (
+            <div className="flex min-h-64 items-center justify-center rounded-2xl border border-dashed border-slate-300 bg-white p-8 text-center">
+              <div>
+                <p className="text-base font-semibold text-slate-900">
+                  No products found
+                </p>
+                <p className="mt-1 text-sm text-slate-500">
+                  Try selecting another subcategory.
+                </p>
+              </div>
+            </div>
           )}
 
-          {hasMore && !loading && (
-            <button
-              onClick={() =>
-                fetchProducts({
-                  cursor: nextCursor,
-                  direction: "next",
-                })
-              }
-              className="w-full text-xs text-orange-500 font-semibold py-3"
-            >
-              {loadingMore ? <SkeletonLoader /> : "Load More"}
-            </button>
+          {hasMore && products.length > 0 && (
+            <div className="flex justify-center pb-10">
+              <button
+                onClick={() =>
+                  fetchProducts({
+                    cursor: nextCursor,
+                    direction: "next",
+                  })
+                }
+                disabled={loadingMore}
+                className="rounded-full bg-secondary px-6 py-3 text-sm font-semibold text-white shadow-sm transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {loadingMore ? "Loading..." : "Load More"}
+              </button>
+            </div>
           )}
         </div>
-      </div>
-    </div>
+      </section>
+    </main>
   );
 }
 

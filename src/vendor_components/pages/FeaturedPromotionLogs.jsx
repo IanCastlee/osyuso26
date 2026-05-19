@@ -6,6 +6,7 @@ import VendorTable from "../organisms/VendorTable";
 import useGetData from "../../hooks/useGetData";
 
 import noImage from "../../assets/assets_osyuso/no-image.png";
+import { FiRefreshCw } from "react-icons/fi";
 
 function FeaturedPromotionLogs() {
   // ================= FILTER =================
@@ -34,7 +35,7 @@ function FeaturedPromotionLogs() {
   }, [limit, search, cursor]);
 
   // ================= FETCH =================
-  const { data, loading } = useGetData(
+  const { data, loading, refetch } = useGetData(
     `promotion/get-featured-promotions-logs_v.php?${query}`,
   );
 
@@ -70,6 +71,12 @@ function FeaturedPromotionLogs() {
     setCursor(prev || null);
   };
 
+  const handleRefresh = () => {
+    setCursor(null);
+    setHistory([]);
+    refetch();
+  };
+
   // ================= TABLE =================
   const columns = [
     {
@@ -84,6 +91,14 @@ function FeaturedPromotionLogs() {
           alt="promotion"
           className="w-12 h-12 object-cover rounded-lg"
         />
+      ),
+    },
+    {
+      header: "Product ID",
+      render: (row) => (
+        <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">
+          #{row.product_id || "-"}
+        </span>
       ),
     },
     {
@@ -189,6 +204,18 @@ function FeaturedPromotionLogs() {
             <option value={50}>50 Rows</option>
           </select>
         </div>
+
+        <button
+          type="button"
+          onClick={handleRefresh}
+          disabled={loading}
+          className="inline-flex w-fit items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-semibold ml-5 text-slate-700 shadow-sm transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          <FiRefreshCw
+            className={`text-green-600 ${loading ? "animate-spin" : ""}`}
+          />
+          {loading ? "Refreshing..." : "Refresh Table"}
+        </button>
       </div>
 
       {/* TABLE */}

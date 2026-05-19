@@ -24,6 +24,7 @@ try {
     $sql = "
         SELECT
             id,
+            product_id,
             tag,
             title,
             description,

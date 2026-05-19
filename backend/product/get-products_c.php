@@ -1,118 +1,208 @@
 <?php
+ob_start();
+
 include("../header.php");
 include("../dbConn.php");
-
+date_default_timezone_set("Asia/Manila");
 header("Content-Type: application/json");
 
-$subcategory_id = $_GET['subcategory_id'] ?? null;
-$category_id = $_GET['category_id'] ?? null;
+error_reporting(E_ALL);
+ini_set("display_errors", 0);
 
-$cursor = $_GET['cursor'] ?? null;
-$direction = $_GET['direction'] ?? 'next';
+function response($success, $message, $data = null, $extra = [], $status = 200) {
+    if (ob_get_length()) {
+        ob_clean();
+    }
 
-$limit = 20;
-$fetchLimit = $limit + 1;
+    http_response_code($status);
 
-// ================= VALIDATION =================
-if (!$subcategory_id && !$category_id) {
-    echo json_encode([
-        "success" => false,
-        "message" => "Missing filter"
-    ]);
+    echo json_encode(array_merge([
+        "success" => $success,
+        "message" => $message,
+        "data" => $data
+    ], $extra));
+
     exit;
 }
 
-// ================= BASE QUERY =================
-$sql = "
-SELECT 
-    p.id,
-    p.name,
-    p.price,
-    p.stock,
-    pi.image_path,
-    s.shop_name
-FROM products p
+function saleLabel($saleType, $saleValue) {
+    $saleValue = (float)$saleValue;
 
-LEFT JOIN product_images pi 
-    ON pi.product_id = p.id 
-    AND pi.is_primary = 1
-
-LEFT JOIN shops s 
-    ON s.id = p.shop_id
-
-WHERE 1=1
-";
-
-$params = [];
-$types = "";
-
-// ================= FILTER =================
-if ($subcategory_id) {
-    $sql .= " AND p.subcategory_id = ? ";
-    $params[] = $subcategory_id;
-    $types .= "i";
-}
-
-if ($category_id) {
-    $sql .= " AND p.category_id = ? ";
-    $params[] = $category_id;
-    $types .= "i";
-}
-
-// ================= CURSOR =================
-if ($cursor) {
-    if ($direction === "next") {
-        $sql .= " AND p.id < ? ";
-    } else {
-        $sql .= " AND p.id > ? ";
+    if ($saleType === "percent") {
+        $value = rtrim(rtrim(number_format($saleValue, 2), "0"), ".");
+        return $value . "% OFF";
     }
 
-    $params[] = $cursor;
+    if ($saleType === "fixed") {
+        return "₱" . number_format($saleValue, 2) . " OFF";
+    }
+
+    return null;
+}
+
+try {
+    $subcategory_id = $_GET["subcategory_id"] ?? null;
+    $category_id = $_GET["category_id"] ?? null;
+
+    $cursor = $_GET["cursor"] ?? null;
+    $direction = $_GET["direction"] ?? "next";
+
+    if (!in_array($direction, ["next", "prev"], true)) {
+        $direction = "next";
+    }
+
+    $limit = min(max((int)($_GET["limit"] ?? 20), 1), 50);
+    $fetchLimit = $limit + 1;
+
+    if (!$subcategory_id && !$category_id) {
+        response(false, "Missing filter", null, [], 400);
+    }
+
+    $sql = "
+        SELECT
+            p.id,
+            p.name,
+            p.price,
+            p.stock,
+            p.unit_type,
+            p.sale_type,
+            p.sale_value,
+            p.sale_starts_at,
+            p.sale_ends_at,
+
+            pi.image_path,
+
+            s.shop_name
+        FROM products p
+
+        LEFT JOIN product_images pi
+            ON pi.product_id = p.id
+            AND pi.is_primary = 1
+
+        LEFT JOIN shops s
+            ON s.id = p.shop_id
+
+        WHERE p.status = 'active'
+    ";
+
+    $params = [];
+    $types = "";
+
+    if ($subcategory_id) {
+        $sql .= " AND p.subcategory_id = ? ";
+        $params[] = (int)$subcategory_id;
+        $types .= "i";
+    }
+
+    if ($category_id) {
+        $sql .= " AND p.category_id = ? ";
+        $params[] = (int)$category_id;
+        $types .= "i";
+    }
+
+    if ($cursor) {
+        if ($direction === "next") {
+            $sql .= " AND p.id < ? ";
+        } else {
+            $sql .= " AND p.id > ? ";
+        }
+
+        $params[] = (int)$cursor;
+        $types .= "i";
+    }
+
+    $sql .= $direction === "next"
+        ? " ORDER BY p.id DESC "
+        : " ORDER BY p.id ASC ";
+
+    $sql .= " LIMIT ? ";
+    $params[] = $fetchLimit;
     $types .= "i";
-}
 
-// ================= ORDER =================
-$sql .= $direction === "next"
-    ? " ORDER BY p.id DESC "
-    : " ORDER BY p.id ASC ";
+    $stmt = $conn->prepare($sql);
 
-// ================= LIMIT =================
-$sql .= " LIMIT $fetchLimit";
+    if (!$stmt) {
+        response(false, "Prepare failed: " . $conn->error, null, [], 500);
+    }
 
-// ================= EXECUTE =================
-$stmt = $conn->prepare($sql);
-
-if (!empty($params)) {
     $stmt->bind_param($types, ...$params);
+    $stmt->execute();
+
+    $result = $stmt->get_result();
+
+    $data = [];
+    $now = date("Y-m-d H:i:s");
+
+    while ($row = $result->fetch_assoc()) {
+        $originalPrice = (float)$row["price"];
+        $finalPrice = $originalPrice;
+
+        $saleType = $row["sale_type"] ?? "none";
+        $saleValue = (float)($row["sale_value"] ?? 0);
+
+        $saleStarted =
+            empty($row["sale_starts_at"]) ||
+            $row["sale_starts_at"] <= $now;
+
+        $saleNotEnded =
+            empty($row["sale_ends_at"]) ||
+            $row["sale_ends_at"] >= $now;
+
+        $isOnSale =
+            $saleType !== "none" &&
+            $saleValue > 0 &&
+            $saleStarted &&
+            $saleNotEnded;
+
+        if ($isOnSale) {
+            if ($saleType === "percent") {
+                $finalPrice = $originalPrice - ($originalPrice * ($saleValue / 100));
+            }
+
+            if ($saleType === "fixed") {
+                $finalPrice = $originalPrice - $saleValue;
+            }
+
+            $finalPrice = max(0, $finalPrice);
+        }
+
+        $row["original_price"] = $originalPrice;
+        $row["final_price"] = $finalPrice;
+        $row["is_on_sale"] = $isOnSale ? 1 : 0;
+        $row["sale_label"] = $isOnSale ? saleLabel($saleType, $saleValue) : null;
+
+        $data[] = $row;
+    }
+
+    $hasMore = count($data) > $limit;
+
+    if ($hasMore) {
+        array_pop($data);
+    }
+
+    if ($direction === "prev") {
+        $data = array_reverse($data);
+    }
+
+    $nextCursor = null;
+    $prevCursor = null;
+
+    if (!empty($data)) {
+        $last = end($data);
+        $first = reset($data);
+
+        $nextCursor = $hasMore ? $last["id"] : null;
+        $prevCursor = $first["id"];
+    }
+
+    response(true, "Products fetched successfully", $data, [
+        "next_cursor" => $nextCursor,
+        "prev_cursor" => $prevCursor,
+        "has_more" => $hasMore,
+        "limit" => $limit
+    ]);
+} catch (Throwable $e) {
+    error_log("Get category products failed: " . $e->getMessage());
+
+    response(false, "Failed to fetch products", null, [], 500);
 }
-
-$stmt->execute();
-
-$result = $stmt->get_result();
-
-$data = [];
-
-while ($row = $result->fetch_assoc()) {
-    $data[] = $row;
-}
-
-// ================= HAS MORE =================
-$has_more = false;
-
-if (count($data) > $limit) {
-    $has_more = true;
-    array_pop($data);
-}
-
-// ================= CURSORS =================
-$next_cursor = $has_more ? end($data)['id'] : null;
-$prev_cursor = !empty($data) ? $data[0]['id'] : null;
-
-// ================= RESPONSE =================
-echo json_encode([
-    "success" => true,
-    "data" => $data,
-    "next_cursor" => $next_cursor,
-    "prev_cursor" => $prev_cursor,
-    "has_more" => $has_more
-]);

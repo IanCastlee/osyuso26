@@ -1,20 +1,33 @@
 <?php
+ob_start();
+
 include("../header.php");
 
-ob_start();
 header("Content-Type: application/json");
 
 error_reporting(E_ALL);
-ini_set('display_errors', 0);
+ini_set("display_errors", 0);
 
 require_once "../dbConn.php";
 require_once "../config/cloudinary.php";
 require_once "../auth/middleware.php";
 
-// ================= AUTH CHECK =================
+function response($success, $message, $data = null) {
+    if (ob_get_length()) {
+        ob_clean();
+    }
+
+    echo json_encode([
+        "success" => $success,
+        "message" => $message,
+        "data" => $data
+    ]);
+
+    exit;
+}
+
 $user = requireRole(["vendor", "admin"]);
 
-// ================= CLOUDINARY CHECK =================
 $cloudName = CLOUDINARY_CLOUD_NAME ?? null;
 
 if (!$cloudName) {
@@ -22,23 +35,20 @@ if (!$cloudName) {
 }
 
 try {
-
-    // ================= START TRANSACTION =================
     $conn->begin_transaction();
 
-    // ================= GET USER =================
     $vendor_id = $user->user_id;
+    $role = $user->role ?? "";
 
-    // ================= GET INPUT =================
-    $tag = trim($_POST['tag'] ?? '');
-    $title = trim($_POST['title'] ?? '');
-    $description = trim($_POST['description'] ?? '');
+    $product_id = (int)($_POST["product_id"] ?? 0);
+    $tag = trim($_POST["tag"] ?? "");
+    $title = trim($_POST["title"] ?? "");
+    $description = trim($_POST["description"] ?? "");
+    $start_date = $_POST["start_date"] ?? null;
+    $expires_at = $_POST["expires_at"] ?? null;
 
-    $start_date = $_POST['start_date'] ?? null;
-    $expires_at = $_POST['expires_at'] ?? null;
-
-    // ================= VALIDATION =================
     if (
+        !$product_id ||
         !$title ||
         !$description ||
         !$start_date ||
@@ -47,155 +57,139 @@ try {
         throw new Exception("Missing required fields");
     }
 
-    // ================= DATE VALIDATION =================
+    if ($role === "admin") {
+        $productStmt = $conn->prepare("
+            SELECT id
+            FROM products
+            WHERE id = ?
+            LIMIT 1
+        ");
+
+        $productStmt->bind_param("i", $product_id);
+    } else {
+        $productStmt = $conn->prepare("
+            SELECT p.id
+            FROM products p
+            INNER JOIN shops s
+                ON s.id = p.shop_id
+            WHERE p.id = ?
+                AND s.owner_id = ?
+            LIMIT 1
+        ");
+
+        $productStmt->bind_param("ii", $product_id, $vendor_id);
+    }
+
+    if (!$productStmt) {
+        throw new Exception("Product validation prepare failed: " . $conn->error);
+    }
+
+    $productStmt->execute();
+    $productResult = $productStmt->get_result();
+
+    if ($productResult->num_rows === 0) {
+        throw new Exception("Invalid product ID or product does not belong to your shop");
+    }
+
     $start = new DateTime($start_date);
     $end = new DateTime($expires_at);
 
     if ($end <= $start) {
-        throw new Exception(
-            "Expiration date must be greater than start date"
-        );
+        throw new Exception("Expiration date must be greater than start date");
     }
 
-    // ================= HOURS =================
-    $diffSeconds =
-        $end->getTimestamp() -
-        $start->getTimestamp();
+    $diffSeconds = $end->getTimestamp() - $start->getTimestamp();
+    $total_hours = max(1, ceil($diffSeconds / 3600));
 
-    $total_hours = ceil($diffSeconds / 3600);
+    $settingsQuery = $conn->query("
+        SELECT promotion_price_per_hour
+        FROM admin_settings
+        LIMIT 1
+    ");
 
-    if ($total_hours < 1) {
-        $total_hours = 1;
-    }
+    $settings = $settingsQuery ? $settingsQuery->fetch_assoc() : null;
+    $price_per_hour = (float)($settings["promotion_price_per_hour"] ?? 20);
+    $total_price = $total_hours * $price_per_hour;
 
-    // ================= PRICING =================
-    // ================= GET SETTINGS =================
-$settingsQuery = $conn->query("
-    SELECT promotion_price_per_hour
-    FROM admin_settings
-    LIMIT 1
-");
-
-$settings = $settingsQuery->fetch_assoc();
-
-$price_per_hour =
-    $settings['promotion_price_per_hour'] ?? 20;
-
-    $total_price =
-        $total_hours * $price_per_hour;
-
-    // ================= DEFAULT IMAGE =================
     $imageUrl = null;
 
-    // ================= IMAGE UPLOAD =================
-    if (!empty($_FILES['image']['tmp_name'])) {
+    if (!empty($_FILES["image"]["tmp_name"])) {
+        $tmp_name = $_FILES["image"]["tmp_name"];
 
-        $tmp_name = $_FILES['image']['tmp_name'];
-
-        // ================= FILE ERROR =================
-        if ($_FILES['image']['error'] !== UPLOAD_ERR_OK) {
-
+        if ($_FILES["image"]["error"] !== UPLOAD_ERR_OK) {
             throw new Exception(
-                "Image upload failed. Error code: " .
-                $_FILES['image']['error']
+                "Image upload failed. Error code: " . $_FILES["image"]["error"]
             );
         }
 
-        // ================= FILE EXISTS =================
         if (!file_exists($tmp_name)) {
             throw new Exception("Uploaded image missing");
         }
 
-        // ================= FILE SIZE =================
-        $fileSize = $_FILES['image']['size'];
-
-        // 10MB
-        if ($fileSize > 10 * 1024 * 1024) {
-            throw new Exception(
-                "Image too large. Max 10MB allowed."
-            );
+        if ($_FILES["image"]["size"] > 10 * 1024 * 1024) {
+            throw new Exception("Image too large. Max 10MB allowed.");
         }
 
-        // ================= MIME CHECK =================
         $mime = mime_content_type($tmp_name);
 
         $allowedMimes = [
-            'image/jpeg',
-            'image/png',
-            'image/webp',
-            'image/gif'
+            "image/jpeg",
+            "image/png",
+            "image/webp",
+            "image/gif"
         ];
 
         if (!in_array($mime, $allowedMimes)) {
             throw new Exception("Invalid image type");
         }
 
-        // ================= CLOUDINARY =================
         $ch = curl_init(
             "https://api.cloudinary.com/v1_1/$cloudName/image/upload"
         );
 
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($ch, CURLOPT_POST, true);
-
         curl_setopt($ch, CURLOPT_TIMEOUT, 30);
         curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 10);
-
         curl_setopt($ch, CURLOPT_POSTFIELDS, [
             "file" => new CURLFile($tmp_name),
             "upload_preset" => "unsigned_upload",
             "folder" => "featured-promotions/{$vendor_id}"
         ]);
 
-        $response = curl_exec($ch);
+        $cloudinaryResponse = curl_exec($ch);
 
-        // ================= CURL ERROR =================
         if (curl_errno($ch)) {
-
             $curlError = curl_error($ch);
-
             curl_close($ch);
-
-            throw new Exception(
-                "Cloudinary cURL Error: " . $curlError
-            );
+            throw new Exception("Cloudinary cURL Error: " . $curlError);
         }
 
         curl_close($ch);
 
-        // ================= RESPONSE =================
-        $result = json_decode($response, true);
+        $result = json_decode($cloudinaryResponse, true);
 
         if (!$result) {
+            throw new Exception("Invalid Cloudinary response");
+        }
+
+        if (!empty($result["error"])) {
             throw new Exception(
-                "Invalid Cloudinary response"
+                $result["error"]["message"] ?? "Cloudinary upload failed"
             );
         }
 
-        // ================= CLOUDINARY ERROR =================
-        if (!empty($result['error'])) {
-
-            $cloudinaryError =
-                $result['error']['message']
-                ?? 'Cloudinary upload failed';
-
-            throw new Exception($cloudinaryError);
+        if (empty($result["secure_url"])) {
+            throw new Exception("Cloudinary upload failed");
         }
 
-        // ================= SUCCESS CHECK =================
-        if (empty($result['secure_url'])) {
-            throw new Exception(
-                "Cloudinary upload failed"
-            );
-        }
-
-        $imageUrl = $result['secure_url'];
+        $imageUrl = $result["secure_url"];
     }
 
-    // ================= INSERT PROMOTION =================
     $stmt = $conn->prepare("
         INSERT INTO featured_promotions
         (
+            product_id,
             vendor_id,
             tag,
             title,
@@ -219,13 +213,19 @@ $price_per_hour =
             ?,
             ?,
             ?,
+            ?,
             'pending',
             NOW()
         )
     ");
 
+    if (!$stmt) {
+        throw new Exception("Promotion insert prepare failed: " . $conn->error);
+    }
+
     $stmt->bind_param(
-        "issssssid",
+        "iissssssid",
+        $product_id,
         $vendor_id,
         $tag,
         $title,
@@ -238,38 +238,25 @@ $price_per_hour =
     );
 
     if (!$stmt->execute()) {
-        throw new Exception(
-            "Failed to create promotion"
-        );
+        throw new Exception("Failed to create promotion");
     }
 
     $promotion_id = $stmt->insert_id;
 
-    // ================= COMMIT =================
     $conn->commit();
 
-    echo json_encode([
-        "success" => true,
-        "message" => "Promotion submitted successfully",
-        "data" => [
-            "promotion_id" => $promotion_id,
-            "image" => $imageUrl,
-            "total_hours" => $total_hours,
-            "total_price" => $total_price
-        ]
+    response(true, "Promotion submitted successfully", [
+        "promotion_id" => $promotion_id,
+        "product_id" => $product_id,
+        "image" => $imageUrl,
+        "total_hours" => $total_hours,
+        "price_per_hour" => $price_per_hour,
+        "total_price" => $total_price
     ]);
-
 } catch (Exception $e) {
-
-    // ================= ROLLBACK =================
-    if ($conn->connect_errno === 0) {
-        $conn->rollback();
-    }
+    $conn->rollback();
 
     error_log($e->getMessage());
 
-    echo json_encode([
-        "success" => false,
-        "message" => $e->getMessage()
-    ]);
+    response(false, $e->getMessage());
 }

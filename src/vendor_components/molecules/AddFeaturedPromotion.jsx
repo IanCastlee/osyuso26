@@ -1,9 +1,9 @@
 import React from "react";
 import { FaBox, FaMoneyBill } from "react-icons/fa";
+import { FiCalendar, FiImage, FiPackage, FiTag } from "react-icons/fi";
 
 import offer1 from "../../assets/hero_images/offer1.png";
 import addImage from "../../assets/icons/addimage.png";
-
 import LoaderWithText from "../../reusable_components/LoaderWithText";
 import InputField from "../atoms/InputField";
 import useGetData from "../../hooks/useGetData";
@@ -17,388 +17,306 @@ function AddFeaturedPromotion({
   handleSubmit,
   submitLoading,
 }) {
-  // ================= ADMIN SETTINGS =================
   const { data, loading } = useGetData("admin_setting/admin-setting.php");
 
-  console.log("data : ", data);
-
-  // ================= PRICE =================
   const PRICE_PER_HOUR = Number(data?.price_per_hour) || 20;
 
-  console.log("DATA :     -- ", PRICE_PER_HOUR);
-
-  // ================= MIN DATE =================
   const now = new Date();
-
   const localDateTime = new Date(
     now.getTime() - now.getTimezoneOffset() * 60000,
   )
     .toISOString()
     .slice(0, 16);
 
-  // ================= HOURS =================
   const calculateHours = () => {
     if (!form.start_date || !form.expires_at) return 1;
 
     const start = new Date(form.start_date);
     const end = new Date(form.expires_at);
-
     const diffMs = end - start;
 
-    // INVALID
     if (diffMs <= 0) return 1;
 
-    const hours = Math.ceil(diffMs / (1000 * 60 * 60));
-
-    return hours;
+    return Math.ceil(diffMs / (1000 * 60 * 60));
   };
 
   const totalHours = calculateHours();
-
-  // ================= TOTAL PRICE =================
   const totalPrice = totalHours * PRICE_PER_HOUR;
+  const imageError = errors.image || errors.images;
 
   return (
-    <div className="bg-white rounded-xl shadow px-4 py-4">
+    <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+      <div className="mb-5 flex items-center gap-3 border-b border-slate-100 pb-4">
+        <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-orange-50 text-secondary">
+          <FiTag className="text-xl" />
+        </span>
+
+        <div>
+          <h2 className="text-lg font-bold text-slate-950">
+            Create Featured Promotion
+          </h2>
+          <p className="mt-1 text-sm text-slate-500">
+            Submit a product promotion for admin approval.
+          </p>
+        </div>
+      </div>
+
       <form
         onSubmit={handleSubmit}
-        className="grid grid-cols-1 md:grid-cols-2 gap-6"
+        className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_420px]"
       >
-        {/* LEFT */}
-        <div className="space-y-4">
-          {/* TAG */}
-          <InputField
-            label="Tag"
-            placeholder="Eg. 🔥 LIMITED OFFER"
-            name="tag"
-            value={form.tag}
-            onChange={handleChange}
-            icon={FaBox}
-            error={errors.tag}
-          />
-
-          {/* TITLE */}
-          <InputField
-            label="Title"
-            name="title"
-            value={form.title}
-            onChange={handleChange}
-            error={errors.title}
-          />
-
-          {/* DESCRIPTION */}
-          <InputField
-            label="Description"
-            name="description"
-            value={form.description}
-            onChange={handleChange}
-            icon={FaMoneyBill}
-            error={errors.description}
-          />
-
-          {/* DATES */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            {/* START DATE */}
-            <div className="w-full">
-              <label className="text-sm font-medium">Start Date</label>
-
-              <input
-                type="datetime-local"
-                name="start_date"
-                value={form.start_date}
-                min={localDateTime}
-                onChange={(e) =>
-                  handleChange({
-                    target: {
-                      name: "start_date",
-                      value: e.target.value,
-                    },
-                  })
-                }
-                className="
-                  w-full border border-gray-300
-                  rounded-lg px-3 py-2 mt-1
-                  focus:outline-none focus:ring-2
-                  focus:ring-orange-400
-                "
-              />
-
-              {errors.start_date && (
-                <p className="text-xs text-red-500 mt-1">{errors.start_date}</p>
-              )}
+        <div className="space-y-5">
+          <div className="rounded-2xl border border-slate-200 bg-slate-50/60 p-4">
+            <div className="mb-4 flex items-center gap-2">
+              <FiPackage className="text-secondary" />
+              <h3 className="text-sm font-semibold text-slate-950">
+                Promotion Details
+              </h3>
             </div>
 
-            {/* EXPIRES */}
-            <div className="w-full">
-              <label className="text-sm font-medium">Expires At</label>
-
-              <input
-                type="datetime-local"
-                name="expires_at"
-                value={form.expires_at}
-                min={form.start_date || localDateTime}
-                onChange={(e) =>
-                  handleChange({
-                    target: {
-                      name: "expires_at",
-                      value: e.target.value,
-                    },
-                  })
-                }
-                className="
-                  w-full border border-gray-300
-                  rounded-lg px-3 py-2 mt-1
-                  focus:outline-none focus:ring-2
-                  focus:ring-orange-400
-                "
+            <div className="grid gap-4 sm:grid-cols-2">
+              <InputField
+                label="Product ID"
+                name="product_id"
+                type="number"
+                placeholder="Eg. 55"
+                value={form.product_id}
+                onChange={handleChange}
+                icon={FiPackage}
+                error={errors.product_id}
               />
 
-              {errors.expires_at && (
-                <p className="text-xs text-red-500 mt-1">{errors.expires_at}</p>
-              )}
+              <InputField
+                label="Tag"
+                placeholder="Eg. Limited Offer"
+                name="tag"
+                value={form.tag}
+                onChange={handleChange}
+                icon={FaBox}
+                error={errors.tag}
+              />
+
+              <div className="sm:col-span-2">
+                <InputField
+                  label="Title"
+                  name="title"
+                  placeholder="Promotion title"
+                  value={form.title}
+                  onChange={handleChange}
+                  error={errors.title}
+                />
+              </div>
+
+              <div className="sm:col-span-2">
+                <InputField
+                  label="Description"
+                  name="description"
+                  placeholder="Short promotion description"
+                  value={form.description}
+                  onChange={handleChange}
+                  icon={FaMoneyBill}
+                  error={errors.description}
+                />
+              </div>
             </div>
           </div>
 
-          {/* LIVE INFO */}
+          <div className="rounded-2xl border border-slate-200 bg-slate-50/60 p-4">
+            <div className="mb-4 flex items-center gap-2">
+              <FiCalendar className="text-secondary" />
+              <h3 className="text-sm font-semibold text-slate-950">Schedule</h3>
+            </div>
 
-          {/* IMAGE UPLOAD */}
-          <div className="flex flex-col">
-            <label className="text-sm font-medium mb-2">Banner Image</label>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <DateField
+                label="Start Date"
+                name="start_date"
+                value={form.start_date}
+                min={localDateTime}
+                onChange={handleChange}
+                error={errors.start_date}
+              />
 
-            {/* HIDDEN INPUT */}
+              <DateField
+                label="Expires At"
+                name="expires_at"
+                value={form.expires_at}
+                min={form.start_date || localDateTime}
+                onChange={handleChange}
+                error={errors.expires_at}
+              />
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-slate-200 bg-slate-50/60 p-4">
+            <div className="mb-4 flex items-center gap-2">
+              <FiImage className="text-secondary" />
+              <h3 className="text-sm font-semibold text-slate-950">
+                Banner Image
+              </h3>
+            </div>
+
             <input
-              id="banner-upload"
+              id="featured-banner-upload"
               type="file"
               accept="image/*"
               onChange={handleImages}
               className="hidden"
             />
 
-            {/* CUSTOM PICKER */}
             <label
-              htmlFor="banner-upload"
-              className="
-                w-full h-[180px]
-                border-2 border-dashed border-gray-300
-                rounded-xl
-                overflow-hidden
-                cursor-pointer
-                hover:border-secondary
-                transition
-                bg-gray-50
-                flex items-center justify-center
-                relative
-                group
-              "
+              htmlFor="featured-banner-upload"
+              className={`group relative flex h-44 cursor-pointer items-center justify-center overflow-hidden rounded-2xl border-2 border-dashed bg-white transition hover:border-secondary ${
+                imageError ? "border-red-300" : "border-slate-300"
+              }`}
             >
-              {/* PREVIEW */}
               {preview[0] ? (
                 <>
                   <img
                     src={preview[0]}
-                    alt="preview"
-                    className="
-                      w-full h-full object-cover
-                      group-hover:scale-105
-                      transition duration-300
-                    "
+                    alt="Preview"
+                    className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
                   />
-
-                  {/* OVERLAY */}
-                  <div
-                    className="
-                      absolute inset-0
-                      bg-black/30
-                      opacity-0 group-hover:opacity-100
-                      transition
-                      flex items-center justify-center
-                    "
-                  >
-                    <span className="text-white text-sm font-semibold">
+                  <div className="absolute inset-0 flex items-center justify-center bg-slate-950/40 opacity-0 transition group-hover:opacity-100">
+                    <span className="text-sm font-semibold text-white">
                       Change Image
                     </span>
                   </div>
                 </>
               ) : (
-                <div className="flex flex-col items-center justify-center text-gray-400">
+                <div className="flex flex-col items-center text-center text-slate-400">
                   <img
                     src={addImage}
-                    alt="upload"
-                    className="w-14 h-14 object-contain opacity-70"
+                    alt="Upload"
+                    className="h-14 w-14 object-contain opacity-70"
                   />
-
-                  <span className="mt-2 text-xs sm:text-sm">
+                  <span className="mt-2 text-sm font-medium">
                     Click to upload banner
                   </span>
+                  <span className="mt-1 text-xs">JPG, PNG, or WEBP</span>
                 </div>
               )}
             </label>
 
-            {/* ERROR */}
-            {errors.images && (
-              <p className="text-xs text-red-500 mt-1">{errors.images}</p>
+            {imageError && (
+              <p className="mt-2 text-xs font-medium text-red-500">
+                {imageError}
+              </p>
             )}
           </div>
-
-          {/* SUBMIT */}
-          <button
-            type="submit"
-            disabled={submitLoading || !form.start_date || !form.expires_at}
-            className="
-              w-full bg-secondary text-white py-2
-              rounded-md font-semibold
-              flex items-center justify-center gap-2
-              disabled:opacity-50
-              disabled:cursor-not-allowed
-            "
-          >
-            {submitLoading ? (
-              <LoaderWithText text="Submit..." />
-            ) : (
-              `Submit Promotion • ₱${totalPrice}`
-            )}
-          </button>
         </div>
 
-        {/* RIGHT PREVIEW */}
-        <div className="flex flex-col gap-2">
-          <div className="w-full h-[250px]">
-            <div
-              className="
-              w-full h-[250px] lg:h-full
-              flex flex-row
-              rounded-lg lg:rounded-xl
-              overflow-hidden
-              shadow-sm hover:shadow-lg
-              transition
-              bg-gradient-to-r
-              from-orange-500
-              via-orange-400
-              to-yellow-400
-              text-white
-              relative
-            "
-            >
-              {/* IMAGE */}
-              <div className="w-[35%] h-full overflow-hidden relative">
+        <aside className="space-y-4 lg:sticky lg:top-24 lg:h-fit">
+          <div className="overflow-hidden rounded-2xl border border-orange-200 bg-orange-500 text-white shadow-sm">
+            <div className="flex h-56">
+              <div className="h-full w-[38%] overflow-hidden bg-orange-600">
                 <img
                   src={preview[0] || offer1}
-                  alt="offer"
-                  className="
-                  w-full h-full object-cover
-                  lg:object-contain lg:object-center
-                  scale-x-[-1]
-                "
+                  alt="Promotion"
+                  className="h-full w-full scale-x-[-1] object-cover"
                 />
-
-                <div className="absolute inset-0 bg-black/10"></div>
               </div>
 
-              {/* CONTENT */}
-              <div className="w-[65%] p-4 flex flex-col justify-center gap-2">
-                {/* TAG */}
-                <span
-                  className="
-                  text-[10px] lg:text-xs
-                  font-semibold
-                  bg-white/20
-                  w-fit
-                  px-2 lg:px-3
-                  py-0 lg:py-1
-                  rounded-full
-                  backdrop-blur-md
-                "
-                >
-                  {form.tag || "🔥 LIMITED OFFER"}
+              <div className="flex flex-1 flex-col justify-center gap-2 p-4">
+                <span className="w-fit rounded-full bg-white/20 px-3 py-1 text-xs font-semibold">
+                  {form.tag || "Limited Offer"}
                 </span>
 
-                {/* TITLE */}
-                <h2 className="text-sm md:text-xl lg:text-3xl font-bold leading-tight">
-                  {form.title || "Special Vendor Offer!"}
+                <h2 className="line-clamp-2 text-xl font-bold leading-tight">
+                  {form.title || "Special Vendor Offer"}
                 </h2>
 
-                {/* DESCRIPTION */}
-                <p className="text-[10px] lg:text-sm text-white/90 leading-snug">
+                <p className="line-clamp-3 text-sm leading-snug text-white/90">
                   {form.description ||
-                    "Get fresh products at discounted prices from local sellers near you."}
+                    "Promote your selected product and reach more buyers."}
                 </p>
 
-                {/* PRICE */}
-                {/* <div className="flex flex-col mt-1">
-                <span className="text-[10px] lg:text-xs text-white/80">
-                  Promotion Fee
-                </span>
-
-                <div className="flex items-end gap-2">
-                  <h2 className="text-lg lg:text-2xl font-bold text-white">
-                    ₱{totalPrice}
-                  </h2>
-
-                  <span className="text-[10px] lg:text-xs text-white/80 mb-1">
-                    ({totalHours} hour
-                    {totalHours > 1 ? "s" : ""} × ₱{PRICE_PER_HOUR})
-                  </span>
-                </div>
-              </div> */}
-
-                {/* BUTTON */}
                 <button
                   type="button"
-                  className="
-                  mt-0 lg:mt-2
-                  w-fit
-                  px-2 lg:px-4
-                  py-0 lg:py-1
-                  text-[10px] lg:text-sm
-                  bg-white
-                  text-orange-500
-                  font-semibold
-                  rounded-md
-                  hover:bg-gray-100
-                  transition
-                "
+                  className="mt-1 w-fit rounded-lg bg-white px-4 py-2 text-sm font-semibold text-orange-500"
                 >
                   Shop Now
                 </button>
               </div>
-
-              {/* DOTS */}
-              <div className="absolute bottom-2 right-4 flex gap-1 lg:gap-2">
-                {[1, 2, 3].map((_, i) => (
-                  <button
-                    key={i}
-                    className="
-                    w-1 lg:w-2
-                    h-1 lg:h-2
-                    rounded-full
-                    bg-white/40
-                  "
-                  />
-                ))}
-              </div>
             </div>
           </div>
 
-          <div className="bg-orange-50 border border-orange-200 rounded-lg p-3">
-            <p className="text-xs text-orange-700 font-semibold">
-              Duration:
-              <span className="ml-1">
-                {totalHours} hour
-                {totalHours > 1 ? "s" : ""}
-              </span>
+          <div className="rounded-2xl border border-orange-200 bg-orange-50 p-4">
+            <p className="text-sm font-bold text-orange-700">
+              Promotion Summary
             </p>
 
-            <p className="text-xs text-orange-600 mt-1">
-              Estimated Cost:
-              <span className="font-bold ml-1">₱{totalPrice}</span>
-            </p>
-
-            <p className="text-[11px] text-orange-500 mt-1">
-              {loading ? "Loading pricing..." : `₱${PRICE_PER_HOUR} per hour`}
-            </p>
+            <div className="mt-3 space-y-2 text-sm">
+              <SummaryRow label="Product ID" value={form.product_id || "-"} />
+              <SummaryRow
+                label="Duration"
+                value={`${totalHours} hour${totalHours > 1 ? "s" : ""}`}
+              />
+              <SummaryRow
+                label="Rate"
+                value={loading ? "Loading..." : `₱${PRICE_PER_HOUR} / hour`}
+              />
+              <SummaryRow
+                label="Estimated Cost"
+                value={`₱${totalPrice}`}
+                bold
+              />
+            </div>
           </div>
-        </div>
+
+          <button
+            type="submit"
+            disabled={submitLoading || !form.start_date || !form.expires_at}
+            className="flex w-full items-center justify-center gap-2 rounded-xl bg-secondary px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {submitLoading ? (
+              <LoaderWithText text="Submitting..." />
+            ) : (
+              `Submit Promotion • ₱${totalPrice}`
+            )}
+          </button>
+        </aside>
       </form>
+    </div>
+  );
+}
+
+function DateField({ label, name, value, min, onChange, error }) {
+  return (
+    <div>
+      <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-slate-400">
+        {label}
+      </label>
+
+      <input
+        type="datetime-local"
+        name={name}
+        value={value}
+        min={min}
+        onChange={onChange}
+        className="h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-800 outline-none transition focus:border-secondary"
+      />
+
+      {error && (
+        <p className="mt-1 text-xs font-medium text-red-500">{error}</p>
+      )}
+    </div>
+  );
+}
+
+function SummaryRow({ label, value, bold = false }) {
+  return (
+    <div className="flex items-center justify-between gap-3">
+      <span className="text-orange-700/80">{label}</span>
+      <span
+        className={`text-right ${
+          bold
+            ? "text-lg font-bold text-orange-700"
+            : "font-semibold text-orange-900"
+        }`}
+      >
+        {value}
+      </span>
     </div>
   );
 }

@@ -11,8 +11,6 @@ function SpecialOfferCard() {
 
   const [index, setIndex] = useState(0);
 
-  console.log(data);
-
   const offers = data || [];
   const current = offers[index] || {};
 
@@ -86,7 +84,7 @@ function SpecialOfferCard() {
           </p>
 
           <button
-            onClick={() => navigate(`/markets/${current.shop_id}`)}
+            onClick={() => navigate(`/reserve/${current.product_id}`)}
             className="mt-3 w-fit rounded-lg bg-white px-4 py-2 text-xs font-semibold text-secondary shadow-sm transition hover:bg-orange-50 sm:mt-4 sm:text-sm"
           >
             Shop Now

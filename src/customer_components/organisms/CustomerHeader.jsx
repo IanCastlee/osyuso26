@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { icons } from "../../constant/icons";
 import { useNavigate } from "react-router-dom";
 import CustomerSidebar from "./CustomerSidebar";
@@ -7,6 +7,10 @@ import { useAuth } from "../../context/AuthContext";
 function CustomerHeader() {
   const [isOpen, setIsOpen] = useState(false);
   const [openUserMenu, setOpenUserMenu] = useState(false);
+  const [navSearch, setNavSearch] = useState("");
+
+  const navigate = useNavigate();
+  const userMenuRef = useRef(null);
 
   const {
     IoMdNotificationsOutline,
@@ -22,74 +26,131 @@ function CustomerHeader() {
   } = icons;
 
   const SearchIcon = icons.IoSearchOutline || icons.CiSearch || icons.FiSearch;
-
-  const navigate = useNavigate();
   const { user, logout } = useAuth();
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (userMenuRef.current && !userMenuRef.current.contains(event.target)) {
+        setOpenUserMenu(false);
+      }
+    };
+
+    const handleEscape = (event) => {
+      if (event.key === "Escape") {
+        setOpenUserMenu(false);
+        setIsOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener("keydown", handleEscape);
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("keydown", handleEscape);
+    };
+  }, []);
+
+  const handleNavbarSearch = (e) => {
+    e.preventDefault();
+
+    const keyword = navSearch.trim();
+    if (!keyword) return;
+
+    navigate(`/search?q=${encodeURIComponent(keyword)}`);
+  };
+
+  const handleLogout = () => {
+    logout();
+    setOpenUserMenu(false);
+    navigate("/signin");
+  };
+
+  const BadgeIconButton = ({ icon: Icon, label, count, onClick }) => (
+    <button
+      onClick={onClick}
+      className="group inline-flex h-10 items-center gap-2 rounded-full px-3 text-sm font-semibold text-white/90 transition hover:bg-white/10 hover:text-white focus:outline-none focus:ring-2 focus:ring-white/40"
+      aria-label={label}
+    >
+      <span className="relative inline-flex">
+        <Icon className="text-[22px]" />
+
+        {count > 0 && (
+          <span className="absolute -right-2 -top-2 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold leading-none text-white ring-2 ring-orange-500">
+            {count}
+          </span>
+        )}
+      </span>
+
+      <span className="hidden xl:inline">{label}</span>
+    </button>
+  );
 
   return (
     <>
-      <header className="w-full sticky top-0 z-20 bg-secondary text-white shadow-md">
-        <div className="hidden md:flex w-full px-16 h-10 justify-between items-center border-b border-white/10">
+      <header className="sticky top-0 z-30 w-full bg-orange-500 text-white shadow-[0_8px_24px_rgba(15,23,42,0.18)]">
+        <div className="hidden h-10 items-center justify-between border-b border-white/15 px-8 lg:flex lg:px-16">
           <button
             onClick={() => navigate("/signup-seller")}
-            className="flex items-center gap-1 hover:underline text-xs"
+            className="inline-flex items-center gap-2 text-xs font-semibold text-white/85 transition hover:text-white"
           >
-            <CiShop className="text-[18px]" />
+            <CiShop className="text-lg" />
             Start Selling
           </button>
 
-          <div className="flex items-center gap-3 text-xs">
+          <div className="flex items-center gap-4 text-xs font-semibold text-white/85">
             <button
               onClick={() => navigate("/about")}
-              className="flex items-center gap-1 hover:opacity-80"
+              className="inline-flex items-center gap-1.5 transition hover:text-white"
             >
-              <IoIosInformationCircleOutline />
+              <IoIosInformationCircleOutline className="text-base" />
               About
             </button>
 
-            <span className="text-white/50">|</span>
-
             <button
               onClick={() => navigate("/faq")}
-              className="flex items-center gap-1 hover:opacity-80"
+              className="inline-flex items-center gap-1.5 transition hover:text-white"
             >
-              <RxQuestionMarkCircled />
+              <RxQuestionMarkCircled className="text-base" />
               FAQ
             </button>
 
-            <span className="text-white/50">|</span>
+            <span className="h-4 w-px bg-white/25" />
 
             {user ? (
-              <div className="relative">
-                <div className="flex items-center gap-1">
+              <div ref={userMenuRef} className="relative">
+                <button
+                  onClick={() => setOpenUserMenu((value) => !value)}
+                  className="inline-flex items-center gap-2 rounded-full py-1 pl-1 pr-2 transition hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-white/40"
+                >
                   <HiMiniUserCircle className="text-2xl" />
-                  <button
-                    onClick={() => setOpenUserMenu(!openUserMenu)}
-                    className="flex items-center font-semibold hover:opacity-80"
-                  >
+
+                  <span className="max-w-32 truncate font-semibold">
                     {user?.fullname?.split(" ")[0] || "User"}
-                    <MdKeyboardArrowDown />
-                  </button>
-                </div>
+                  </span>
+
+                  <MdKeyboardArrowDown
+                    className={`text-base transition ${
+                      openUserMenu ? "rotate-180" : ""
+                    }`}
+                  />
+                </button>
 
                 {openUserMenu && (
-                  <div className="absolute right-0 mt-2 w-44 bg-white text-black rounded-md shadow-lg overflow-hidden z-50">
+                  <div className="absolute right-0 z-50 mt-3 w-52 overflow-hidden rounded-xl border border-slate-100 bg-white py-1 text-sm text-slate-700 shadow-xl">
                     <button
                       onClick={() => {
                         navigate("/account");
                         setOpenUserMenu(false);
                       }}
-                      className="w-full text-left px-4 py-2 hover:bg-gray-100"
+                      className="w-full px-4 py-3 text-left font-medium transition hover:bg-slate-50"
                     >
                       My Account
                     </button>
 
                     <button
-                      onClick={() => {
-                        logout();
-                        navigate("/signin");
-                      }}
-                      className="w-full text-left px-4 py-2 hover:bg-gray-100 text-red-600"
+                      onClick={handleLogout}
+                      className="w-full px-4 py-3 text-left font-semibold text-red-600 transition hover:bg-red-50"
                     >
                       Logout
                     </button>
@@ -97,105 +158,120 @@ function CustomerHeader() {
                 )}
               </div>
             ) : (
-              <>
-                <button onClick={() => navigate("/signin")}>Sign In</button>
-                <span className="text-white/50">|</span>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => navigate("/signin")}
+                  className="transition hover:text-white"
+                >
+                  Sign In
+                </button>
+
                 <button
                   onClick={() => navigate("/signup")}
-                  className="font-semibold"
+                  className="rounded-full bg-white px-4 py-1.5 font-bold text-orange-500 transition hover:bg-orange-50"
                 >
                   Sign Up
                 </button>
-              </>
+              </div>
             )}
           </div>
         </div>
 
-        <div className="w-full px-6 md:px-16 h-16 flex items-center gap-5">
-          <h2
+        <div className="flex min-h-16 w-full items-center gap-3 px-4 py-3 md:px-8 lg:px-16">
+          <button
             onClick={() => navigate("/")}
-            className="shrink-0 flex items-center font-bold lg:text-2xl md:text-[24px] tracking-wide cursor-pointer"
+            className="flex shrink-0 items-center gap-1 text-xl font-black tracking-wide transition hover:opacity-90 md:text-2xl"
           >
-            OSY <PiShoppingCartSimpleFill /> SO
-          </h2>
+            OSY
+            <PiShoppingCartSimpleFill className="text-white" />
+            SO
+          </button>
 
-          <div className="hidden md:flex flex-1 px-5">
-            <div className="flex w-full overflow-hidden rounded-sm bg-white p-1 shadow-sm">
+          <form
+            onSubmit={handleNavbarSearch}
+            className="hidden flex-1 md:block"
+          >
+            <div className="flex h-9 overflow-hidden rounded-full bg-white p-1 shadow-sm ring-1 ring-white/20 focus-within:ring-2 focus-within:ring-white/70">
               <input
                 type="text"
-                placeholder="Search products, shops, or markets"
-                className="min-w-0 flex-1 bg-white px-4 py-1 text-sm text-gray-800 placeholder:text-gray-400 outline-none"
+                value={navSearch}
+                onChange={(e) => setNavSearch(e.target.value)}
+                placeholder="Search products or markets"
+                className="min-w-0 flex-1 bg-transparent px-5 text-sm text-slate-800 placeholder:text-slate-400 outline-none"
               />
 
               <button
-                type="button"
-                className="flex w-16 items-center justify-center rounded-sm bg-orange-500 text-white transition hover:opacity-90"
+                type="submit"
+                className="flex h-7 w-14 items-center justify-center rounded-full bg-orange-500 text-white transition hover:bg-orange-600 focus:outline-none focus:ring-2 focus:ring-orange-300"
+                aria-label="Search"
               >
-                <icons.IoSearchOutline className="text-xl" />
+                {SearchIcon && <SearchIcon className="text-lg" />}
               </button>
             </div>
+          </form>
+
+          <div className="ml-auto hidden shrink-0 items-center gap-1 md:flex">
+            <BadgeIconButton
+              icon={CiShop}
+              label="Markets"
+              count={0}
+              onClick={() => navigate("/markets")}
+            />
+
+            <BadgeIconButton
+              icon={IoMdNotificationsOutline}
+              label="Notifications"
+              count={3}
+              onClick={() => navigate("/notification")}
+            />
+
+            {user && (
+              <>
+                <BadgeIconButton
+                  icon={PiShoppingCartSimpleLight}
+                  label="Cart"
+                  count={2}
+                  onClick={() => navigate("/cart")}
+                />
+
+                <BadgeIconButton
+                  icon={GoChecklist}
+                  label="Orders"
+                  count={2}
+                  onClick={() => navigate("/orders")}
+                />
+              </>
+            )}
           </div>
 
           <button
             onClick={() => setIsOpen(true)}
-            className="ml-auto md:hidden p-2 hover:bg-white/20 rounded-md"
+            className="ml-auto rounded-full p-2 transition hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-white/40 md:hidden"
+            aria-label="Open menu"
           >
             <TbMenu2 className="text-2xl" />
           </button>
+        </div>
 
-          <div className="hidden md:flex shrink-0 items-center gap-3">
-            <button className="flex items-center gap-1 rounded-full px-3 py-2 text-xs hover:bg-white/20">
-              <CiShop className="text-[22px]" />
-              <span>View Markets</span>
-            </button>
+        <form onSubmit={handleNavbarSearch} className="px-4 pb-3 md:hidden">
+          <div className="flex h-9 overflow-hidden rounded-full bg-white p-1 shadow-sm">
+            <input
+              type="text"
+              value={navSearch}
+              onChange={(e) => setNavSearch(e.target.value)}
+              placeholder="Search products or markets"
+              className="min-w-0 flex-1 bg-transparent px-4 text-sm text-slate-800 placeholder:text-slate-400 outline-none"
+            />
 
             <button
-              onClick={() => navigate("/notification")}
-              className="flex items-center gap-2 rounded-full px-3 py-2 hover:bg-white/20"
+              type="submit"
+              className="flex h-7 w-12 items-center justify-center rounded-full bg-orange-500 text-white"
+              aria-label="Search"
             >
-              <span className="relative inline-flex">
-                <IoMdNotificationsOutline className="text-xl" />
-                <span className="absolute -top-2 -right-2 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-semibold leading-none text-white">
-                  3
-                </span>
-              </span>
-
-              <span className="text-xs">Notification</span>
+              {SearchIcon && <SearchIcon className="text-lg" />}
             </button>
-
-            {user && (
-              <>
-                <button
-                  onClick={() => navigate("/cart")}
-                  className="flex items-center gap-2 rounded-full px-3 py-2 hover:bg-white/20"
-                >
-                  <span className="relative inline-flex">
-                    <PiShoppingCartSimpleLight className="text-xl" />
-                    <span className="absolute -top-2 -right-2 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-semibold leading-none text-white">
-                      2
-                    </span>
-                  </span>
-
-                  <span className="text-xs">Cart</span>
-                </button>
-
-                <button
-                  onClick={() => navigate("/orders")}
-                  className="flex items-center gap-2 rounded-full px-3 py-2 hover:bg-white/20"
-                >
-                  <span className="relative inline-flex">
-                    <GoChecklist className="text-xl" />
-                    <span className="absolute -top-2 -right-2 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-semibold leading-none text-white">
-                      2
-                    </span>
-                  </span>
-
-                  <span className="text-xs">Orders</span>
-                </button>
-              </>
-            )}
           </div>
-        </div>
+        </form>
       </header>
 
       <CustomerSidebar isOpen={isOpen} onClose={() => setIsOpen(false)} />

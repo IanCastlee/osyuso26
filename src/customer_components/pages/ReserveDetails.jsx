@@ -38,11 +38,16 @@ function ReserveDetails() {
   if (!data) return <NoData text="Product Not Found" />;
 
   const product = data;
+
   const stock = Number(product.stock || 0);
-  const price = Number(product.price || 0);
+  const originalPrice = Number(product.original_price ?? product.price ?? 0);
+  const finalPrice = Number(product.final_price ?? product.price ?? 0);
+  const isOnSale =
+    Number(product.is_on_sale) === 1 && finalPrice < originalPrice;
+
   const isKg = product.unit_type === "kg";
   const selectedAmount = isKg ? weight : quantity;
-  const total = selectedAmount * price;
+  const total = selectedAmount * finalPrice;
   const isOutOfStock = stock <= 0;
 
   const decrease = () => {
@@ -83,19 +88,26 @@ function ReserveDetails() {
 
     navigate("/checkout", {
       state: {
-        product,
+        product: {
+          ...product,
+          price: finalPrice,
+          original_price: originalPrice,
+          final_price: finalPrice,
+          is_on_sale: isOnSale ? 1 : 0,
+        },
         unit: product.unit_type,
         quantity,
         weight,
+        unitPrice: finalPrice,
         total,
       },
     });
   };
 
   return (
-    <div className="min-h-screen w-full bg-gray-100 px-1 lg:px-4 py-1 lg:py-5 md:px-8 lg:px-28">
-      <div className="grid gap-5 rounded-xl bg-white p-4 shadow-sm md:p-5 lg:grid-cols-[420px_1fr]">
-        <div className="overflow-hidden rounded-xl bg-gray-100">
+    <div className="min-h-screen w-full bg-slate-50 px-3 py-4 md:px-8 lg:px-28">
+      <div className="grid gap-5 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm md:p-5 lg:grid-cols-[420px_1fr]">
+        <div className="overflow-hidden rounded-2xl bg-slate-100">
           <div className="relative aspect-square w-full">
             <LazyLoadImage
               src={product.image_path || "/placeholder.png"}
@@ -112,62 +124,91 @@ function ReserveDetails() {
             >
               {isOutOfStock ? "Sold Out" : `${stock} in stock`}
             </span>
+
+            {isOnSale && (
+              <span className="absolute right-3 top-3 rounded-full bg-orange-500 px-3 py-1 text-xs font-bold text-white shadow-sm">
+                {product.sale_label || "SALE"}
+              </span>
+            )}
           </div>
         </div>
 
         <div className="flex flex-col">
-          <div className="border-b border-gray-100 pb-5">
-            <h1 className="text-xl font-bold leading-tight text-gray-900 md:text-2xl">
+          <div className="border-b border-slate-100 pb-5">
+            <h1 className="text-xl font-bold leading-tight text-slate-950 md:text-2xl">
               {product.name}
             </h1>
 
-            <p className="mt-3 text-2xl font-bold text-secondary md:text-3xl">
-              ₱{price.toFixed(2)}
-              <span className="ml-1 text-sm font-medium text-gray-500">
-                / {product.unit_type}
-              </span>
-            </p>
+            <div className="mt-3">
+              {isOnSale ? (
+                <>
+                  <div className="flex items-center gap-3">
+                    <p className="text-sm font-semibold text-slate-400 line-through">
+                      ₱{originalPrice.toFixed(2)}
+                    </p>
 
-            <p className="mt-4 text-sm leading-7 text-gray-600">
+                    <span className="rounded-full bg-orange-50 px-2.5 py-1 text-xs font-bold text-orange-600">
+                      {product.sale_label || "SALE"}
+                    </span>
+                  </div>
+
+                  <p className="mt-1 text-3xl font-bold text-orange-500 md:text-4xl">
+                    ₱{finalPrice.toFixed(2)}
+                    <span className="ml-1 text-sm font-medium text-slate-500">
+                      / {product.unit_type}
+                    </span>
+                  </p>
+                </>
+              ) : (
+                <p className="text-3xl font-bold text-secondary md:text-4xl">
+                  ₱{originalPrice.toFixed(2)}
+                  <span className="ml-1 text-sm font-medium text-slate-500">
+                    / {product.unit_type}
+                  </span>
+                </p>
+              )}
+            </div>
+
+            <p className="mt-4 text-sm leading-7 text-slate-600">
               {product.description || "No description available."}
             </p>
           </div>
 
           <div className="grid flex-1 gap-5 py-5 lg:grid-cols-[1fr_260px]">
             <div>
-              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-400">
+              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">
                 {isKg ? "Select Weight" : "Select Quantity"}
               </p>
 
-              <div className="inline-flex items-center rounded-lg border border-gray-200 bg-gray-50">
+              <div className="inline-flex items-center overflow-hidden rounded-xl border border-slate-200 bg-slate-50">
                 <button
                   onClick={decrease}
                   disabled={isOutOfStock}
-                  className="flex h-11 w-11 items-center justify-center text-gray-600 transition hover:bg-gray-100 disabled:opacity-40"
+                  className="flex h-11 w-11 items-center justify-center text-slate-600 transition hover:bg-slate-100 disabled:opacity-40"
                 >
                   <FiMinus />
                 </button>
 
-                <span className="min-w-28 px-4 text-center text-sm font-semibold text-gray-900">
+                <span className="min-w-28 px-4 text-center text-sm font-semibold text-slate-900">
                   {isKg ? `${weight} kg` : `${quantity} pcs`}
                 </span>
 
                 <button
                   onClick={increase}
                   disabled={isOutOfStock || selectedAmount >= stock}
-                  className="flex h-11 w-11 items-center justify-center text-gray-600 transition hover:bg-gray-100 disabled:opacity-40"
+                  className="flex h-11 w-11 items-center justify-center text-slate-600 transition hover:bg-slate-100 disabled:opacity-40"
                 >
                   <FiPlus />
                 </button>
               </div>
 
-              <p className="mt-2 text-xs text-gray-500">
+              <p className="mt-2 text-xs text-slate-500">
                 Available stock: {stock} {isKg ? "kg" : "pcs"}
               </p>
             </div>
 
-            <div className="rounded-xl bg-gray-50 p-4">
-              <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
                 Order Total
               </p>
 
@@ -175,17 +216,17 @@ function ReserveDetails() {
                 ₱{total.toFixed(2)}
               </p>
 
-              <p className="mt-2 text-xs leading-5 text-gray-500">
+              <p className="mt-2 text-xs leading-5 text-slate-500">
                 Final payment will be processed securely during checkout.
               </p>
             </div>
           </div>
 
-          <div className="flex flex-col-reverse gap-3 border-t border-gray-100 pt-5 sm:flex-row sm:justify-end">
+          <div className="mt-auto flex flex-col-reverse gap-3 border-t border-slate-100 pt-5 sm:flex-row sm:justify-end">
             <button
               onClick={handleAddToCart}
               disabled={cartLoading || isOutOfStock}
-              className="flex items-center justify-center gap-2 rounded-lg border border-gray-200 px-5 py-3 text-sm font-semibold text-gray-700 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+              className="flex items-center justify-center gap-2 rounded-xl border border-slate-200 px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
             >
               <BsCartPlus />
               {cartLoading ? "Adding..." : "Add to Cart"}
@@ -194,7 +235,7 @@ function ReserveDetails() {
             <button
               onClick={handleBuyNow}
               disabled={isOutOfStock}
-              className="rounded-lg bg-secondary px-6 py-3 text-sm font-semibold text-white shadow-sm transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+              className="rounded-xl bg-secondary px-6 py-3 text-sm font-semibold text-white shadow-sm transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
             >
               Buy Now
             </button>

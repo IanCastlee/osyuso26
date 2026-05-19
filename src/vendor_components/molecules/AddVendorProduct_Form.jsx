@@ -1,32 +1,51 @@
-import React, { useEffect, useState } from "react";
-import InputField from "../atoms/InputField";
+import React, { useEffect, useMemo, useState } from "react";
 import { FaBox, FaMoneyBill } from "react-icons/fa";
+import { FiImage, FiPackage, FiPercent, FiTag, FiX } from "react-icons/fi";
+
+import InputField from "../atoms/InputField";
 import useGetData from "../../hooks/useGetData";
 import useFormSubmit from "../../hooks/useFormSubmit";
 import LoaderWithText from "../../reusable_components/LoaderWithText";
 import SelectField from "../../reusable_components/SelectField";
 import addImage from "../../assets/icons/addimage.png";
-
 import { useToast } from "../../context/ToastContext";
 
-function AddVendorProduct_Form() {
+const EMPTY_FORM = {
+  name: "",
+  description: "",
+  price: "",
+  stock: "",
+  category_id: "",
+  subcategory_id: "",
+  unit_type: "",
+  sale_type: "none",
+  sale_value: "",
+  sale_starts_at: "",
+  sale_ends_at: "",
+  images: [],
+};
+
+const toDateTimeLocal = (value) => {
+  if (!value) return "";
+  return String(value).replace(" ", "T").slice(0, 16);
+};
+
+function AddVendorProduct_Form({
+  mode = "add",
+  initialData = null,
+  onSuccess,
+}) {
   const { showToast } = useToast();
+  const isEdit = mode === "edit";
 
-  const [form, setForm] = useState({
-    name: "",
-    description: "",
-    price: "",
-    stock: "",
-    category_id: "",
-    subcategory_id: "",
-    unit_type: "",
-    images: [],
-  });
-
+  const [form, setForm] = useState(EMPTY_FORM);
   const [errors, setErrors] = useState({});
   const [preview, setPreview] = useState([]);
 
-  // ================= API =================
+  const endpoint = isEdit
+    ? "product/update-product.php"
+    : "product/add-products.php";
+
   const { data: categories } = useGetData("product/get-categories_v.php");
 
   const { data: subcategories, refetch: fetchSubcategories } = useGetData(
@@ -37,91 +56,235 @@ function AddVendorProduct_Form() {
     false,
   );
 
-  const { submit, loading } = useFormSubmit(
-    "product/add-products.php",
-    (res) => {
-      // SUCCESS TOAST
-      showToast({
-        type: "success",
-        message: "Product Added!",
-        duration: 3000,
+  const categoryList = useMemo(() => {
+    if (Array.isArray(categories)) return categories;
+    if (Array.isArray(categories?.data)) return categories.data;
+    return [];
+  }, [categories]);
+
+  const subcategoryList = useMemo(() => {
+    if (Array.isArray(subcategories)) return subcategories;
+    if (Array.isArray(subcategories?.data)) return subcategories.data;
+    return [];
+  }, [subcategories]);
+
+  const originalPrice = Number(form.price || 0);
+  const saleValue = Number(form.sale_value || 0);
+
+  const finalPrice = useMemo(() => {
+    if (form.sale_type === "percent") {
+      return Math.max(0, originalPrice - originalPrice * (saleValue / 100));
+    }
+
+    if (form.sale_type === "fixed") {
+      return Math.max(0, originalPrice - saleValue);
+    }
+
+    return originalPrice;
+  }, [form.sale_type, originalPrice, saleValue]);
+
+  const { submit, loading } = useFormSubmit(endpoint, (res) => {
+    showToast({
+      type: "success",
+      message: isEdit
+        ? "Product updated successfully!"
+        : "Product added successfully!",
+      duration: 3000,
+    });
+
+    if (!isEdit) {
+      preview.forEach((url) => {
+        if (url.startsWith("blob:")) URL.revokeObjectURL(url);
       });
 
-      //  CLEAR FORM AFTER SUCCESS
-      setForm({
-        name: "",
-        description: "",
-        price: "",
-        stock: "",
-        category_id: "",
-        subcategory_id: "",
-        unit_type: "",
-        images: [],
-      });
-
+      setForm(EMPTY_FORM);
       setPreview([]);
-    },
-  );
+      setErrors({});
+    }
 
-  // ================= CATEGORY CHANGE =================
+    onSuccess?.(res);
+  });
+
   useEffect(() => {
-    if (form.category_id) {
-      fetchSubcategories();
+    if (!isEdit || !initialData) {
+      setForm(EMPTY_FORM);
+      setPreview([]);
+      setErrors({});
+      return;
+    }
 
-      setForm((prev) => ({
+    const existingImage = initialData.image || initialData.image_path || "";
+
+    setForm({
+      name: initialData.name || "",
+      description: initialData.description || "",
+      price: initialData.price || "",
+      stock: initialData.stock || "",
+      category_id: initialData.category_id || "",
+      subcategory_id: initialData.subcategory_id || "",
+      unit_type: initialData.unit_type || "",
+      sale_type: initialData.sale_type || "none",
+      sale_value:
+        initialData.sale_type && initialData.sale_type !== "none"
+          ? initialData.sale_value || ""
+          : "",
+      sale_starts_at: toDateTimeLocal(initialData.sale_starts_at),
+      sale_ends_at: toDateTimeLocal(initialData.sale_ends_at),
+      images: [],
+    });
+
+    setPreview(existingImage ? [existingImage] : []);
+    setErrors({});
+  }, [isEdit, initialData]);
+
+  useEffect(() => {
+    if (!form.category_id) return;
+
+    fetchSubcategories();
+
+    setForm((prev) => {
+      const isInitialEditCategory =
+        isEdit &&
+        initialData &&
+        String(prev.category_id) === String(initialData.category_id || "") &&
+        String(prev.subcategory_id || "") ===
+          String(initialData.subcategory_id || "");
+
+      if (isInitialEditCategory) return prev;
+
+      return {
         ...prev,
         subcategory_id: "",
-      }));
-    }
+      };
+    });
   }, [form.category_id]);
 
-  // ================= INPUT =================
+  useEffect(() => {
+    return () => {
+      preview.forEach((url) => {
+        if (url.startsWith("blob:")) URL.revokeObjectURL(url);
+      });
+    };
+  }, [preview]);
+
   const handleChange = (e) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+
+    setForm((prev) => {
+      if (name === "sale_type" && value === "none") {
+        return {
+          ...prev,
+          sale_type: "none",
+          sale_value: "",
+          sale_starts_at: "",
+          sale_ends_at: "",
+        };
+      }
+
+      return {
+        ...prev,
+        [name]: value,
+      };
+    });
+
+    setErrors((prev) => ({
+      ...prev,
+      [name]: "",
+    }));
   };
 
-  // ================= MULTI IMAGE =================
   const handleImages = (e) => {
-    const files = Array.from(e.target.files);
+    const files = Array.from(e.target.files || []);
+    if (!files.length) return;
+
+    preview.forEach((url) => {
+      if (url.startsWith("blob:")) URL.revokeObjectURL(url);
+    });
 
     setForm((prev) => ({
       ...prev,
       images: files,
     }));
 
-    // preview images
-    const previews = files.map((file) => URL.createObjectURL(file));
-    setPreview(previews);
+    setPreview(files.map((file) => URL.createObjectURL(file)));
+
+    setErrors((prev) => ({
+      ...prev,
+      images: "",
+    }));
   };
 
-  // ================= VALIDATION =================
-  const validate = () => {
-    let err = {};
+  const removeImage = (index) => {
+    const nextImages = form.images.filter((_, i) => i !== index);
+    const nextPreview = preview.filter((_, i) => i !== index);
 
-    if (!form.name) err.name = "Required";
-    if (!form.price) err.price = "Required";
-    if (!form.stock) err.stock = "Required";
-    if (!form.category_id) err.category_id = "Required";
-    if (!form.subcategory_id) err.subcategory_id = "Required";
-    if (!form.unit_type) err.unit_type = "Required";
-    if (form.images.length === 0) err.images = "Upload at least 1 image";
+    if (preview[index]?.startsWith("blob:")) {
+      URL.revokeObjectURL(preview[index]);
+    }
+
+    setForm((prev) => ({
+      ...prev,
+      images: nextImages,
+    }));
+
+    setPreview(nextPreview);
+  };
+
+  const validate = () => {
+    const err = {};
+
+    if (!form.name.trim()) err.name = "Product name is required";
+    if (!form.price) err.price = "Price is required";
+    if (Number(form.price) < 0) err.price = "Price cannot be negative";
+    if (form.stock === "") err.stock = "Stock is required";
+    if (Number(form.stock) < 0) err.stock = "Stock cannot be negative";
+    if (!form.category_id) err.category_id = "Category is required";
+    if (!form.subcategory_id) err.subcategory_id = "Subcategory is required";
+    if (!form.unit_type) err.unit_type = "Unit type is required";
+
+    if (form.sale_type !== "none") {
+      if (!form.sale_value || Number(form.sale_value) <= 0) {
+        err.sale_value = "Sale value is required";
+      }
+
+      if (form.sale_type === "percent" && Number(form.sale_value) > 100) {
+        err.sale_value = "Percent discount cannot be more than 100";
+      }
+
+      if (
+        form.sale_type === "fixed" &&
+        Number(form.sale_value) > Number(form.price)
+      ) {
+        err.sale_value = "Discount cannot be greater than product price";
+      }
+
+      if (form.sale_starts_at && form.sale_ends_at) {
+        const start = new Date(form.sale_starts_at);
+        const end = new Date(form.sale_ends_at);
+
+        if (end <= start) {
+          err.sale_ends_at = "Sale end must be after sale start";
+        }
+      }
+    }
+
+    if (!isEdit && form.images.length === 0) {
+      err.images = "Upload at least 1 image";
+    }
 
     setErrors(err);
     return Object.keys(err).length === 0;
   };
 
-  // ================= SUBMIT =================
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // CHECK INTERNET CONNECTION
     if (!navigator.onLine) {
       showToast({
         type: "error",
         message: "No internet connection. Please check your network.",
         duration: 5000,
       });
-
       return;
     }
 
@@ -129,16 +292,23 @@ function AddVendorProduct_Form() {
 
     const data = new FormData();
 
-    // normal fields
-    data.append("name", form.name);
-    data.append("description", form.description);
+    if (isEdit) {
+      data.append("product_id", initialData.id);
+    }
+
+    data.append("name", form.name.trim());
+    data.append("description", form.description.trim());
     data.append("price", form.price);
     data.append("stock", form.stock);
     data.append("category_id", form.category_id);
     data.append("subcategory_id", form.subcategory_id);
     data.append("unit_type", form.unit_type);
 
-    // multiple images
+    data.append("sale_type", form.sale_type);
+    data.append("sale_value", form.sale_type === "none" ? 0 : form.sale_value);
+    data.append("sale_starts_at", form.sale_starts_at || "");
+    data.append("sale_ends_at", form.sale_ends_at || "");
+
     form.images.forEach((file) => {
       data.append("images[]", file);
     });
@@ -147,202 +317,321 @@ function AddVendorProduct_Form() {
       await submit(data);
     } catch (err) {
       console.error(err);
-
-      //  HANDLE NETWORK ERRORS DURING REQUEST
-      if (!navigator.onLine) {
-        showToast({
-          type: "error",
-          message: "No internet connection. Please check your network.",
-          duration: 5000,
-        });
-      } else {
-        showToast({
-          type: "error",
-          message: err?.message || "Something went wrong",
-
-          duration: 5000,
-        });
-      }
-      console.er;
     }
   };
+
+  const existingPreviewOnly =
+    isEdit && preview.length > 0 && form.images.length === 0;
+
   return (
-    <div className="w-full max-w-5xl mx-auto bg-white p-6 rounded-xl shadow-md">
-      <h2 className="text-xl font-bold mb-5">Add Product</h2>
+    <div className="w-full">
+      <div className="mb-5 border-b border-slate-100 pb-4 pr-10">
+        <div className="flex items-center gap-3">
+          <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-orange-50 text-secondary">
+            <FiPackage className="text-xl" />
+          </span>
+
+          <div>
+            <h2 className="text-xl font-bold text-slate-950">
+              {isEdit ? "Edit Product" : "Add Product"}
+            </h2>
+            <p className="mt-1 text-sm text-slate-500">
+              {isEdit
+                ? "Update product details, pricing, inventory, and sale settings."
+                : "Create a new item for your shop inventory."}
+            </p>
+          </div>
+        </div>
+      </div>
 
       <form
         onSubmit={handleSubmit}
-        className="grid grid-cols-1 md:grid-cols-2 gap-6"
+        className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_360px]"
       >
-        {/* LEFT */}
-        <div className="space-y-4">
-          <InputField
-            label="Product Name"
-            name="name"
-            value={form.name}
-            onChange={handleChange}
-            icon={FaBox}
-            error={errors.name}
-          />
-
-          <InputField
-            label="Description"
-            name="description"
-            value={form.description}
-            onChange={handleChange}
-            error={errors.description}
-          />
-
-          <InputField
-            label="Price"
-            name="price"
-            type="number"
-            value={form.price}
-            onChange={handleChange}
-            icon={FaMoneyBill}
-            error={errors.price}
-          />
-
-          <InputField
-            label="Stock"
-            name="stock"
-            type="number"
-            value={form.stock}
-            onChange={handleChange}
-            error={errors.stock}
-          />
-        </div>
-
-        {/* RIGHT */}
-        <div className="space-y-4">
-          {/* CATEGORY */}
-          <SelectField
-            label="Category"
-            name="category_id"
-            value={form.category_id}
-            onChange={handleChange}
-            options={
-              categories?.map((c) => ({
-                value: c.id,
-                label: c.name,
-              })) || []
-            }
-            error={errors.category_id}
-          />
-
-          {/* SUBCATEGORY */}
-          <SelectField
-            label="Subcategory"
-            name="subcategory_id"
-            value={form.subcategory_id}
-            onChange={handleChange}
-            disabled={!form.category_id}
-            options={
-              subcategories?.map((s) => ({
-                value: s.id,
-                label: s.name,
-              })) || []
-            }
-            error={errors.subcategory_id}
-          />
-
-          {/* UNIT TYPE */}
-          <SelectField
-            label="Unit Type"
-            name="unit_type"
-            value={form.unit_type}
-            onChange={handleChange}
-            options={[
-              { value: "pcs", label: "Per Piece" },
-              { value: "kg", label: "Per Kilogram" },
-            ]}
-            error={errors.unit_type}
-          />
-
-          {/* MULTI IMAGE UPLOAD */}
-          <div>
-            {/* <input
-              type="file"
-              multiple
-              onChange={handleImages}
-              className="w-full border p-2 rounded-md mt-1"
-            /> */}
-
-            <div className="flex flex-col">
-              <label className="text-sm font-medium">Product Images</label>
-
-              {/* HIDDEN INPUT */}
-              <input
-                id="banner-upload"
-                type="file"
-                multiple
-                accept="image/*"
-                onChange={handleImages}
-                className="hidden"
-              />
-
-              {/* CUSTOM IMAGE PICKER */}
-              <label
-                htmlFor="banner-upload"
-                className="
-      w-full h-[100px]
-      border-2 border-dashed border-gray-300
-      rounded-xl
-      overflow-hidden
-      cursor-pointer
-      hover:border-secondary
-      transition
-      bg-gray-50
-      flex items-center justify-center
-      relative
-      group
-    "
-              >
-                {/* PREVIEW IMAGE */}
-                <div className="flex flex-col items-center justify-center text-gray-400">
-                  <img
-                    src={addImage}
-                    alt="upload"
-                    className="w-12 h-12 object-contain opacity-70"
-                  />
-
-                  <span className="mt-2 text-xs sm:text-sm">
-                    Click to upload banner
-                  </span>
-                </div>
-              </label>
-
-              {/* ERROR */}
-              {errors.images && (
-                <p className="text-xs text-red-500 mt-1">{errors.images}</p>
-              )}
+        <div className="space-y-5">
+          <div className="rounded-2xl border border-slate-200 bg-white p-5">
+            <div className="mb-4 flex items-center gap-2">
+              <FiTag className="text-secondary" />
+              <h3 className="text-sm font-semibold text-slate-950">
+                Product Details
+              </h3>
             </div>
 
-            {errors.images && (
-              <p className="text-xs text-red-500">{errors.images}</p>
-            )}
-
-            {/* PREVIEW */}
-            <div className="flex gap-2 mt-2 flex-wrap">
-              {preview.map((img, i) => (
-                <img
-                  key={i}
-                  src={img}
-                  className="w-16 h-16 object-cover rounded-md border"
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="sm:col-span-2">
+                <InputField
+                  label="Product Name"
+                  name="name"
+                  value={form.name}
+                  onChange={handleChange}
+                  icon={FaBox}
+                  error={errors.name}
                 />
-              ))}
+              </div>
+
+              <div className="sm:col-span-2">
+                <InputField
+                  label="Description"
+                  name="description"
+                  value={form.description}
+                  onChange={handleChange}
+                  error={errors.description}
+                />
+              </div>
+
+              <InputField
+                label="Price"
+                name="price"
+                type="number"
+                value={form.price}
+                onChange={handleChange}
+                icon={FaMoneyBill}
+                error={errors.price}
+              />
+
+              <InputField
+                label="Stock"
+                name="stock"
+                type="number"
+                value={form.stock}
+                onChange={handleChange}
+                error={errors.stock}
+              />
             </div>
           </div>
 
-          {/* SUBMIT */}
+          <div className="rounded-2xl border border-slate-200 bg-white p-5">
+            <div className="mb-4 flex items-center gap-2">
+              <FiPercent className="text-secondary" />
+              <h3 className="text-sm font-semibold text-slate-950">
+                Sale Settings
+              </h3>
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <SelectField
+                label="Sale Type"
+                name="sale_type"
+                value={form.sale_type}
+                onChange={handleChange}
+                options={[
+                  { value: "none", label: "No Sale" },
+                  { value: "percent", label: "Percent Off" },
+                  { value: "fixed", label: "Fixed Amount Off" },
+                ]}
+                error={errors.sale_type}
+              />
+
+              {form.sale_type !== "none" && (
+                <InputField
+                  label={
+                    form.sale_type === "percent"
+                      ? "Discount Percent"
+                      : "Discount Amount"
+                  }
+                  name="sale_value"
+                  type="number"
+                  value={form.sale_value}
+                  onChange={handleChange}
+                  error={errors.sale_value}
+                />
+              )}
+
+              {form.sale_type !== "none" && (
+                <>
+                  <div>
+                    <label className="mb-1 block text-sm font-medium text-slate-700">
+                      Sale Starts
+                    </label>
+                    <input
+                      type="datetime-local"
+                      name="sale_starts_at"
+                      value={form.sale_starts_at}
+                      onChange={handleChange}
+                      className="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm text-slate-800 outline-none transition focus:border-secondary focus:bg-white"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="mb-1 block text-sm font-medium text-slate-700">
+                      Sale Ends
+                    </label>
+                    <input
+                      type="datetime-local"
+                      name="sale_ends_at"
+                      value={form.sale_ends_at}
+                      onChange={handleChange}
+                      className="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm text-slate-800 outline-none transition focus:border-secondary focus:bg-white"
+                    />
+
+                    {errors.sale_ends_at && (
+                      <p className="mt-1 text-xs text-red-500">
+                        {errors.sale_ends_at}
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="sm:col-span-2 rounded-xl border border-orange-100 bg-orange-50 p-4">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-orange-500">
+                      Sale Preview
+                    </p>
+
+                    <div className="mt-2 flex items-end gap-3">
+                      <span className="text-sm text-slate-400 line-through">
+                        ₱{originalPrice.toFixed(2)}
+                      </span>
+
+                      <span className="text-2xl font-bold text-orange-500">
+                        ₱{finalPrice.toFixed(2)}
+                      </span>
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-slate-200 bg-white p-5">
+            <div className="mb-4 flex items-center gap-2">
+              <FiPackage className="text-secondary" />
+              <h3 className="text-sm font-semibold text-slate-950">
+                Category and Selling Unit
+              </h3>
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <SelectField
+                label="Category"
+                name="category_id"
+                value={form.category_id}
+                onChange={handleChange}
+                options={categoryList.map((c) => ({
+                  value: c.id,
+                  label: c.name,
+                }))}
+                error={errors.category_id}
+              />
+
+              <SelectField
+                label="Subcategory"
+                name="subcategory_id"
+                value={form.subcategory_id}
+                onChange={handleChange}
+                disabled={!form.category_id}
+                options={subcategoryList.map((s) => ({
+                  value: s.id,
+                  label: s.name,
+                }))}
+                error={errors.subcategory_id}
+              />
+
+              <div className="sm:col-span-2">
+                <SelectField
+                  label="Unit Type"
+                  name="unit_type"
+                  value={form.unit_type}
+                  onChange={handleChange}
+                  options={[
+                    { value: "pcs", label: "Per Piece" },
+                    { value: "kg", label: "Per Kilogram" },
+                  ]}
+                  error={errors.unit_type}
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <aside className="space-y-5">
+          <div className="rounded-2xl border border-slate-200 bg-white p-5">
+            <div className="mb-4 flex items-center gap-2">
+              <FiImage className="text-secondary" />
+              <h3 className="text-sm font-semibold text-slate-950">
+                Product Images
+              </h3>
+            </div>
+
+            <input
+              id="product-images-upload"
+              type="file"
+              multiple
+              accept="image/*"
+              onChange={handleImages}
+              className="hidden"
+            />
+
+            <label
+              htmlFor="product-images-upload"
+              className={`flex min-h-40 cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed bg-slate-50 p-5 text-center transition hover:border-secondary hover:bg-orange-50/40 ${
+                errors.images ? "border-red-300" : "border-slate-300"
+              }`}
+            >
+              <img
+                src={addImage}
+                alt="Upload"
+                className="h-12 w-12 object-contain opacity-70"
+              />
+
+              <p className="mt-3 text-sm font-semibold text-slate-800">
+                {isEdit ? "Upload new product photos" : "Upload product photos"}
+              </p>
+
+              <p className="mt-1 text-xs text-slate-500">
+                {isEdit
+                  ? "Optional. New upload will become the latest product image."
+                  : "JPG, PNG, or WEBP. You can select multiple images."}
+              </p>
+            </label>
+
+            {errors.images && (
+              <p className="mt-2 text-xs font-medium text-red-500">
+                {errors.images}
+              </p>
+            )}
+
+            {preview.length > 0 && (
+              <div className="mt-4 grid grid-cols-3 gap-2">
+                {preview.map((img, index) => (
+                  <div
+                    key={img}
+                    className="group relative aspect-square overflow-hidden rounded-xl border border-slate-200 bg-slate-100"
+                  >
+                    <img
+                      src={img}
+                      alt={`Product preview ${index + 1}`}
+                      className="h-full w-full object-cover"
+                    />
+
+                    {!existingPreviewOnly && (
+                      <button
+                        type="button"
+                        onClick={() => removeImage(index)}
+                        className="absolute right-1.5 top-1.5 flex h-7 w-7 items-center justify-center rounded-full bg-white/90 text-slate-700 shadow-sm transition hover:bg-red-50 hover:text-red-600"
+                        title="Remove image"
+                      >
+                        <FiX />
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-secondary text-white py-2 rounded-md font-semibold flex items-center justify-center gap-2"
+            className="flex w-full items-center justify-center gap-2 rounded-xl bg-secondary px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {loading ? <LoaderWithText text="Uploading..." /> : "Add Product"}
+            {loading ? (
+              <LoaderWithText text={isEdit ? "Updating..." : "Uploading..."} />
+            ) : isEdit ? (
+              "Update Product"
+            ) : (
+              "Add Product"
+            )}
           </button>
-        </div>
+        </aside>
       </form>
     </div>
   );

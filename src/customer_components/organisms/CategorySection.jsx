@@ -51,7 +51,7 @@ function CategorySection() {
 
   return (
     <section className="mt-4 w-full rounded-xl bg-white shadow-sm mb-4">
-      <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3">
+      <div className="flex items-center  justify-between border-b border-gray-100 px-4 py-3">
         <div className="mb-1">
           <h2 className="text-sm font-bold text-gray-900">Categories</h2>
           <p className="mt-0.5 hidden text-xs text-gray-500 sm:block">

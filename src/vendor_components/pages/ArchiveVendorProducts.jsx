@@ -1,27 +1,40 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { FaClipboardList } from "react-icons/fa";
+import { FaBox } from "react-icons/fa";
+import { RiRefreshFill } from "react-icons/ri";
+
 import {
   FiChevronLeft,
   FiChevronRight,
+  FiEdit,
+  FiPlus,
   FiSearch,
-  FiShoppingBag,
-  FiRefreshCw,
+  FiX,
 } from "react-icons/fi";
 
+import AddVendorProduct_Form from "../molecules/AddVendorProduct_Form";
 import VendorTable from "../organisms/VendorTable";
 import useGetData from "../../hooks/useGetData";
-import noImage from "../../assets/assets_osyuso/no-image.png";
 import useFormSubmit from "../../hooks/useFormSubmit";
+import noImage from "../../assets/assets_osyuso/no-image.png";
 import { useToast } from "../../context/ToastContext";
+import ConfirmationModal from "../../reusable_components/ConfirmationModal";
 
-function Reserved() {
+function ArchiveVendorProducts() {
+  const { showToast } = useToast();
+
+  const [openForm, setOpenForm] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState(null);
+  const [productRows, setProductRows] = useState([]);
+
+  const [confirmArchive, setConfirmArchive] = useState({
+    open: false,
+    product: null,
+  });
+
   const [search, setSearch] = useState("");
   const [limit, setLimit] = useState(10);
   const [cursor, setCursor] = useState(null);
   const [history, setHistory] = useState([]);
-  const [orderRows, setOrderRows] = useState([]);
-
-  const { showToast } = useToast();
 
   const query = useMemo(() => {
     const q = new URLSearchParams();
@@ -34,12 +47,12 @@ function Reserved() {
   }, [limit, search, cursor]);
 
   const { data, loading, refetch } = useGetData(
-    `order/get-vendor-orders.php?${query}`,
+    `product/get-archive-products.php?${query}`,
   );
 
   const payload = useMemo(() => data?.data || data, [data]);
 
-  const orders = useMemo(() => {
+  const products = useMemo(() => {
     if (Array.isArray(payload)) return payload;
     if (Array.isArray(payload?.rows)) return payload.rows;
     if (Array.isArray(payload?.data)) return payload.data;
@@ -47,21 +60,23 @@ function Reserved() {
   }, [payload]);
 
   useEffect(() => {
-    setOrderRows(orders);
-  }, [orders]);
+    setProductRows(products);
+  }, [products]);
 
-  const hasMore = Boolean(payload?.has_more);
-  const nextCursor = payload?.next_cursor || null;
+  const hasMore = Boolean(payload?.has_more ?? products.length >= limit);
+  const nextCursor =
+    payload?.next_cursor ||
+    (products.length >= limit ? products.at(-1)?.id : null);
 
   const canGoNext = Boolean(hasMore && nextCursor);
   const canGoPrev = history.length > 0;
 
-  const { submit: markClaimedSubmit, loading: markingClaimed } = useFormSubmit(
-    "order/mark-claimed.php",
+  const { submit: archiveSubmit, loading: archiving } = useFormSubmit(
+    "product/update-active-product.php",
     () => {
       showToast({
         type: "success",
-        message: "Order marked as claimed",
+        message: "Product moved to active",
         duration: 3000,
       });
     },
@@ -71,6 +86,43 @@ function Reserved() {
     setCursor(null);
     setHistory([]);
   }, [search, limit]);
+
+  const handleFormSuccess = () => {
+    closeForm();
+    refetch();
+  };
+
+  const askArchiveProduct = (product) => {
+    setConfirmArchive({
+      open: true,
+      product,
+    });
+  };
+
+  const closeArchiveModal = () => {
+    setConfirmArchive({
+      open: false,
+      product: null,
+    });
+  };
+
+  const archiveProduct = async () => {
+    const productId = confirmArchive.product?.id;
+    if (!productId) return;
+
+    try {
+      await archiveSubmit({ product_id: productId });
+
+      setProductRows((prev) =>
+        prev.filter((product) => Number(product.id) !== Number(productId)),
+      );
+
+      closeArchiveModal();
+      refetch();
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
   const handleNext = () => {
     if (!canGoNext) return;
@@ -89,29 +141,10 @@ function Reserved() {
     setCursor(prevCursor || null);
   };
 
-  const markAsClaimed = async (orderId) => {
-    try {
-      await markClaimedSubmit({ order_id: orderId });
-
-      setOrderRows((prev) =>
-        prev.map((order) =>
-          Number(order.id) === Number(orderId)
-            ? {
-                ...order,
-                claim_status: "claimed",
-                claimed_at: new Date().toISOString(),
-              }
-            : order,
-        ),
-      );
-
-      refetch();
-    } catch (err) {
-      console.error(err);
-    }
+  const formatPrice = (price) => {
+    const value = Number(price || 0);
+    return `₱${value.toFixed(2)}`;
   };
-
-  const formatMoney = (value) => `₱${Number(value || 0).toFixed(2)}`;
 
   const formatDate = (value) => {
     if (!value) return "Not set";
@@ -119,159 +152,110 @@ function Reserved() {
     const date = new Date(value);
     if (Number.isNaN(date.getTime())) return value;
 
-    return date.toLocaleString("en-PH", {
+    return date.toLocaleDateString("en-PH", {
       month: "short",
       day: "numeric",
       year: "numeric",
-      hour: "numeric",
-      minute: "2-digit",
     });
-  };
-
-  const getQty = (row) => {
-    if (Number(row.weight) > 0) return `${row.weight} kg`;
-    return `${row.quantity || 0} pcs`;
-  };
-
-  const handleRefresh = () => {
-    setCursor(null);
-    setHistory([]);
-    refetch();
   };
 
   const columns = [
     {
-      header: "Order",
+      header: "#",
       render: (row) => (
-        <div>
-          <p className="text-sm font-bold text-slate-950">#{row.id}</p>
-          <p className="text-xs text-slate-500">{formatDate(row.created_at)}</p>
-        </div>
+        <span className="text-sm font-semibold text-slate-900">
+          {row.id || "N/A"}
+        </span>
       ),
     },
     {
       header: "Product",
       render: (row) => (
-        <div className="flex min-w-[260px] items-center gap-3">
+        <div className="flex min-w-[240px] items-center gap-3">
           <img
-            src={row.image_path || noImage}
-            alt={row.product_name}
-            className="h-10 w-10 shrink-0 rounded-xl border border-slate-200 object-cover"
+            src={row.image || row.image_path || noImage}
+            alt={row.name}
+            className="h-12 w-12 shrink-0 rounded-xl border border-slate-200 object-cover"
           />
 
           <div className="min-w-0">
             <p className="truncate text-sm font-semibold text-slate-950">
-              {row.product_name || "Unknown product"}
+              {row.name}
             </p>
             <p className="line-clamp-1 text-xs text-slate-500">
-              {row.shop_name || "Shop"}
+              {row.description || "No description"}
             </p>
           </div>
         </div>
       ),
     },
     {
-      header: "Customer",
+      header: "Price",
       render: (row) => (
-        <div className="min-w-[160px]">
-          <p className="truncate text-sm font-semibold text-slate-800">
-            {row.customer_name || "Customer"}
-          </p>
-          <p className="truncate text-xs text-slate-500">
-            {row.customer_email || "-"}
-          </p>
-        </div>
-      ),
-    },
-    {
-      header: "Qty/Weight",
-      render: (row) => (
-        <span className="text-sm font-semibold text-slate-700">
-          {getQty(row)}
+        <span className="text-sm font-semibold text-slate-900">
+          {formatPrice(row.price)}
         </span>
       ),
     },
     {
-      header: "Unit Price",
-      render: (row) => (
-        <span className="text-sm font-medium text-slate-600">
-          {formatMoney(row.unit_price)}
-        </span>
-      ),
-    },
-    {
-      header: "Total",
-      render: (row) => (
-        <span className="text-sm font-bold text-slate-950">
-          {formatMoney(row.total_amount)}
-        </span>
-      ),
-    },
-    {
-      header: "Payment",
+      header: "Stock",
       render: (row) => {
-        const status = row.payment_status || "pending";
+        const stock = Number(row.stock || 0);
 
         return (
           <span
-            className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold capitalize ${
-              status === "paid"
+            className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${
+              stock > 10
                 ? "bg-emerald-50 text-emerald-700"
-                : status === "expired"
-                  ? "bg-red-50 text-red-700"
-                  : "bg-amber-50 text-amber-700"
+                : stock > 0
+                  ? "bg-amber-50 text-amber-700"
+                  : "bg-red-50 text-red-700"
             }`}
           >
-            {status}
+            {stock} left
           </span>
         );
       },
     },
     {
-      header: "Receipt",
+      header: "Unit",
       render: (row) => (
-        <span className="text-xs font-medium text-slate-600">
-          {row.receipt_no || "-"}
+        <span className="text-sm font-medium text-slate-600">
+          {row.unit_type || "pcs"}
         </span>
       ),
     },
     {
-      header: "Claim",
+      header: "Status",
       render: (row) => (
-        <div>
-          <span
-            className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold capitalize ${
-              row.claim_status === "claimed"
-                ? "bg-blue-50 text-blue-700"
-                : "bg-slate-100 text-slate-700"
-            }`}
-          >
-            {row.claim_status || "unclaimed"}
-          </span>
-
-          <p className="truncate text-[10px] text-slate-500">
-            {row.claimed_at || "-"}
-          </p>
-        </div>
+        <span className="inline-flex rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold capitalize text-emerald-700">
+          {row.status || "active"}
+        </span>
+      ),
+    },
+    {
+      header: "Created",
+      render: (row) => (
+        <span className="text-sm text-slate-500">
+          {formatDate(row.created_at)}
+        </span>
       ),
     },
     {
       header: "Action",
       align: "right",
-      render: (row) => {
-        const canMarkClaimed =
-          row.payment_status === "paid" && row.claim_status !== "claimed";
-
-        return (
+      render: (row) => (
+        <div className="flex justify-end gap-2">
           <button
-            disabled={!canMarkClaimed || markingClaimed}
-            onClick={() => markAsClaimed(row.id)}
-            className="rounded-lg bg-orange-500 px-3 py-2 text-xs font-semibold text-white transition hover:bg-orange-600 disabled:cursor-not-allowed disabled:opacity-50"
+            onClick={() => askArchiveProduct(row)}
+            disabled={archiving}
+            className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-red-50 text-green-600 transition hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-50"
+            title="Move to active"
           >
-            {row.claim_status === "claimed" ? "Claimed" : "Mark Claimed"}
+            <RiRefreshFill className="text-lg" />
           </button>
-        );
-      },
+        </div>
+      ),
     },
   ];
 
@@ -282,30 +266,24 @@ function Reserved() {
           <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
             <div className="flex items-center gap-3">
               <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-orange-50 text-secondary">
-                <FaClipboardList className="text-xl" />
+                <FaBox className="text-xl" />
               </span>
 
               <div>
-                <h1 className="text-xl font-bold text-slate-950">Orders</h1>
+                <h1 className="text-xl font-bold text-slate-950">
+                  Archive Product
+                </h1>
                 <p className="mt-1 text-sm text-slate-500">
-                  View customer orders for your shop.
+                  Manage archived product listings, stock, and pricing.
                 </p>
               </div>
-            </div>
-
-            <div className="inline-flex w-fit items-center gap-2 rounded-full bg-slate-100 px-4 py-2 text-sm text-slate-600">
-              <FiShoppingBag className="text-secondary" />
-              <span className="font-semibold text-slate-950">
-                {orderRows.length}
-              </span>
-              orders shown
             </div>
           </div>
 
           <div className="mt-5 grid gap-3 border-t border-slate-100 pt-5 md:grid-cols-[1fr_160px_140px]">
             <div>
               <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-slate-400">
-                Search Orders
+                Search Product
               </label>
 
               <div className="relative">
@@ -314,7 +292,7 @@ function Reserved() {
                 <input
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Search product, customer, or order ID..."
+                  placeholder="Search by product name..."
                   className="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 pl-10 pr-3 text-sm text-slate-800 outline-none transition focus:border-secondary focus:bg-white"
                 />
               </div>
@@ -342,37 +320,30 @@ function Reserved() {
               </label>
 
               <div className="flex h-11 items-center justify-center rounded-xl bg-slate-100 text-sm font-semibold text-slate-800">
-                {orderRows.length} items
+                {productRows.length} items
               </div>
             </div>
           </div>
         </div>
 
         <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-          <div className="flex flex-col gap-3 border-b border-slate-100 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
             <div>
               <h2 className="text-sm font-semibold text-slate-950">
-                Order List
+                Archive Product List
               </h2>
               <p className="mt-1 text-xs text-slate-500">
-                Latest paid and unclaimed customer orders from your market.
+                Archived products are hidden from active listings.
               </p>
             </div>
-
-            <button
-              type="button"
-              onClick={handleRefresh}
-              disabled={loading}
-              className="inline-flex w-fit items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              <FiRefreshCw
-                className={`text-green-600 ${loading ? "animate-spin" : ""}`}
-              />
-              {loading ? "Refreshing..." : "Refresh Table"}
-            </button>
           </div>
+
           <div className="overflow-x-auto p-4">
-            <VendorTable columns={columns} data={orderRows} loading={loading} />
+            <VendorTable
+              columns={columns}
+              data={productRows}
+              loading={loading}
+            />
           </div>
 
           <div className="flex flex-col gap-3 border-t border-slate-100 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
@@ -400,8 +371,21 @@ function Reserved() {
           </div>
         </div>
       </div>
+
+      <ConfirmationModal
+        open={confirmArchive.open}
+        title="Move product to active?"
+        message={`This will make "${
+          confirmArchive.product?.name || "this product"
+        }" visible in active listings again. Existing orders and receipts will not be deleted.`}
+        confirmText="Move Active"
+        cancelText="Cancel"
+        loading={archiving}
+        onConfirm={archiveProduct}
+        onCancel={closeArchiveModal}
+      />
     </div>
   );
 }
 
-export default Reserved;
+export default ArchiveVendorProducts;

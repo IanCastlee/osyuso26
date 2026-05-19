@@ -1,6 +1,6 @@
 import { useState } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import fetchInstance from "../utils/fetchInstance";
-import { useNavigate } from "react-router-dom";
 import { useToast } from "../context/ToastContext";
 import { useAuth } from "../context/AuthContext";
 
@@ -10,10 +10,29 @@ function useFormSubmit(url, onSuccess) {
 
   const { showToast } = useToast();
   const navigate = useNavigate();
+  const location = useLocation();
   const { logout } = useAuth();
 
+  const redirectToSignin = () => {
+    sessionStorage.removeItem("auth-storage");
+
+    logout?.();
+
+    showToast({
+      type: "error",
+      message: "Session expired. Please login again.",
+      duration: 3000,
+    });
+
+    navigate("/signin", {
+      replace: true,
+      state: {
+        from: location.pathname,
+      },
+    });
+  };
+
   const submit = async (formData, options = {}) => {
-    // 🛑 prevent double submit
     if (loading) return;
 
     try {
@@ -29,70 +48,25 @@ function useFormSubmit(url, onSuccess) {
         ...options,
       });
 
-      // const res = await fetchInstance(url, {
-      //   method: "POST",
-      //   body: isFormData ? formData : JSON.stringify(formData),
-      //   ...(isFormData
-      //     ? {}
-      //     : {
-      //         headers: {
-      //           "Content-Type": "application/json",
-      //         },
-      //       }),
-      //   ...options,
-      // });
-
-      console.log("📡 RAW RESPONSE FROM API:", res);
-
-      const message = res?.message || "Unknown response";
-
-      // ================= AUTH CHECK (TRY) =================
-      if (
-        message.includes("No token") ||
-        message.includes("Invalid or expired token")
-      ) {
-        showToast({
-          type: "error",
-          message: "Session expired. Please login again.",
-          duration: 3000,
-        });
-
-        logout();
-        return;
-      }
-
-      // ================= BACKEND ERROR =================
       if (res?.success === false) {
         throw res;
       }
 
-      // ================= SUCCESS =================
       onSuccess?.(res);
       return res;
     } catch (err) {
-      console.error("🚨 FULL ERROR:", err);
+      console.error("FULL ERROR:", err);
 
-      // 🔥 FIX: get correct message source
+      if (err?.status === 401) {
+        redirectToSignin();
+        return;
+      }
+
       const message =
         err?.response?.data?.message || err?.message || "Something went wrong";
 
       setError(message);
 
-      // ================= AUTH CHECK (CATCH) =================
-      if (
-        message.includes("No token") ||
-        message.includes("Invalid or expired token")
-      ) {
-        showToast({
-          type: "error",
-          message: "Session expired. Please login again.",
-          duration: 3000,
-        });
-        navigate("/signin");
-        return;
-      }
-
-      // ================= NORMAL ERROR =================
       showToast({
         type: "error",
         message,

@@ -53,6 +53,9 @@ import CheckoutSummary from "./customer_components/pages/CheckoutSummary";
 import PaymentSuccess from "./customer_components/pages/PaymentSuccess";
 import PaymentFailed from "./customer_components/pages/PaymentFailed";
 import Orders from "./customer_components/pages/Orders";
+import Search from "./customer_components/pages/Search";
+import PendingReservation from "./vendor_components/pages/PendingReservation";
+import ArchiveVendorProducts from "./vendor_components/pages/ArchiveVendorProducts";
 
 const CustomerLayout = () => {
   const location = useLocation();
@@ -69,6 +72,7 @@ const CustomerLayout = () => {
     "/checkout",
     "/payment-success",
     "/payment-failed",
+    "/search",
   ].includes(location.pathname);
 
   return (
@@ -86,6 +90,7 @@ const CustomerLayout = () => {
           <Route path="all-markets" element={<AllMarkets />} />
           <Route path="reserve/:productId" element={<ReserveDetails />} />
           <Route path="cart" element={<Cart />} />
+          <Route path="search" element={<Search />} />
           <Route path="notification" element={<Notifcation />} />
           <Route path="faq" element={<FAQ />} />
           <Route path="about" element={<AboutCostumer />} />
@@ -113,14 +118,10 @@ const CustomerLayout = () => {
 
 const VendorLayout = () => {
   return (
-    <div className="w-full h-screen flex overflow-hidden">
-      {/* SIDEBAR */}
-      <div className="w-[260px] h-full bg-secondary text-white flex flex-col">
-        <SidebarVendor />
-      </div>
+    <div className="flex h-screen w-full overflow-hidden">
+      <SidebarVendor />
 
-      {/* MAIN CONTENT */}
-      <div className="flex-1 h-full overflow-y-auto bg-gray-100">
+      <main className="min-w-0 flex-1 overflow-y-auto bg-gray-100">
         <Routes>
           <Route index element={<DashboardVendor />} />
           <Route path="/vendor-products" element={<ProductsVendor />} />
@@ -130,11 +131,13 @@ const VendorLayout = () => {
             element={<FeaturedPromotionLogs />}
           />
           <Route path="/reserved" element={<Reserved />} />
+          <Route path="/pending" element={<PendingReservation />} />
           <Route path="/reservation-log" element={<ReservationHistory />} />
+          <Route path="/archive-products" element={<ArchiveVendorProducts />} />
           <Route path="about" element={<AboutVendor />} />
           <Route path="market-settings" element={<MarketSetting />} />
         </Routes>
-      </div>
+      </main>
     </div>
   );
 };

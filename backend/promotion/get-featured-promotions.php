@@ -13,6 +13,7 @@ try {
     $stmt = $conn->prepare("
         SELECT
             id,
+            product_id,
             tag,
             title,
             description,
@@ -21,7 +22,7 @@ try {
             expires_at
         FROM featured_promotions
         WHERE
-            status = 'pending'
+            status = 'active'
             AND start_date <= NOW()
             AND expires_at >= NOW()
         ORDER BY created_at ASC
@@ -36,6 +37,7 @@ try {
     while ($row = $result->fetch_assoc()) {
         $promotions[] = [
             "id" => (int)$row['id'],
+            "product_id" => (int)$row['product_id'],
             "tag" => $row['tag'],
             "title" => $row['title'],
             "description" => $row['description'],

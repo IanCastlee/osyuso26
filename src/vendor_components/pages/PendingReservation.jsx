@@ -14,7 +14,7 @@ import noImage from "../../assets/assets_osyuso/no-image.png";
 import useFormSubmit from "../../hooks/useFormSubmit";
 import { useToast } from "../../context/ToastContext";
 
-function Reserved() {
+function PendingReservation() {
   const [search, setSearch] = useState("");
   const [limit, setLimit] = useState(10);
   const [cursor, setCursor] = useState(null);
@@ -34,7 +34,7 @@ function Reserved() {
   }, [limit, search, cursor]);
 
   const { data, loading, refetch } = useGetData(
-    `order/get-vendor-orders.php?${query}`,
+    `order/get-vendor-pending-orders.php?${query}`,
   );
 
   const payload = useMemo(() => data?.data || data, [data]);
@@ -56,17 +56,6 @@ function Reserved() {
   const canGoNext = Boolean(hasMore && nextCursor);
   const canGoPrev = history.length > 0;
 
-  const { submit: markClaimedSubmit, loading: markingClaimed } = useFormSubmit(
-    "order/mark-claimed.php",
-    () => {
-      showToast({
-        type: "success",
-        message: "Order marked as claimed",
-        duration: 3000,
-      });
-    },
-  );
-
   useEffect(() => {
     setCursor(null);
     setHistory([]);
@@ -87,28 +76,6 @@ function Reserved() {
 
     setHistory(updated);
     setCursor(prevCursor || null);
-  };
-
-  const markAsClaimed = async (orderId) => {
-    try {
-      await markClaimedSubmit({ order_id: orderId });
-
-      setOrderRows((prev) =>
-        prev.map((order) =>
-          Number(order.id) === Number(orderId)
-            ? {
-                ...order,
-                claim_status: "claimed",
-                claimed_at: new Date().toISOString(),
-              }
-            : order,
-        ),
-      );
-
-      refetch();
-    } catch (err) {
-      console.error(err);
-    }
   };
 
   const formatMoney = (value) => `₱${Number(value || 0).toFixed(2)}`;
@@ -138,7 +105,6 @@ function Reserved() {
     setHistory([]);
     refetch();
   };
-
   const columns = [
     {
       header: "Order",
@@ -255,24 +221,6 @@ function Reserved() {
         </div>
       ),
     },
-    {
-      header: "Action",
-      align: "right",
-      render: (row) => {
-        const canMarkClaimed =
-          row.payment_status === "paid" && row.claim_status !== "claimed";
-
-        return (
-          <button
-            disabled={!canMarkClaimed || markingClaimed}
-            onClick={() => markAsClaimed(row.id)}
-            className="rounded-lg bg-orange-500 px-3 py-2 text-xs font-semibold text-white transition hover:bg-orange-600 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {row.claim_status === "claimed" ? "Claimed" : "Mark Claimed"}
-          </button>
-        );
-      },
-    },
   ];
 
   return (
@@ -286,9 +234,11 @@ function Reserved() {
               </span>
 
               <div>
-                <h1 className="text-xl font-bold text-slate-950">Orders</h1>
+                <h1 className="text-xl font-bold text-slate-950">
+                  Pending Orders
+                </h1>
                 <p className="mt-1 text-sm text-slate-500">
-                  View customer orders for your shop.
+                  Orders awaiting online payment confirmation.
                 </p>
               </div>
             </div>
@@ -349,14 +299,11 @@ function Reserved() {
         </div>
 
         <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-          <div className="flex flex-col gap-3 border-b border-slate-100 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
             <div>
               <h2 className="text-sm font-semibold text-slate-950">
-                Order List
+                Pending Orders
               </h2>
-              <p className="mt-1 text-xs text-slate-500">
-                Latest paid and unclaimed customer orders from your market.
-              </p>
             </div>
 
             <button
@@ -371,6 +318,7 @@ function Reserved() {
               {loading ? "Refreshing..." : "Refresh Table"}
             </button>
           </div>
+
           <div className="overflow-x-auto p-4">
             <VendorTable columns={columns} data={orderRows} loading={loading} />
           </div>
@@ -404,4 +352,4 @@ function Reserved() {
   );
 }
 
-export default Reserved;
+export default PendingReservation;

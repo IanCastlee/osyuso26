@@ -34,6 +34,19 @@ function Market() {
 
   const [openDropdown, setOpenDropdown] = useState(false);
 
+  const activeCategoryName =
+    activeMode === "all"
+      ? "All Products"
+      : categories.find((cat) => Number(cat.id) === Number(activeCategory))
+          ?.name || "Products";
+
+  const activeSubcategoryName =
+    activeSubcategory === ALL
+      ? "All Subcategories"
+      : subcategories.find(
+          (sub) => Number(sub.id) === Number(activeSubcategory),
+        )?.name || "All Subcategories";
+
   const fetchCategories = async () => {
     if (!market?.shop_id) return;
 
@@ -164,9 +177,9 @@ function Market() {
   useEffect(() => {
     const handleScroll = () => {
       const bottom =
-        window.innerHeight + window.scrollY >= document.body.offsetHeight - 200;
+        window.innerHeight + window.scrollY >= document.body.offsetHeight - 240;
 
-      if (bottom && hasMore && !loadingProducts) {
+      if (bottom && hasMore && !loadingProducts && nextCursor) {
         fetchProducts({ cursor: nextCursor });
       }
     };
@@ -180,162 +193,224 @@ function Market() {
   }
 
   return (
-    <div className="w-full bg-gray-100 lg:px-3 sm:px-6 lg:px-28">
-      <div className="w-full flex flex-col bg-primary">
-        <div className="w-full h-[160px] sm:h-[200px] md:h-[220px] relative">
-          <LazyLoadImage
-            src={market?.shop_cover_photo || bgImage}
-            className="w-full h-full object-cover"
-          />
-          <div className="absolute inset-0 bg-black/20" />
-
-          <div className="w-[100px] lg:w-[120px] h-[100px] lg:h-[120px] absolute left-3 sm:left-6 bottom-0 lg:-bottom-10 rounded-full border-4 border-white overflow-hidden bg-white">
+    <main className="min-h-[calc(100vh-4rem)] bg-slate-50">
+      <section className="mx-auto w-full max-w-7xl px-2 py-5  lg:px-[120px]">
+        <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+          <div className="relative h-44 sm:h-56 lg:h-64">
             <LazyLoadImage
-              src={market?.shop_logo || profileImage}
-              className="w-full h-full object-cover"
+              src={market?.shop_cover_photo || bgImage}
+              alt={market?.shop_name || "Market cover"}
+              className="h-full w-full object-cover"
             />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-black/10 to-transparent" />
+
+            <div className="absolute bottom-5 left-5 right-5 flex items-end gap-4">
+              <div className="h-24 w-24 shrink-0 overflow-hidden rounded-2xl border-4 border-white bg-white shadow-lg sm:h-28 sm:w-28">
+                <LazyLoadImage
+                  src={market?.shop_logo || profileImage}
+                  alt={market?.shop_name || "Market logo"}
+                  className="h-full w-full object-cover"
+                />
+              </div>
+
+              <div className="min-w-0 pb-1 text-white">
+                <p className="text-xs font-semibold uppercase tracking-wide text-white/80">
+                  Official Store
+                </p>
+                <h1 className="mt-1 truncate text-2xl font-bold sm:text-3xl">
+                  {market?.shop_name || "Market"}
+                </h1>
+              </div>
+            </div>
           </div>
-        </div>
 
-        <div className="pl-3 sm:pl-28 md:pl-36 mt-2">
-          <h2 className="text-xl font-semibold">{market?.shop_name}</h2>
-
-          <a
-            href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
-              market?.address || "",
-            )}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-xs text-gray-600 flex items-center gap-1 hover:text-blue-600 hover:underline"
-          >
-            <CiLocationOn />
-            {market?.address}
-          </a>
-
-          <div className="text-xs text-gray-600 flex items-center gap-1">
-            <icons.CiLocationArrow1 />
-            <span className="text-[10px]">
-              Nearby Landmark : {market?.nearby}
-            </span>
-          </div>
-        </div>
-
-        <div className="flex gap-4 border-b border-gray-200 px-3 mt-8 lg:mt-12 overflow-x-auto">
-          <button
-            onClick={() => {
-              setActiveMode("all");
-              setActiveSubcategory(ALL);
-              setProducts([]);
-              setNextCursor(null);
-              setHasMore(true);
-            }}
-            className={`pb-2 text-xs font-medium px-2 lg:px-4 ${
-              activeMode === "all"
-                ? "text-orange-500 border-b-2 border-orange-500"
-                : "text-gray-500"
-            }`}
-          >
-            All
-          </button>
-
-          {categories.map((cat) => (
-            <button
-              key={cat.id}
-              onClick={() => {
-                setActiveCategory(cat.id);
-                setActiveMode("category");
-              }}
-              className={`pb-2 text-xs font-medium px-2 lg:px-4 ${
-                activeCategory === cat.id && activeMode === "category"
-                  ? "text-orange-500 border-b-2 border-orange-500"
-                  : "text-gray-500"
-              }`}
-            >
-              {cat.name}
-            </button>
-          ))}
-        </div>
-
-        <div className="flex justify-end px-3 mt-3 relative">
-          <icons.MdSort
-            onClick={() => setOpenDropdown(!openDropdown)}
-            className="text-secondary mr-1 cursor-pointer"
-          />
-
-          <button
-            onClick={() => setOpenDropdown(!openDropdown)}
-            className="text-xs text-secondary"
-          >
-            {activeSubcategory === ALL
-              ? "All"
-              : subcategories.find(
-                  (s) => Number(s.id) === Number(activeSubcategory),
-                )?.name || "All"}
-          </button>
-
-          {openDropdown && (
-            <div className="absolute right-3 top-6 bg-white shadow rounded w-48 z-50">
-              <button
-                onClick={() => {
-                  setActiveSubcategory(ALL);
-                  setActiveMode("category");
-                  setOpenDropdown(false);
-                }}
-                className={`w-full text-left px-3 py-2 text-xs hover:bg-gray-100 ${
-                  activeSubcategory === ALL
-                    ? "text-secondary font-semibold"
-                    : ""
-                }`}
+          <div className="grid gap-4 p-5 lg:grid-cols-[1fr_auto] lg:items-center">
+            <div className="space-y-2">
+              <a
+                href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+                  market?.address || "",
+                )}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex max-w-3xl items-start gap-2 text-sm text-slate-600 transition hover:text-secondary hover:underline"
               >
-                All
+                <CiLocationOn className="mt-0.5 shrink-0 text-lg text-secondary" />
+                <span>{market?.address || "Address unavailable"}</span>
+              </a>
+
+              <div className="flex items-start gap-2 text-sm text-slate-500">
+                <icons.CiLocationArrow1 className="mt-0.5 shrink-0 text-secondary" />
+                <span>
+                  Nearby Landmark:{" "}
+                  <span className="font-medium text-slate-700">
+                    {market?.nearby || "Not specified"}
+                  </span>
+                </span>
+              </div>
+            </div>
+
+            <div className="inline-flex w-fit items-center gap-2 rounded-full bg-slate-100 px-4 py-2 text-sm text-slate-600">
+              <span className="h-2 w-2 rounded-full bg-secondary" />
+              <span className="font-semibold text-slate-900">
+                {products.length}
+              </span>
+              products shown
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-5 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <div className="min-w-0">
+              <h2 className="text-base font-semibold text-slate-950">
+                {activeCategoryName}
+              </h2>
+              <p className="mt-1 text-sm text-slate-500">
+                Browse products from this market by category and subcategory.
+              </p>
+            </div>
+
+            <div className="relative w-full lg:w-64">
+              <button
+                onClick={() => setOpenDropdown(!openDropdown)}
+                className="flex w-full items-center justify-between rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-800 transition hover:bg-slate-100"
+              >
+                <span className="flex min-w-0 items-center gap-2">
+                  <icons.MdSort className="shrink-0 text-secondary" />
+                  <span className="truncate">{activeSubcategoryName}</span>
+                </span>
+                <span className="text-xs text-slate-400">
+                  {openDropdown ? "Close" : "Filter"}
+                </span>
               </button>
 
-              {subcategories.map((sub) => (
-                <button
-                  key={sub.id}
-                  onClick={() => {
-                    setActiveSubcategory(sub.id);
-                    setActiveMode("sub");
-                    setOpenDropdown(false);
-                  }}
-                  className={`w-full text-left px-3 py-2 text-xs hover:bg-gray-100 ${
-                    Number(activeSubcategory) === Number(sub.id)
-                      ? "text-secondary font-semibold"
-                      : ""
-                  }`}
-                >
-                  {sub.name}
-                </button>
+              {openDropdown && (
+                <div className="absolute left-0 right-0 top-14 z-50 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl">
+                  <div className="max-h-64 overflow-y-auto p-2">
+                    <button
+                      onClick={() => {
+                        setActiveSubcategory(ALL);
+                        setActiveMode(activeCategory ? "category" : "all");
+                        setOpenDropdown(false);
+                      }}
+                      className={`w-full rounded-lg px-3 py-2 text-left text-sm transition hover:bg-slate-100 ${
+                        activeSubcategory === ALL
+                          ? "bg-orange-50 font-semibold text-secondary"
+                          : "text-slate-600"
+                      }`}
+                    >
+                      All Subcategories
+                    </button>
+
+                    {subcategories.map((sub) => (
+                      <button
+                        key={sub.id}
+                        onClick={() => {
+                          setActiveSubcategory(sub.id);
+                          setActiveMode("sub");
+                          setOpenDropdown(false);
+                        }}
+                        className={`w-full rounded-lg px-3 py-2 text-left text-sm transition hover:bg-slate-100 ${
+                          Number(activeSubcategory) === Number(sub.id)
+                            ? "bg-orange-50 font-semibold text-secondary"
+                            : "text-slate-600"
+                        }`}
+                      >
+                        {sub.name}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="mt-5 flex gap-2 overflow-x-auto border-t border-slate-100 pt-4 no-scrollbar">
+            <button
+              onClick={() => {
+                setActiveMode("all");
+                setActiveSubcategory(ALL);
+                setProducts([]);
+                setNextCursor(null);
+                setHasMore(true);
+              }}
+              className={`shrink-0 rounded-full px-4 py-2 text-sm font-medium transition ${
+                activeMode === "all"
+                  ? "bg-secondary text-white shadow-sm"
+                  : "bg-slate-100 text-slate-600 hover:bg-slate-200 hover:text-slate-950"
+              }`}
+            >
+              All
+            </button>
+
+            {categories.map((cat) => (
+              <button
+                key={cat.id}
+                onClick={() => {
+                  setActiveCategory(cat.id);
+                  setActiveMode("category");
+                  setActiveSubcategory(ALL);
+                }}
+                className={`shrink-0 rounded-full px-4 py-2 text-sm font-medium transition ${
+                  activeCategory === cat.id && activeMode === "category"
+                    ? "bg-secondary text-white shadow-sm"
+                    : "bg-slate-100 text-slate-600 hover:bg-slate-200 hover:text-slate-950"
+                }`}
+              >
+                {cat.name}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="mt-5">
+          {loadingProducts && products.length === 0 ? (
+            <SkeletonLoader count={10} />
+          ) : products.length > 0 ? (
+            <div className="grid grid-cols-2 gap-3 pb-8 sm:grid-cols-3 sm:gap-4 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+              {products.map((item) => (
+                <ProductCard
+                  key={item.id}
+                  id={item.id}
+                  name={item.name}
+                  price={item.final_price ?? item.price}
+                  originalPrice={item.original_price ?? item.price}
+                  finalPrice={item.final_price ?? item.price}
+                  isOnSale={item.is_on_sale}
+                  saleLabel={item.sale_label}
+                  image={item.image_path}
+                  stock={item.stock}
+                  seller={market?.shop_name}
+                />
               ))}
+            </div>
+          ) : (
+            <div className="flex min-h-64 items-center justify-center rounded-2xl border border-dashed border-slate-300 bg-white p-8 text-center">
+              <div>
+                <p className="text-base font-semibold text-slate-900">
+                  No products found
+                </p>
+                <p className="mt-1 text-sm text-slate-500">
+                  Try another category or subcategory.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {hasMore && products.length > 0 && (
+            <div className="flex justify-center pb-10">
+              <button
+                onClick={() => fetchProducts({ cursor: nextCursor })}
+                disabled={loadingProducts}
+                className="rounded-full bg-secondary px-6 py-3 text-sm font-semibold text-white shadow-sm transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {loadingProducts ? "Loading..." : "Load More"}
+              </button>
             </div>
           )}
         </div>
-
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 px-3 mt-4 pb-6">
-          {products.map((item) => (
-            <ProductCard
-              key={item.id}
-              id={item.id}
-              name={item.name}
-              price={item.price}
-              image={item.image_path}
-              stock={item.stock}
-              seller={market?.shop_name}
-            />
-          ))}
-        </div>
-
-        {hasMore && (
-          <button
-            onClick={() => fetchProducts({ cursor: nextCursor })}
-            disabled={loadingProducts}
-            className="w-full text-xs text-orange-500 font-semibold py-3"
-          >
-            {loadingProducts ? <SkeletonLoader /> : "Load More"}
-          </button>
-        )}
-      </div>
-    </div>
+      </section>
+    </main>
   );
 }
 

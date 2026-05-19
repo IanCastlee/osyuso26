@@ -1,8 +1,17 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useEffect, useRef, useState } from "react";
+import {
+  FiCamera,
+  FiMapPin,
+  FiPhone,
+  FiSave,
+  FiSettings,
+  FiUser,
+} from "react-icons/fi";
+import { LazyLoadImage } from "react-lazy-load-image-component";
+
 import { icons } from "../../constant/icons";
 import bgImg from "../../assets/assets_osyuso/bg.webp";
 import profileImage from "../../assets/assets_osyuso/shop.png";
-import { LazyLoadImage } from "react-lazy-load-image-component";
 import InputField from "../atoms/InputField";
 import useFormSubmit from "../../hooks/useFormSubmit";
 import useGetData from "../../hooks/useGetData";
@@ -11,18 +20,20 @@ import LoaderWithText from "../../reusable_components/LoaderWithText";
 import { useToast } from "../../context/ToastContext";
 
 function MarketSetting() {
-  const profileInputRef = useRef();
-  const coverInputRef = useRef();
+  const profileInputRef = useRef(null);
+  const coverInputRef = useRef(null);
 
-  // ================= FETCH EXISTING DATA =================
+  const { showToast } = useToast();
+
   const { data, loading: fetching } = useGetData(
     "market/get-market-settings.php",
   );
 
-  const { showToast } = useToast();
-
   const [profilePreview, setProfilePreview] = useState(null);
   const [coverPreview, setCoverPreview] = useState(null);
+
+  const [profileObjectUrl, setProfileObjectUrl] = useState(null);
+  const [coverObjectUrl, setCoverObjectUrl] = useState(null);
 
   const [profileFile, setProfileFile] = useState(null);
   const [coverFile, setCoverFile] = useState(null);
@@ -36,7 +47,17 @@ function MarketSetting() {
     phone: "",
   });
 
-  // ================= PREFILL DATA =================
+  const { submit, loading } = useFormSubmit(
+    "market/update-market-settings.php",
+    () => {
+      showToast({
+        type: "success",
+        message: "Market settings updated successfully!",
+        duration: 5000,
+      });
+    },
+  );
+
   useEffect(() => {
     if (!data) return;
 
@@ -53,181 +74,262 @@ function MarketSetting() {
     setCoverPreview(data.shop_cover_photo || null);
   }, [data]);
 
-  // ================= INPUT HANDLER =================
+  useEffect(() => {
+    return () => {
+      if (profileObjectUrl) URL.revokeObjectURL(profileObjectUrl);
+      if (coverObjectUrl) URL.revokeObjectURL(coverObjectUrl);
+    };
+  }, [profileObjectUrl, coverObjectUrl]);
+
   const handleChange = (e) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+
+    setForm((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
   };
 
-  const { submit, loading } = useFormSubmit(
-    "market/update-market-settings.php",
-    () => {
+  const handleSubmit = async () => {
+    if (!navigator.onLine) {
       showToast({
-        type: "success",
-        message: "Market settings updated successfully!",
+        type: "error",
+        message: "No internet connection. Please check your network.",
         duration: 5000,
       });
-    },
-  );
-  // ================= SUBMIT =================
-  const handleSubmit = async () => {
+      return;
+    }
+
     const formData = new FormData();
 
-    Object.keys(form).forEach((key) => {
-      formData.append(key, form[key]);
+    Object.entries(form).forEach(([key, value]) => {
+      formData.append(key, value);
     });
 
     if (profileFile) formData.append("profile_picture", profileFile);
     if (coverFile) formData.append("cover_photo", coverFile);
 
-    await submit(formData);
+    try {
+      await submit(formData);
+    } catch (err) {
+      showToast({
+        type: "error",
+        message: err?.message || "Failed to update market settings",
+        duration: 5000,
+      });
+    }
   };
 
-  // ================= PROFILE =================
   const handleProfileClick = () => {
-    profileInputRef.current.click();
+    profileInputRef.current?.click();
+  };
+
+  const handleCoverClick = () => {
+    coverInputRef.current?.click();
   };
 
   const handleProfileChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      setProfileFile(file);
-      setProfilePreview(URL.createObjectURL(file));
-    }
-  };
+    const file = e.target.files?.[0];
+    if (!file) return;
 
-  // ================= COVER =================
-  const handleCoverClick = () => {
-    coverInputRef.current.click();
+    if (profileObjectUrl) URL.revokeObjectURL(profileObjectUrl);
+
+    const url = URL.createObjectURL(file);
+    setProfileFile(file);
+    setProfileObjectUrl(url);
+    setProfilePreview(url);
   };
 
   const handleCoverChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      setCoverFile(file);
-      setCoverPreview(URL.createObjectURL(file));
-    }
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (coverObjectUrl) URL.revokeObjectURL(coverObjectUrl);
+
+    const url = URL.createObjectURL(file);
+    setCoverFile(file);
+    setCoverObjectUrl(url);
+    setCoverPreview(url);
   };
 
-  // ================= LOADING =================
   if (fetching) {
     return (
-      <div className="p-6 text-sm text-gray-500">
+      <div className="flex min-h-full items-center justify-center bg-slate-50 p-6">
         <Loader />
       </div>
     );
   }
 
   return (
-    <div className="w-full min-h-full p-4 flex flex-col gap-4 bg-gray-100">
-      {/* HEADER */}
-      <div className="bg-white rounded-xl shadow px-4 py-4 flex justify-between">
-        <h1 className="flex items-center text-lg font-bold">
-          <icons.CiSettings className="mr-2 text-secondary text-2xl" />
-          Market Settings
-        </h1>
+    <div className="min-h-full bg-slate-50 p-4 sm:p-6">
+      <div className="mx-auto flex w-full max-w-7xl flex-col gap-5">
+        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center gap-3">
+              <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-orange-50 text-secondary">
+                <FiSettings className="text-xl" />
+              </span>
 
-        <button
-          onClick={handleSubmit}
-          className="bg-green-500 text-white px-4 py-2 rounded text-xs"
-        >
-          {loading ? (
-            <LoaderWithText text="Updating..." size="w-3 h-3" />
-          ) : (
-            "Save Changes"
-          )}
-        </button>
-      </div>
+              <div>
+                <h1 className="text-xl font-bold text-slate-950">
+                  Market Settings
+                </h1>
+                <p className="mt-1 text-sm text-slate-500">
+                  Update your shop profile, location, and public details.
+                </p>
+              </div>
+            </div>
 
-      {/* COVER */}
-      <div
-        onClick={handleCoverClick}
-        className="w-full h-[180px] relative rounded-2xl overflow-hidden cursor-pointer"
-      >
-        <LazyLoadImage
-          src={coverPreview || bgImg}
-          className="w-full h-full object-cover"
-        />
-
-        <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
-          <span className="text-white text-xs">
-            Click to change cover photo
-          </span>
+            <button
+              onClick={handleSubmit}
+              disabled={loading}
+              className="inline-flex items-center justify-center gap-2 rounded-xl bg-secondary px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {loading ? (
+                <LoaderWithText text="Updating..." size="w-3 h-3" />
+              ) : (
+                <>
+                  <FiSave className="text-lg" />
+                  Save Changes
+                </>
+              )}
+            </button>
+          </div>
         </div>
 
-        {/* PROFILE */}
-        <div
-          onClick={(e) => {
-            e.stopPropagation();
-            handleProfileClick();
-          }}
-          className="w-[90px] h-[90px] sm:w-[110px] sm:h-[110px] md:w-[120px] md:h-[120px]
-          rounded-full absolute left-4 -bottom-0 overflow-hidden border-4 border-white cursor-pointer z-10"
-        >
-          <LazyLoadImage
-            src={profilePreview || profileImage}
-            className="w-full h-full object-cover"
-          />
+        <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+          <button
+            type="button"
+            onClick={handleCoverClick}
+            className="group relative block h-52 w-full overflow-hidden text-left sm:h-64"
+          >
+            <LazyLoadImage
+              src={coverPreview || bgImg}
+              alt="Market cover"
+              className="h-full w-full object-cover"
+            />
+
+            <div className="absolute inset-0 bg-gradient-to-t from-slate-950/70 via-slate-950/20 to-transparent" />
+
+            <div className="absolute right-4 top-4 inline-flex items-center gap-2 rounded-full bg-white/90 px-3 py-2 text-xs font-semibold text-slate-800 shadow-sm transition group-hover:bg-white">
+              <FiCamera />
+              Change cover
+            </div>
+          </button>
+
+          <div className="relative px-5 pb-5 pt-16">
+            <button
+              type="button"
+              onClick={handleProfileClick}
+              className="group absolute -top-14 left-5 h-28 w-28 overflow-hidden rounded-2xl border-4 border-white bg-white shadow-lg"
+            >
+              <LazyLoadImage
+                src={profilePreview || profileImage}
+                alt="Shop logo"
+                className="h-full w-full object-cover"
+              />
+
+              <div className="absolute inset-0 flex items-center justify-center bg-slate-950/45 text-white opacity-0 transition group-hover:opacity-100">
+                <FiCamera className="text-xl" />
+              </div>
+            </button>
+
+            <div className="min-w-0">
+              <h2 className="text-xl font-bold text-slate-950">
+                {form.shop_name || "Your Shop"}
+              </h2>
+              <p className="mt-1 max-w-3xl text-sm text-slate-500">
+                {form.shop_description ||
+                  "Add a short description so buyers know what your shop offers."}
+              </p>
+            </div>
+          </div>
         </div>
-      </div>
 
-      {/* HIDDEN INPUTS */}
-      <input
-        type="file"
-        ref={profileInputRef}
-        onChange={handleProfileChange}
-        hidden
-      />
-
-      <input
-        type="file"
-        ref={coverInputRef}
-        onChange={handleCoverChange}
-        hidden
-      />
-
-      {/* FORM */}
-      <div className="mt-10 grid grid-cols-1 md:grid-cols-2 gap-3">
-        <InputField
-          label="Full Name"
-          name="fullname"
-          value={form.fullname}
-          onChange={handleChange}
+        <input
+          type="file"
+          ref={profileInputRef}
+          onChange={handleProfileChange}
+          accept="image/*"
+          hidden
         />
 
-        <InputField
-          label="Shop Name"
-          name="shop_name"
-          value={form.shop_name}
-          onChange={handleChange}
+        <input
+          type="file"
+          ref={coverInputRef}
+          onChange={handleCoverChange}
+          accept="image/*"
+          hidden
         />
 
-        <InputField
-          label="Phone"
-          name="phone"
-          value={form.phone}
-          onChange={handleChange}
-        />
+        <div className="grid gap-5 lg:grid-cols-[1fr_420px]">
+          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+            <div className="mb-5 flex items-center gap-2">
+              <FiUser className="text-secondary" />
+              <h3 className="text-sm font-semibold text-slate-950">
+                Owner and Shop Details
+              </h3>
+            </div>
 
-        <InputField
-          label="Address"
-          name="address"
-          value={form.address}
-          onChange={handleChange}
-        />
+            <div className="grid gap-4 sm:grid-cols-2">
+              <InputField
+                label="Full Name"
+                name="fullname"
+                value={form.fullname}
+                onChange={handleChange}
+              />
 
-        <InputField
-          label="Nearby Landmark"
-          name="nearby"
-          value={form.nearby}
-          onChange={handleChange}
-        />
+              <InputField
+                label="Shop Name"
+                name="shop_name"
+                value={form.shop_name}
+                onChange={handleChange}
+              />
 
-        <InputField
-          label="Shop Description"
-          name="shop_description"
-          value={form.shop_description}
-          onChange={handleChange}
-        />
+              <div className="sm:col-span-2">
+                <InputField
+                  label="Shop Description"
+                  name="shop_description"
+                  value={form.shop_description}
+                  onChange={handleChange}
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+            <div className="mb-5 flex items-center gap-2">
+              <FiMapPin className="text-secondary" />
+              <h3 className="text-sm font-semibold text-slate-950">
+                Contact and Location
+              </h3>
+            </div>
+
+            <div className="space-y-4">
+              <InputField
+                label="Phone"
+                name="phone"
+                value={form.phone}
+                onChange={handleChange}
+                icon={FiPhone}
+              />
+
+              <InputField
+                label="Address"
+                name="address"
+                value={form.address}
+                onChange={handleChange}
+              />
+
+              <InputField
+                label="Nearby Landmark"
+                name="nearby"
+                value={form.nearby}
+                onChange={handleChange}
+              />
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );

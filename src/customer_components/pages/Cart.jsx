@@ -1,7 +1,8 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { LazyLoadImage } from "react-lazy-load-image-component";
 import { BsCart4 } from "react-icons/bs";
 import { FiMinus, FiPlus, FiTrash2 } from "react-icons/fi";
+import { useNavigate } from "react-router-dom";
 
 import Loader from "../../reusable_components/Loader";
 import NoData from "../../reusable_components/NoData";
@@ -10,45 +11,58 @@ import useFormSubmit from "../../hooks/useFormSubmit";
 import { useToast } from "../../context/ToastContext";
 
 function Cart() {
+  const navigate = useNavigate();
   const { data, loading } = useGetData("cart/get-cart.php");
 
   const [items, setItems] = useState([]);
-
-  // ================= SELECTED ITEM =================
   const [selectedItem, setSelectedItem] = useState(null);
 
   const { submit: updateSubmit } = useFormSubmit("cart/update-cart.php");
   const { submit: removeSubmit } = useFormSubmit("cart/remove-cart-item.php");
-
   const { showToast } = useToast();
 
   useEffect(() => {
-    if (data) {
-      setItems(data);
+    if (!Array.isArray(data)) return;
 
-      // AUTO SELECT FIRST ITEM
-      if (data.length > 0 && !selectedItem) {
-        setSelectedItem(data[0].cart_item_id);
-      }
-    }
+    setItems(data);
+
+    setSelectedItem((prev) => {
+      const stillExists = data.some((item) => item.cart_item_id === prev);
+      return stillExists ? prev : data[0]?.cart_item_id || null;
+    });
   }, [data]);
 
-  if (loading) return <Loader />;
+  const formatPeso = (value) => `₱${Number(value || 0).toFixed(2)}`;
 
-  if (!items.length) {
-    return <NoData text="Your cart is empty" />;
-  }
+  const getItemAmount = (item) => {
+    const amount = item.unit_type === "kg" ? item.weight : item.quantity;
+    return Number(item.price || 0) * Number(amount || 0);
+  };
 
-  // ================= UPDATE CART =================
+  const getQtyLabel = (item) => {
+    if (item.unit_type === "kg") return `${Number(item.weight || 0)} kg`;
+    return `${Number(item.quantity || 0)} pcs`;
+  };
+
+  const selectedCartItem = useMemo(
+    () => items.find((item) => item.cart_item_id === selectedItem),
+    [items, selectedItem],
+  );
+
+  const total = selectedCartItem ? getItemAmount(selectedCartItem) : 0;
+
   const updateCart = async (item, newValue) => {
     try {
+      const value = Number(newValue);
+      if (Number.isNaN(value)) return;
+
       const updated = { ...item };
 
       if (item.unit_type === "kg") {
-        updated.weight = Math.max(0.5, Number(newValue));
+        updated.weight = Math.max(0.5, value);
         updated.quantity = 0;
       } else {
-        updated.quantity = Math.max(1, Number(newValue));
+        updated.quantity = Math.max(1, value);
         updated.weight = 0;
       }
 
@@ -59,21 +73,21 @@ function Cart() {
       });
 
       setItems((prev) =>
-        prev.map((i) =>
-          i.cart_item_id === item.cart_item_id
+        prev.map((cartItem) =>
+          cartItem.cart_item_id === item.cart_item_id
             ? {
-                ...i,
-                weight: updated.weight,
+                ...cartItem,
                 quantity: updated.quantity,
+                weight: updated.weight,
               }
-            : i,
+            : cartItem,
         ),
       );
 
       showToast({
         type: "success",
         message: "Cart updated!",
-        duration: 3000,
+        duration: 2500,
       });
     } catch (err) {
       showToast({
@@ -84,16 +98,13 @@ function Cart() {
     }
   };
 
-  // ================= REMOVE ITEM =================
   const removeItem = async (id) => {
     try {
       await removeSubmit({ cart_item_id: id });
 
-      const updatedItems = items.filter((i) => i.cart_item_id !== id);
-
+      const updatedItems = items.filter((item) => item.cart_item_id !== id);
       setItems(updatedItems);
 
-      // RESET SELECTED ITEM
       if (selectedItem === id) {
         setSelectedItem(updatedItems[0]?.cart_item_id || null);
       }
@@ -101,7 +112,7 @@ function Cart() {
       showToast({
         type: "success",
         message: "Item removed",
-        duration: 3000,
+        duration: 2500,
       });
     } catch (err) {
       showToast({
@@ -112,81 +123,104 @@ function Cart() {
     }
   };
 
-  // ================= GET ITEM TOTAL =================
-  const getItemAmount = (item) => {
-    const qty = item.unit_type === "kg" ? item.weight : item.quantity;
+  const handleCheckoutSelected = () => {
+    if (!selectedCartItem) {
+      showToast({
+        type: "error",
+        message: "Please select an item first.",
+        duration: 3000,
+      });
+      return;
+    }
 
-    return Number(item.price) * Number(qty);
+    const product = {
+      ...selectedCartItem,
+      id: selectedCartItem.product_id,
+    };
+
+    const unit = product.unit_type;
+    const quantity = unit === "kg" ? 0 : Number(product.quantity || 1);
+    const weight = unit === "kg" ? Number(product.weight || 0.5) : 0;
+    const total = getItemAmount(product);
+
+    navigate("/checkout", {
+      state: {
+        product,
+        unit: product.unit_type,
+        quantity,
+        weight,
+        total,
+      },
+    });
   };
+  if (loading) return <Loader />;
 
-  // ================= SELECTED ITEM DATA =================
-  const selectedCartItem = items.find(
-    (item) => item.cart_item_id === selectedItem,
-  );
-
-  // ================= SUMMARY =================
-  const total = selectedCartItem ? getItemAmount(selectedCartItem) : 0;
+  if (!items.length) {
+    return <NoData text="Your cart is empty" />;
+  }
 
   return (
-    <div className="min-h-screen w-full bg-gray-100 px-4 py-6 md:px-10 lg:px-28">
+    <div className="min-h-screen bg-slate-50 px-3 pb-28 pt-5 sm:px-5 lg:px-10 lg:pb-10">
       <div className="mx-auto max-w-6xl">
-        {/* HEADER */}
-        <div className="mb-6 flex items-center justify-between">
-          <div>
-            <h1 className="flex items-center gap-2 text-xl font-bold text-gray-900 md:text-2xl">
-              <BsCart4 className="text-secondary" />
+        <div className="mb-5 flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <h1 className="flex items-center gap-2 text-xl font-black text-slate-950 sm:text-2xl">
+              <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-secondary/10 text-secondary">
+                <BsCart4 />
+              </span>
               Your Cart
             </h1>
 
-            <p className="mt-1 text-xs text-gray-500">
-              Select one item for checkout summary.
+            <p className="mt-1 text-sm text-slate-500">
+              Select one item to checkout.
             </p>
           </div>
 
-          <span className="rounded-full bg-white px-4 py-2 text-xs font-medium text-gray-600 shadow-sm">
+          <span className="shrink-0 rounded-full bg-white px-3 py-2 text-xs font-bold text-slate-600 shadow-sm ring-1 ring-slate-200">
             {items.length} {items.length === 1 ? "item" : "items"}
           </span>
         </div>
 
-        <div className="grid gap-5 lg:grid-cols-[1fr_340px]">
-          {/* CART ITEMS */}
+        <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_360px]">
           <div className="space-y-3">
             {items.map((item) => {
+              const isSelected = selectedItem === item.cart_item_id;
               const qtyValue =
-                item.unit_type === "kg" ? item.weight : item.quantity;
-
+                item.unit_type === "kg"
+                  ? Number(item.weight || 0)
+                  : Number(item.quantity || 0);
               const subtotal = getItemAmount(item);
 
-              const isSelected = selectedItem === item.cart_item_id;
-
               return (
-                <div
+                <article
                   key={item.cart_item_id}
-                  className={`
-                    rounded-xl bg-white p-4 shadow-sm transition
-                    hover:shadow-md"
-                  
-                  `}
+                  onClick={() => setSelectedItem(item.cart_item_id)}
+                  className={`cursor-pointer rounded-xl border bg-white p-3 shadow-sm transition sm:p-4 ${
+                    isSelected
+                      ? "border-orange-500 bg-secondary/5"
+                      : "border-slate-200 hover:border-slate-300"
+                  }`}
                 >
-                  <div className="flex gap-4">
-                    {/* SELECT BUTTON */}
-                    <div className="pt-1">
-                      <button
-                        onClick={() => setSelectedItem(item.cart_item_id)}
-                        className={`
-                          w-5 h-5 rounded-full
-                          flex items-center justify-center
-                          transition border border-gray-500
-                        `}
-                      >
-                        {isSelected && (
-                          <div className="w-2.5 h-2.5 rounded-full bg-secondary" />
-                        )}
-                      </button>
-                    </div>
+                  <div className="grid grid-cols-[20px_80px_minmax(0,1fr)] gap-3 sm:grid-cols-[20px_112px_minmax(0,1fr)] sm:gap-4">
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedItem(item.cart_item_id);
+                      }}
+                      className={`mt-1 grid h-5 w-5 shrink-0 place-items-center rounded-full border transition focus:outline-none focus:ring-0 ${
+                        isSelected
+                          ? "border-secondary bg-secondary"
+                          : "border-slate-300 bg-white"
+                      }`}
+                      aria-label="Select item"
+                    >
+                      {isSelected && (
+                        <span className="h-2 w-2 rounded-full bg-white" />
+                      )}
+                    </button>
 
-                    {/* IMAGE */}
-                    <div className="h-24 w-24 shrink-0 overflow-hidden rounded-lg bg-gray-100 md:h-28 md:w-28">
+                    <div className="h-20 w-20 overflow-hidden rounded-lg bg-slate-100 sm:h-28 sm:w-28">
                       <LazyLoadImage
                         src={item.image_path || "/placeholder.png"}
                         alt={item.name}
@@ -194,122 +228,110 @@ function Cart() {
                       />
                     </div>
 
-                    {/* CONTENT */}
-                    <div className="min-w-0 flex-1">
-                      <div className="flex gap-3">
+                    <div className="min-w-0">
+                      <div className="flex items-start gap-2">
                         <div className="min-w-0 flex-1">
-                          <h3 className="line-clamp-2 text-sm font-semibold text-gray-900">
+                          <h3 className="line-clamp-2 break-words text-sm font-bold leading-snug text-slate-950 sm:text-base">
                             {item.name}
                           </h3>
 
-                          <p className="mt-1 text-xs text-gray-500">
+                          <p className="mt-1 truncate text-xs font-medium text-slate-500">
                             {item.shop_name}
                           </p>
 
-                          <p className="mt-2 text-sm font-bold text-secondary">
-                            ₱{Number(item.price).toFixed(2)} / {item.unit_type}
+                          <p className="mt-2 text-sm font-black text-secondary">
+                            {formatPeso(item.price)} / {item.unit_type}
                           </p>
                         </div>
 
-                        {/* REMOVE */}
                         <button
-                          onClick={() => removeItem(item.cart_item_id)}
-                          className="
-                            flex h-9 w-9 shrink-0 items-center
-                            justify-center rounded-full
-                            text-red-500 transition
-                            hover:bg-red-50
-                          "
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            removeItem(item.cart_item_id);
+                          }}
+                          className="grid h-8 w-8 shrink-0 place-items-center rounded-full text-red-500 transition hover:bg-red-50 focus:outline-none focus:ring-0 sm:h-9 sm:w-9"
                           title="Remove item"
                         >
                           <FiTrash2 />
                         </button>
                       </div>
 
-                      {/* QUANTITY */}
-                      <div className="mt-4 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+                      <div className="mt-4 grid gap-3 sm:flex sm:items-end sm:justify-between">
                         <div>
-                          <p className="mb-2 text-[11px] font-medium uppercase tracking-wide text-gray-400">
+                          <p className="mb-2 text-[10px] font-bold uppercase tracking-wide text-slate-400 sm:text-[11px]">
                             {item.unit_type === "kg" ? "Weight" : "Quantity"}
                           </p>
 
-                          <div className="inline-flex items-center rounded-lg border border-gray-200 bg-gray-50">
-                            {/* MINUS */}
+                          <div
+                            onClick={(e) => e.stopPropagation()}
+                            className="inline-flex h-9 max-w-full items-center overflow-hidden rounded-full border border-slate-200 bg-slate-50 sm:h-10"
+                          >
                             <button
+                              type="button"
                               onClick={() =>
                                 updateCart(
                                   item,
                                   item.unit_type === "kg"
-                                    ? item.weight - 0.5
-                                    : item.quantity - 1,
+                                    ? qtyValue - 0.5
+                                    : qtyValue - 1,
                                 )
                               }
-                              className="
-                                flex h-9 w-9 items-center
-                                justify-center text-gray-600
-                                transition hover:bg-gray-100
-                              "
+                              className="grid h-9 w-9 shrink-0 place-items-center text-slate-600 transition hover:bg-slate-100 focus:outline-none focus:ring-0 sm:h-10 sm:w-10"
+                              aria-label="Decrease"
                             >
                               <FiMinus />
                             </button>
 
-                            {/* VALUE */}
-                            <span className="min-w-20 px-3 text-center text-sm font-semibold text-gray-800">
-                              {item.unit_type === "kg"
-                                ? `${qtyValue} kg`
-                                : `${qtyValue} pcs`}
+                            <span className="min-w-16 px-2 text-center text-xs font-bold text-slate-800 sm:min-w-20 sm:px-3 sm:text-sm">
+                              {getQtyLabel(item)}
                             </span>
 
-                            {/* PLUS */}
                             <button
+                              type="button"
                               onClick={() =>
                                 updateCart(
                                   item,
                                   item.unit_type === "kg"
-                                    ? item.weight + 0.5
-                                    : item.quantity + 1,
+                                    ? qtyValue + 0.5
+                                    : qtyValue + 1,
                                 )
                               }
-                              className="
-                                flex h-9 w-9 items-center
-                                justify-center text-gray-600
-                                transition hover:bg-gray-100
-                              "
+                              className="grid h-9 w-9 shrink-0 place-items-center text-slate-600 transition hover:bg-slate-100 focus:outline-none focus:ring-0 sm:h-10 sm:w-10"
+                              aria-label="Increase"
                             >
                               <FiPlus />
                             </button>
                           </div>
                         </div>
 
-                        {/* SUBTOTAL */}
-                        <div className="text-left sm:text-right">
-                          <p className="text-[11px] font-medium uppercase tracking-wide text-gray-400">
+                        <div className="flex items-center justify-between rounded-lg bg-slate-50 px-3 py-2 sm:block sm:bg-transparent sm:px-0 sm:py-0 sm:text-right">
+                          <p className="text-[10px] font-bold uppercase tracking-wide text-slate-400 sm:text-[11px]">
                             Subtotal
                           </p>
 
-                          <p className="mt-1 text-lg font-bold text-gray-900">
-                            ₱{subtotal.toFixed(2)}
+                          <p className="text-base font-black text-slate-950 sm:text-lg">
+                            {formatPeso(subtotal)}
                           </p>
                         </div>
                       </div>
                     </div>
                   </div>
-                </div>
+                </article>
               );
             })}
           </div>
 
-          {/* SUMMARY */}
-          <aside className="h-fit rounded-xl bg-white p-5 shadow-sm lg:sticky lg:top-24">
-            <h2 className="text-sm font-semibold text-gray-900">
+          <aside className="hidden h-fit rounded-xl border border-slate-200 bg-white p-5 shadow-sm lg:sticky lg:top-24 lg:block">
+            <h2 className="text-base font-black text-slate-950">
               Order Summary
             </h2>
 
             {selectedCartItem ? (
               <>
-                <div className="mt-4 rounded-xl border border-gray-100 p-3">
+                <div className="mt-4 rounded-xl border border-slate-200 p-3">
                   <div className="flex gap-3">
-                    <div className="h-16 w-16 overflow-hidden rounded-lg bg-gray-100">
+                    <div className="h-16 w-16 shrink-0 overflow-hidden rounded-lg bg-slate-100">
                       <img
                         src={selectedCartItem.image_path || "/placeholder.png"}
                         alt={selectedCartItem.name}
@@ -317,65 +339,80 @@ function Cart() {
                       />
                     </div>
 
-                    <div className="flex-1">
-                      <h3 className="line-clamp-2 text-sm font-semibold text-gray-900">
+                    <div className="min-w-0 flex-1">
+                      <h3 className="line-clamp-2 text-sm font-bold text-slate-950">
                         {selectedCartItem.name}
                       </h3>
 
-                      <p className="mt-1 text-xs text-gray-500">
+                      <p className="mt-1 truncate text-xs text-slate-500">
                         {selectedCartItem.shop_name}
                       </p>
 
-                      <p className="mt-2 text-sm font-bold text-secondary">
-                        ₱{Number(selectedCartItem.price).toFixed(2)}
+                      <p className="mt-2 text-sm font-black text-secondary">
+                        {formatPeso(selectedCartItem.price)}
                       </p>
                     </div>
                   </div>
                 </div>
 
-                <div className="mt-4 space-y-3 text-sm">
+                <div className="mt-5 space-y-3 text-sm">
                   <div className="flex justify-between">
-                    <span className="text-gray-500">Selected Item</span>
-
-                    <span className="font-medium text-gray-800">1</span>
+                    <span className="text-slate-500">Selected item</span>
+                    <span className="font-bold text-slate-800">1</span>
                   </div>
 
                   <div className="flex justify-between">
-                    <span className="text-gray-500">Quantity</span>
-
-                    <span className="font-medium text-gray-800">
-                      {selectedCartItem.unit_type === "kg"
-                        ? `${selectedCartItem.weight} kg`
-                        : `${selectedCartItem.quantity} pcs`}
+                    <span className="text-slate-500">Amount</span>
+                    <span className="font-bold text-slate-800">
+                      {getQtyLabel(selectedCartItem)}
                     </span>
                   </div>
 
-                  <div className="flex justify-between border-t border-gray-100 pt-4">
-                    <span className="font-semibold text-gray-900">Total</span>
-
-                    <span className="text-2xl font-bold text-secondary">
-                      ₱{total.toFixed(2)}
+                  <div className="flex items-end justify-between border-t border-slate-200 pt-4">
+                    <span className="font-black text-slate-950">Total</span>
+                    <span className="text-2xl font-black text-secondary">
+                      {formatPeso(total)}
                     </span>
                   </div>
                 </div>
 
                 <button
-                  className="
-                    mt-6 w-full rounded-lg bg-secondary
-                    px-4 py-3 text-sm font-semibold
-                    text-white shadow-sm transition
-                    hover:opacity-90
-                  "
+                  type="button"
+                  onClick={handleCheckoutSelected}
+                  className="mt-6 w-full rounded-lg bg-secondary px-4 py-3 text-sm font-black text-white shadow-sm transition hover:opacity-90 focus:outline-none focus:ring-0"
                 >
                   Checkout Selected
                 </button>
               </>
             ) : (
-              <p className="mt-4 text-sm text-gray-500">
+              <p className="mt-4 text-sm text-slate-500">
                 Please select an item.
               </p>
             )}
           </aside>
+        </div>
+      </div>
+
+      <div className="fixed inset-x-0 bottom-0 z-20 border-t border-slate-200 bg-white p-3 shadow-[0_-10px_30px_rgba(15,23,42,0.12)] lg:hidden">
+        <div className="mx-auto flex max-w-6xl items-center gap-3">
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-xs font-semibold text-slate-500">
+              {selectedCartItem ? selectedCartItem.name : "No selected item"}
+            </p>
+
+            <p className="text-lg font-black text-secondary">
+              {formatPeso(total)}
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={handleCheckoutSelected}
+            disabled={!selectedCartItem}
+            className="shrink-0 rounded-lg bg-secondary px-5 py-3 text-sm font-black text-white shadow-sm transition hover:opacity-90 focus:outline-none focus:ring-0 disabled:cursor-not-allowed disabled:bg-slate-300"
+          >
+            Checkout
+          </button>
         </div>
       </div>
     </div>

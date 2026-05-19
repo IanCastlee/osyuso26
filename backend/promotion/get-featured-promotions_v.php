@@ -29,6 +29,7 @@ try {
             description,
             image_path,
             start_date,
+            product_id,
             expires_at,
             status,
             created_at
