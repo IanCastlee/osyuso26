@@ -2,6 +2,9 @@ import React, { useState } from "react";
 import { icons } from "../../constant/icons";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
+import useNotificationStore from "../../store/useNotificationStore";
+import useCartStore from "../../store/useCartStore";
+import useOrderStore from "../../store/useOrderStore";
 
 function CustomerSidebar({ isOpen, onClose }) {
   const [openUserMenu, setOpenUserMenu] = useState(false);
@@ -22,20 +25,52 @@ function CustomerSidebar({ isOpen, onClose }) {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
 
+  const unreadCount = useNotificationStore((state) => state.unreadCount);
+  const clearUnread = useNotificationStore((state) => state.clearUnread);
+
+  const cartCount = useCartStore((state) => state.cartCount);
+  const clearCartCount = useCartStore((state) => state.clearCartCount);
+
+  const orderCount = useOrderStore((state) => state.orderCount);
+  const clearOrderCount = useOrderStore((state) => state.clearOrderCount);
+
   const go = (path) => {
     navigate(path);
     onClose();
   };
 
+  const handleLogout = () => {
+    clearUnread();
+    clearCartCount();
+    clearOrderCount();
+    logout();
+    setOpenUserMenu(false);
+    go("/signin");
+  };
+
   const navItems = [
     { label: "Home", icon: RiHomeLine, path: "/" },
     { label: "Markets", icon: CiShop, path: "/all-markets" },
-    { label: "Cart", icon: PiShoppingCartSimpleLight, path: "/cart" },
-    { label: "Orders", icon: GoChecklist, path: "/orders" },
+    {
+      label: "Cart",
+      icon: PiShoppingCartSimpleLight,
+      path: "/cart",
+      count: cartCount,
+      authOnly: true,
+    },
+    {
+      label: "Orders",
+      icon: GoChecklist,
+      path: "/orders",
+      count: orderCount,
+      authOnly: true,
+    },
     {
       label: "Notifications",
       icon: IoMdNotificationsOutline,
       path: "/notification",
+      count: unreadCount,
+      authOnly: true,
     },
   ];
 
@@ -43,6 +78,13 @@ function CustomerSidebar({ isOpen, onClose }) {
     { label: "About", icon: IoIosInformationCircleOutline, path: "/about" },
     { label: "FAQ", icon: RxQuestionMarkCircled, path: "/faq" },
   ];
+
+  const renderCount = (count) => {
+    const value = Number(count || 0);
+    if (value <= 0) return null;
+
+    return value > 99 ? "99+" : value;
+  };
 
   return (
     <>
@@ -92,20 +134,31 @@ function CustomerSidebar({ isOpen, onClose }) {
           )}
 
           <nav className="space-y-1">
-            {navItems.map((item) => {
-              const Icon = item.icon;
+            {navItems
+              .filter((item) => !item.authOnly || user)
+              .map((item) => {
+                const Icon = item.icon;
+                const countLabel = renderCount(item.count);
 
-              return (
-                <button
-                  key={item.path}
-                  onClick={() => go(item.path)}
-                  className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-white/90 transition hover:bg-white/10 hover:text-white"
-                >
-                  <Icon className="text-xl" />
-                  {item.label}
-                </button>
-              );
-            })}
+                return (
+                  <button
+                    key={item.path}
+                    onClick={() => go(item.path)}
+                    className="flex w-full items-center justify-between gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-white/90 transition hover:bg-white/10 hover:text-white"
+                  >
+                    <span className="flex min-w-0 items-center gap-3">
+                      <Icon className="shrink-0 text-xl" />
+                      <span className="truncate">{item.label}</span>
+                    </span>
+
+                    {countLabel && (
+                      <span className="flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-red-500 px-1.5 text-[10px] font-bold leading-none text-white">
+                        {countLabel}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
           </nav>
 
           <div className="my-4 border-t border-white/10" />
@@ -145,13 +198,17 @@ function CustomerSidebar({ isOpen, onClose }) {
                 onClick={() => setOpenUserMenu(!openUserMenu)}
                 className="flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-sm font-semibold hover:bg-white/10"
               >
-                <span className="flex items-center gap-2">
-                  <HiMiniUserCircle className="text-2xl" />
-                  {user?.fullname?.split(" ")[0] || "User"}
+                <span className="flex min-w-0 items-center gap-2">
+                  <HiMiniUserCircle className="shrink-0 text-2xl" />
+                  <span className="truncate">
+                    {user?.fullname?.split(" ")[0] || "User"}
+                  </span>
                 </span>
 
                 <MdKeyboardArrowDown
-                  className={`transition ${openUserMenu ? "rotate-180" : ""}`}
+                  className={`shrink-0 transition ${
+                    openUserMenu ? "rotate-180" : ""
+                  }`}
                 />
               </button>
 
@@ -168,11 +225,7 @@ function CustomerSidebar({ isOpen, onClose }) {
                   </button>
 
                   <button
-                    onClick={() => {
-                      logout();
-                      setOpenUserMenu(false);
-                      go("/signin");
-                    }}
+                    onClick={handleLogout}
                     className="w-full rounded-lg px-3 py-2 text-left text-sm text-white/85 hover:bg-white/10"
                   >
                     Logout

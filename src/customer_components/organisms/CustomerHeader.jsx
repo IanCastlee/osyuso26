@@ -3,6 +3,9 @@ import { icons } from "../../constant/icons";
 import { useNavigate } from "react-router-dom";
 import CustomerSidebar from "./CustomerSidebar";
 import { useAuth } from "../../context/AuthContext";
+import useNotificationStore from "../../store/useNotificationStore";
+import useCartStore from "../../store/useCartStore";
+import useOrderStore from "../../store/useOrderStore";
 
 function CustomerHeader() {
   const [isOpen, setIsOpen] = useState(false);
@@ -28,6 +31,20 @@ function CustomerHeader() {
   const SearchIcon = icons.IoSearchOutline || icons.CiSearch || icons.FiSearch;
   const { user, logout } = useAuth();
 
+  const unreadCount = useNotificationStore((state) => state.unreadCount);
+  const fetchUnreadCount = useNotificationStore(
+    (state) => state.fetchUnreadCount,
+  );
+  const clearUnread = useNotificationStore((state) => state.clearUnread);
+
+  const cartCount = useCartStore((state) => state.cartCount);
+  const fetchCartCount = useCartStore((state) => state.fetchCartCount);
+  const clearCartCount = useCartStore((state) => state.clearCartCount);
+
+  const orderCount = useOrderStore((state) => state.orderCount);
+  const fetchOrderCount = useOrderStore((state) => state.fetchOrderCount);
+  const clearOrderCount = useOrderStore((state) => state.clearOrderCount);
+
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (userMenuRef.current && !userMenuRef.current.contains(event.target)) {
@@ -51,6 +68,49 @@ function CustomerHeader() {
     };
   }, []);
 
+  useEffect(() => {
+    if (!user) {
+      clearUnread();
+      clearCartCount();
+      clearOrderCount();
+      return;
+    }
+
+    fetchUnreadCount({ force: true });
+    fetchCartCount({ force: true });
+    fetchOrderCount({ force: true });
+
+    const handleFocus = () => {
+      fetchUnreadCount();
+      fetchCartCount();
+      fetchOrderCount();
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        fetchUnreadCount();
+        fetchCartCount();
+        fetchOrderCount();
+      }
+    };
+
+    window.addEventListener("focus", handleFocus);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      window.removeEventListener("focus", handleFocus);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, [
+    user,
+    fetchUnreadCount,
+    fetchCartCount,
+    fetchOrderCount,
+    clearUnread,
+    clearCartCount,
+    clearOrderCount,
+  ]);
+
   const handleNavbarSearch = (e) => {
     e.preventDefault();
 
@@ -61,30 +121,41 @@ function CustomerHeader() {
   };
 
   const handleLogout = () => {
+    clearUnread();
+    clearCartCount();
+    clearOrderCount();
     logout();
     setOpenUserMenu(false);
     navigate("/signin");
   };
 
-  const BadgeIconButton = ({ icon: Icon, label, count, onClick }) => (
-    <button
-      onClick={onClick}
-      className="group inline-flex h-10 items-center gap-2 rounded-full px-3 text-sm font-semibold text-white/90 transition hover:bg-white/10 hover:text-white focus:outline-none focus:ring-2 focus:ring-white/40"
-      aria-label={label}
-    >
-      <span className="relative inline-flex">
-        <Icon className="text-[22px]" />
+  const BadgeIconButton = ({ icon: Icon, label, count = 0, onClick }) => {
+    const safeCount = Number(count || 0);
+    const displayCount = safeCount > 99 ? "99+" : safeCount;
 
-        {count > 0 && (
-          <span className="absolute -right-2 -top-2 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold leading-none text-white ring-2 ring-orange-500">
-            {count}
-          </span>
-        )}
-      </span>
+    return (
+      <button
+        onClick={onClick}
+        className="group inline-flex h-10 items-center gap-2 rounded-full px-3 text-sm font-semibold text-white/90 transition hover:bg-white/10 hover:text-white focus:outline-none focus:ring-2 focus:ring-white/40"
+        aria-label={label}
+      >
+        <span className="relative inline-flex">
+          <Icon className="text-[22px]" />
 
-      <span className="hidden xl:inline">{label}</span>
-    </button>
-  );
+          {safeCount > 0 && (
+            <span className="absolute -right-2 -top-2 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold leading-none text-white ring-2 ring-orange-500">
+              {displayCount}
+            </span>
+          )}
+        </span>
+
+        <span className="hidden xl:inline">{label}</span>
+      </button>
+    );
+  };
+
+  const mobileMenuCount =
+    Number(unreadCount || 0) + Number(cartCount || 0) + Number(orderCount || 0);
 
   return (
     <>
@@ -218,26 +289,28 @@ function CustomerHeader() {
               onClick={() => navigate("/markets")}
             />
 
-            <BadgeIconButton
-              icon={IoMdNotificationsOutline}
-              label="Notifications"
-              count={3}
-              onClick={() => navigate("/notification")}
-            />
+            {user && (
+              <BadgeIconButton
+                icon={IoMdNotificationsOutline}
+                label="Notifications"
+                count={unreadCount}
+                onClick={() => navigate("/notification")}
+              />
+            )}
 
             {user && (
               <>
                 <BadgeIconButton
                   icon={PiShoppingCartSimpleLight}
                   label="Cart"
-                  count={2}
+                  count={cartCount}
                   onClick={() => navigate("/cart")}
                 />
 
                 <BadgeIconButton
                   icon={GoChecklist}
                   label="Orders"
-                  count={2}
+                  count={orderCount}
                   onClick={() => navigate("/orders")}
                 />
               </>
@@ -246,10 +319,16 @@ function CustomerHeader() {
 
           <button
             onClick={() => setIsOpen(true)}
-            className="ml-auto rounded-full p-2 transition hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-white/40 md:hidden"
+            className="relative ml-auto rounded-full p-2 transition hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-white/40 md:hidden"
             aria-label="Open menu"
           >
             <TbMenu2 className="text-2xl" />
+
+            {user && mobileMenuCount > 0 && (
+              <span className="absolute right-0 top-0 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold leading-none text-white ring-2 ring-orange-500">
+                {mobileMenuCount > 99 ? "99+" : mobileMenuCount}
+              </span>
+            )}
           </button>
         </div>
 

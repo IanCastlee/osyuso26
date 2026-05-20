@@ -367,7 +367,7 @@ function Market() {
           {loadingProducts && products.length === 0 ? (
             <SkeletonLoader count={10} />
           ) : products.length > 0 ? (
-            <div className="grid grid-cols-2 gap-3 pb-8 sm:grid-cols-3 sm:gap-4 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+            <div className="grid grid-cols-2 gap-1 pb-8 sm:grid-cols-3 sm:gap-2 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
               {products.map((item) => (
                 <ProductCard
                   key={item.id}
@@ -381,6 +381,7 @@ function Market() {
                   image={item.image_path}
                   stock={item.stock}
                   seller={market?.shop_name}
+                  unitType={item.unit_type}
                 />
               ))}
             </div>

@@ -14,6 +14,7 @@ function ProductCard({
   image,
   seller,
   stock,
+  unitType,
 }) {
   const navigate = useNavigate();
 
@@ -26,6 +27,11 @@ function ProductCard({
   const hasSale =
     Number(isOnSale) === 1 && computedFinalPrice < computedOriginalPrice;
 
+  const formattedStock =
+    unitType === "kg"
+      ? `${stockCount.toLocaleString()} kg`
+      : `${stockCount.toLocaleString()} pcs`;
+
   const handleBuyNow = (e) => {
     e.stopPropagation();
     if (!isAvailable) return;
@@ -35,7 +41,7 @@ function ProductCard({
 
   return (
     <article
-      onClick={() => navigate(`/product/${id}`)}
+      onClick={handleBuyNow}
       className="group flex h-full min-h-[330px] cursor-pointer flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition duration-200 hover:-translate-y-1 hover:border-orange-200 hover:shadow-lg"
     >
       <div className="relative aspect-[4/3] w-full overflow-hidden bg-slate-100">
@@ -49,21 +55,17 @@ function ProductCard({
 
         <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-black/0 to-black/0 opacity-0 transition group-hover:opacity-100" />
 
-        <div className="absolute left-2 top-2 z-10">
-          <span
-            className={`inline-flex rounded-full px-2.5 py-1 text-[10px] font-bold shadow-sm ring-1 ring-white/50 ${
-              isAvailable
-                ? "bg-emerald-500 text-white"
-                : "bg-red-500 text-white"
-            }`}
-          >
-            {isAvailable ? `${stockCount} STOCK` : "SOLD OUT"}
-          </span>
-        </div>
+        {!isAvailable && (
+          <div className="absolute left-0 top-0 z-10">
+            <span className="inline-flex bg-red-500 px-2.5 py-1 text-[10px] font-bold text-white shadow-sm ring-1 ring-white/50">
+              SOLD OUT
+            </span>
+          </div>
+        )}
 
         {hasSale && (
-          <div className="absolute right-2 top-2 z-10">
-            <span className="inline-flex rounded-full bg-orange-500 px-2.5 py-1 text-[10px] font-bold text-white shadow-sm ring-1 ring-white/50">
+          <div className="absolute right-0 top-0 z-10">
+            <span className="inline-flex  bg-orange-500 px-2.5 py-1 text-[10px] font-bold text-white shadow-sm ring-1 ring-white/50">
               {saleLabel || "SALE"}
             </span>
           </div>
@@ -76,9 +78,19 @@ function ProductCard({
             {name}
           </h3>
 
-          <p className="mt-1 line-clamp-1 text-xs text-slate-500">
-            {seller || "Unknown Seller"}
-          </p>
+          <div className="mt-1 space-y-0.5">
+            <p className="line-clamp-1 text-xs text-slate-500">
+              {seller || "Unknown Seller"}
+            </p>
+
+            <p
+              className={`line-clamp-1 text-xs font-medium ${
+                isAvailable ? "text-slate-500" : "text-red-500"
+              }`}
+            >
+              Stock: {isAvailable ? formattedStock : "Unavailable"}
+            </p>
+          </div>
 
           <div className="mt-3 min-h-[48px]">
             {hasSale ? (

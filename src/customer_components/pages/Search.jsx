@@ -236,6 +236,7 @@ function Search() {
                       image={item.image_path}
                       seller={item.shop_name}
                       stock={item.stock}
+                      unitType={item.unit_type}
                     />
                   ))}
                 </div>

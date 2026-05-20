@@ -1,31 +1,43 @@
 <?php
-
 ob_start();
 
 include("../header.php");
-
 header("Content-Type: application/json; charset=UTF-8");
 
 require_once "../dbConn.php";
 require_once "../auth/middleware.php";
 
+function response($success, $message, $data = null, $status = 200) {
+    if (ob_get_length()) {
+        ob_clean();
+    }
+
+    http_response_code($status);
+
+    echo json_encode([
+        "success" => $success,
+        "message" => $message,
+        "data" => $data
+    ]);
+
+    exit;
+}
+
 try {
-    // ================= AUTH =================
     $user = requireRole(["customer"]);
 
     if (is_object($user)) {
         $user_id = $user->user_id ?? null;
     } elseif (is_array($user)) {
-        $user_id = $user['user_id'] ?? null;
+        $user_id = $user["user_id"] ?? null;
     } else {
         $user_id = null;
     }
 
     if (!$user_id) {
-        throw new Exception("Unauthorized user");
+        response(false, "Unauthorized user", null, 401);
     }
 
-    // ================= GET ORDERS =================
     $stmt = $conn->prepare("
         SELECT
             o.id AS order_id,
@@ -36,6 +48,8 @@ try {
             o.unit_price,
             o.total_amount,
             o.payment_status,
+            o.claim_status,
+            o.claimed_at,
             o.xendit_invoice_id,
             o.xendit_checkout_url,
             o.created_at,
@@ -61,8 +75,12 @@ try {
 
         WHERE o.user_id = ?
 
-        ORDER BY o.created_at DESC
+        ORDER BY o.created_at DESC, o.id DESC
     ");
+
+    if (!$stmt) {
+        response(false, "Prepare failed: " . $conn->error, null, 500);
+    }
 
     $stmt->bind_param("i", $user_id);
     $stmt->execute();
@@ -72,32 +90,22 @@ try {
     $orders = [];
 
     while ($row = $result->fetch_assoc()) {
-        $row['order_id'] = (int) $row['order_id'];
-        $row['product_id'] = (int) $row['product_id'];
-        $row['shop_id'] = (int) $row['shop_id'];
-        $row['quantity'] = (int) $row['quantity'];
-        $row['weight'] = (float) $row['weight'];
-        $row['unit_price'] = (float) $row['unit_price'];
-        $row['total_amount'] = (float) $row['total_amount'];
-        $row['stock'] = (float) $row['stock'];
+        $row["order_id"] = (int)$row["order_id"];
+        $row["product_id"] = (int)$row["product_id"];
+        $row["shop_id"] = (int)$row["shop_id"];
+        $row["quantity"] = (int)$row["quantity"];
+        $row["weight"] = (float)$row["weight"];
+        $row["unit_price"] = (float)$row["unit_price"];
+        $row["total_amount"] = (float)$row["total_amount"];
+        $row["stock"] = (float)$row["stock"];
+        $row["claim_status"] = $row["claim_status"] ?: "unclaimed";
 
         $orders[] = $row;
     }
 
-    echo json_encode([
-        "success" => true,
-        "data" => $orders
-    ]);
+    response(true, "Orders fetched successfully", $orders);
+} catch (Throwable $e) {
+    error_log("Get customer orders failed: " . $e->getMessage());
 
-} catch (Exception $e) {
-    error_log($e->getMessage());
-
-    http_response_code(400);
-
-    echo json_encode([
-        "success" => false,
-        "message" => $e->getMessage()
-    ]);
+    response(false, $e->getMessage(), null, 400);
 }
-
-exit;

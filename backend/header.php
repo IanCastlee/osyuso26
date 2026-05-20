@@ -1,5 +1,7 @@
 <?php
 // Allow frontend
+date_default_timezone_set('Asia/Manila');
+
 header("Access-Control-Allow-Origin: http://localhost:5173");
 header("Access-Control-Allow-Credentials: true");
 

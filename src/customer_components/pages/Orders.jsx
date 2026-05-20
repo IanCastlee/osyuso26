@@ -1,6 +1,12 @@
 import React, { useEffect, useState } from "react";
 import { LazyLoadImage } from "react-lazy-load-image-component";
-import { FiPackage, FiClock, FiCheckCircle, FiXCircle } from "react-icons/fi";
+import {
+  FiPackage,
+  FiClock,
+  FiCheckCircle,
+  FiXCircle,
+  FiMapPin,
+} from "react-icons/fi";
 
 import useGetData from "../../hooks/useGetData";
 import useFormSubmit from "../../hooks/useFormSubmit";
@@ -45,6 +51,22 @@ function Orders() {
       label: "Pending",
       icon: FiClock,
       className: "bg-orange-50 text-orange-600",
+    };
+  };
+
+  const getClaimStyle = (status) => {
+    if (status === "claimed") {
+      return {
+        label: "Claimed",
+        icon: FiCheckCircle,
+        className: "bg-blue-50 text-blue-600",
+      };
+    }
+
+    return {
+      label: "Unclaimed",
+      icon: FiMapPin,
+      className: "bg-slate-100 text-slate-600",
     };
   };
 
@@ -99,7 +121,7 @@ function Orders() {
               </h1>
 
               <p className="mt-1 hidden text-xs text-gray-500 lg:flex">
-                Track your recent purchases and payment status.
+                Track your recent purchases, payment status, and claim status.
               </p>
             </div>
 
@@ -108,10 +130,13 @@ function Orders() {
             </span>
           </div>
 
-          <div className="space-y-4">
+          <div className="space-y-2">
             {orders.map((order) => {
               const status = getStatusStyle(order.payment_status);
               const StatusIcon = status.icon;
+
+              const claim = getClaimStyle(order.claim_status || "unclaimed");
+              const ClaimIcon = claim.icon;
 
               const amount =
                 order.unit_type === "kg"
@@ -119,6 +144,7 @@ function Orders() {
                   : `${order.quantity} pcs`;
 
               const isPending = order.payment_status === "pending";
+              const isPaid = order.payment_status === "paid";
 
               return (
                 <div
@@ -136,11 +162,22 @@ function Orders() {
                       </p>
                     </div>
 
-                    <div
-                      className={`inline-flex w-fit items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold capitalize ${status.className}`}
-                    >
-                      <StatusIcon />
-                      {status.label}
+                    <div className="flex flex-wrap gap-2">
+                      <div
+                        className={`inline-flex w-fit items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold capitalize ${status.className}`}
+                      >
+                        <StatusIcon />
+                        {status.label}
+                      </div>
+
+                      {isPaid && (
+                        <div
+                          className={`inline-flex w-fit items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold capitalize ${claim.className}`}
+                        >
+                          <ClaimIcon />
+                          {claim.label}
+                        </div>
+                      )}
                     </div>
                   </div>
 
@@ -170,6 +207,13 @@ function Orders() {
                             {amount} • ₱{Number(order.unit_price).toFixed(2)} /{" "}
                             {order.unit_type}
                           </p>
+
+                          {order.claim_status === "claimed" &&
+                            order.claimed_at && (
+                              <p className="mt-2 text-xs text-blue-500">
+                                Claimed at {order.claimed_at}
+                              </p>
+                            )}
                         </div>
 
                         <div className="sm:text-right">

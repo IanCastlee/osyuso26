@@ -9,8 +9,7 @@ import noShopLogo from "../../assets/icons/noShopLogo.png";
 function ShopInfo({ product }) {
   const navigate = useNavigate();
 
-  const shopRouteId =
-    product?.vendor_id || product?.owner_id || product?.user_id;
+  const shopRouteId = product?.user_id;
 
   const handleViewShop = () => {
     if (shopRouteId) {

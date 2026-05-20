@@ -7,6 +7,8 @@ header("Content-Type: application/json; charset=UTF-8");
 error_reporting(E_ALL);
 ini_set("display_errors", 0);
 
+date_default_timezone_set("Asia/Manila");
+
 require_once "../vendor/autoload.php";
 
 $dotenv = Dotenv\Dotenv::createImmutable(__DIR__ . "/..");
@@ -32,6 +34,10 @@ function response($success, $message, $statusCode = 200, $data = null) {
     exit;
 }
 
+function h($value) {
+    return htmlspecialchars((string)($value ?? ""), ENT_QUOTES, "UTF-8");
+}
+
 function toMysqlDateTime($value) {
     if (!$value) {
         return date("Y-m-d H:i:s");
@@ -43,6 +49,114 @@ function toMysqlDateTime($value) {
             ->format("Y-m-d H:i:s");
     } catch (Throwable $e) {
         return date("Y-m-d H:i:s");
+    }
+}
+
+function createNotification(
+    $conn,
+    $userId,
+    $type,
+    $title,
+    $message,
+    $relatedType,
+    $relatedId,
+    $dedupeKey,
+    $actorUserId = null
+) {
+    if (!$userId || !$dedupeKey) {
+        return false;
+    }
+
+    try {
+        $stmt = $conn->prepare("
+            INSERT IGNORE INTO notifications
+            (
+                user_id,
+                actor_user_id,
+                type,
+                title,
+                message,
+                related_type,
+                related_id,
+                dedupe_key,
+                created_at
+            )
+            VALUES
+            (?, ?, ?, ?, ?, ?, ?, ?, NOW())
+        ");
+
+        $stmt->bind_param(
+            "iissssis",
+            $userId,
+            $actorUserId,
+            $type,
+            $title,
+            $message,
+            $relatedType,
+            $relatedId,
+            $dedupeKey
+        );
+
+        $stmt->execute();
+
+        return $stmt->affected_rows > 0;
+    } catch (Throwable $e) {
+        error_log("Create notification failed: " . $e->getMessage());
+        return false;
+    }
+}
+
+function queueEmail(
+    $conn,
+    $toEmail,
+    $toName,
+    $subject,
+    $bodyHtml,
+    $bodyText,
+    $relatedType,
+    $relatedId,
+    $dedupeKey
+) {
+    if (!$toEmail || !filter_var($toEmail, FILTER_VALIDATE_EMAIL)) {
+        return false;
+    }
+
+    try {
+        $stmt = $conn->prepare("
+            INSERT IGNORE INTO email_queue
+            (
+                to_email,
+                to_name,
+                subject,
+                body_html,
+                body_text,
+                related_type,
+                related_id,
+                dedupe_key,
+                created_at
+            )
+            VALUES
+            (?, ?, ?, ?, ?, ?, ?, ?, NOW())
+        ");
+
+        $stmt->bind_param(
+            "ssssssis",
+            $toEmail,
+            $toName,
+            $subject,
+            $bodyHtml,
+            $bodyText,
+            $relatedType,
+            $relatedId,
+            $dedupeKey
+        );
+
+        $stmt->execute();
+
+        return $stmt->affected_rows > 0;
+    } catch (Throwable $e) {
+        error_log("Queue email failed: " . $e->getMessage());
+        return false;
     }
 }
 
@@ -82,9 +196,35 @@ try {
     $conn->begin_transaction();
 
     $stmt = $conn->prepare("
-        SELECT id, payment_status
-        FROM orders
-        WHERE xendit_invoice_id = ?
+        SELECT
+            o.id,
+            o.user_id,
+            o.shop_id,
+            o.product_id,
+            o.payment_status,
+            o.quantity,
+            o.weight,
+
+            p.name AS product_name,
+
+            s.owner_id AS vendor_user_id,
+            s.shop_name,
+
+            cu.fullname AS customer_name,
+            cu.email AS customer_email,
+
+            vu.fullname AS vendor_name,
+            vu.email AS vendor_email
+        FROM orders o
+        LEFT JOIN products p
+            ON p.id = o.product_id
+        LEFT JOIN shops s
+            ON s.id = o.shop_id
+        LEFT JOIN users cu
+            ON cu.user_id = o.user_id
+        LEFT JOIN users vu
+            ON vu.user_id = s.owner_id
+        WHERE o.xendit_invoice_id = ?
         LIMIT 1
         FOR UPDATE
     ");
@@ -96,9 +236,23 @@ try {
 
     if (!$order) {
         $conn->commit();
-
         response(true, "Webhook received, no matching order");
     }
+
+    $previousPaymentStatus = $order["payment_status"];
+
+    if ($previousPaymentStatus === "paid" && $payment_status !== "paid") {
+        $conn->commit();
+
+        response(true, "Order already paid. Non-paid webhook ignored.", 200, [
+            "order_id" => $order["id"],
+            "payment_status" => $previousPaymentStatus
+        ]);
+    }
+
+    $shouldDeductStock =
+        $payment_status === "paid" &&
+        $previousPaymentStatus !== "paid";
 
     $update = $conn->prepare("
         UPDATE orders
@@ -108,6 +262,64 @@ try {
 
     $update->bind_param("si", $payment_status, $order["id"]);
     $update->execute();
+
+    $stockDeducted = false;
+    $deductAmount = 0;
+
+    if ($shouldDeductStock) {
+        $productId = (int)$order["product_id"];
+        $quantity = (float)($order["quantity"] ?? 0);
+        $weight = (float)($order["weight"] ?? 0);
+
+        $deductAmount = $weight > 0 ? $weight : $quantity;
+
+        if ($productId <= 0 || $deductAmount <= 0) {
+            throw new Exception("Invalid order quantity or product");
+        }
+
+        $productStmt = $conn->prepare("
+            SELECT id, stock
+            FROM products
+            WHERE id = ?
+            LIMIT 1
+            FOR UPDATE
+        ");
+
+        $productStmt->bind_param("i", $productId);
+        $productStmt->execute();
+
+        $product = $productStmt->get_result()->fetch_assoc();
+
+        if (!$product) {
+            throw new Exception("Product not found for stock deduction");
+        }
+
+        $currentStock = (float)$product["stock"];
+        $newStock = max(0, $currentStock - $deductAmount);
+
+        if ($currentStock < $deductAmount) {
+            error_log(
+                "Stock shortage on order " . $order["id"] .
+                ". Current stock: " . $currentStock .
+                ", deduct: " . $deductAmount
+            );
+        }
+
+        $stockUpdate = $conn->prepare("
+            UPDATE products
+            SET stock = ?, updated_at = NOW()
+            WHERE id = ?
+        ");
+
+        $stockUpdate->bind_param("di", $newStock, $productId);
+        $stockUpdate->execute();
+
+        $stockDeducted = true;
+    }
+
+    $receiptCreated = false;
+    $notificationCreated = false;
+    $emailQueued = false;
 
     if ($payment_status === "paid") {
         $checkReceipt = $conn->prepare("
@@ -170,14 +382,114 @@ try {
             );
 
             $receiptStmt->execute();
+            $receiptCreated = true;
         }
+
+        $orderId = (int)$order["id"];
+        $productName = $order["product_name"] ?: "your product";
+        $shopName = $order["shop_name"] ?: "the shop";
+
+        $customerNotification = createNotification(
+            $conn,
+            (int)$order["user_id"],
+            "payment_success",
+            "Payment successful",
+            "Your payment for {$productName} was successful. Please claim your order at {$shopName}.",
+            "order",
+            $orderId,
+            "payment_success_customer_order_" . $orderId
+        );
+
+        $vendorNotification = false;
+
+        if (!empty($order["vendor_user_id"])) {
+            $vendorNotification = createNotification(
+                $conn,
+                (int)$order["vendor_user_id"],
+                "new_paid_order",
+                "New paid order",
+                "A customer paid for {$productName}. Prepare this order for claiming.",
+                "order",
+                $orderId,
+                "new_paid_order_vendor_order_" . $orderId,
+                (int)$order["user_id"]
+            );
+        }
+
+        $notificationCreated = $customerNotification || $vendorNotification;
+
+        $customerName = $order["customer_name"] ?: "Customer";
+        $vendorName = $order["vendor_name"] ?: "Vendor";
+
+        $customerSubject = "Payment Successful - Order #{$orderId}";
+        $customerHtml = "
+            <div style='font-family: Arial, sans-serif; color: #111827; line-height: 1.6;'>
+                <h2 style='color:#f97316;'>Payment Successful</h2>
+                <p>Hello " . h($customerName) . ",</p>
+                <p>Your payment for <strong>" . h($productName) . "</strong> was successful.</p>
+                <p>Please claim your order at <strong>" . h($shopName) . "</strong>.</p>
+                <p><strong>Order ID:</strong> #{$orderId}</p>
+                <br>
+                <p>Thank you for using OSYUSO.</p>
+            </div>
+        ";
+
+        $customerText =
+            "Your payment for {$productName} was successful. " .
+            "Please claim your order at {$shopName}. Order ID: #{$orderId}.";
+
+        $customerEmailQueued = queueEmail(
+            $conn,
+            $order["customer_email"] ?? null,
+            $customerName,
+            $customerSubject,
+            $customerHtml,
+            $customerText,
+            "order",
+            $orderId,
+            "payment_success_customer_email_order_" . $orderId
+        );
+
+        $vendorSubject = "New Paid Order - Order #{$orderId}";
+        $vendorHtml = "
+            <div style='font-family: Arial, sans-serif; color: #111827; line-height: 1.6;'>
+                <h2 style='color:#f97316;'>New Paid Order</h2>
+                <p>Hello " . h($vendorName) . ",</p>
+                <p>A customer paid for <strong>" . h($productName) . "</strong>.</p>
+                <p>Please prepare this order for claiming.</p>
+                <p><strong>Order ID:</strong> #{$orderId}</p>
+            </div>
+        ";
+
+        $vendorText =
+            "A customer paid for {$productName}. " .
+            "Please prepare this order for claiming. Order ID: #{$orderId}.";
+
+        $vendorEmailQueued = queueEmail(
+            $conn,
+            $order["vendor_email"] ?? null,
+            $vendorName,
+            $vendorSubject,
+            $vendorHtml,
+            $vendorText,
+            "order",
+            $orderId,
+            "new_paid_order_vendor_email_order_" . $orderId
+        );
+
+        $emailQueued = $customerEmailQueued || $vendorEmailQueued;
     }
 
     $conn->commit();
 
     response(true, "Webhook processed", 200, [
         "order_id" => $order["id"],
-        "payment_status" => $payment_status
+        "payment_status" => $payment_status,
+        "stock_deducted" => $stockDeducted,
+        "deducted_amount" => $deductAmount,
+        "receipt_created" => $receiptCreated,
+        "notification_created" => $notificationCreated,
+        "email_queued" => $emailQueued
     ]);
 } catch (Throwable $e) {
     if (isset($conn)) {

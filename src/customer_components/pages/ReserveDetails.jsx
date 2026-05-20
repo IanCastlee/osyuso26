@@ -57,7 +57,7 @@ function ReserveDetails() {
       setQuantity((q) => Math.max(1, q - 1));
     }
   };
-
+  console.log("PROF : ", product);
   const increase = () => {
     if (isKg) {
       setWeight((w) => Math.min(stock, Number((w + 0.5).toFixed(1))));

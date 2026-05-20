@@ -76,8 +76,8 @@
 // export default fetchInstance;
 
 /////////////////////////////
-const BASE_URL = "http://localhost/OSYUSO26/backend/";
-// const BASE_URL = "https://osyuso.kesug.com/backend/";
+//const BASE_URL = "http://localhost/OSYUSO26/backend/";
+const BASE_URL = "https://osyuso.com/backend/";
 
 const getToken = () => {
   const authData = sessionStorage.getItem("auth-storage");
