@@ -1,280 +1,318 @@
 import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { NavLink, useNavigate } from "react-router-dom";
 import {
   FaBox,
   FaCog,
   FaClipboardList,
   FaChevronDown,
   FaChevronRight,
+  FaChartLine,
+  FaMoneyBillWave,
+  FaStore,
+  FaTags,
+  FaUsers,
 } from "react-icons/fa";
 import { PiShoppingCartSimpleFill } from "react-icons/pi";
 
 function SidebarAdmin() {
   const navigate = useNavigate();
 
-  const [openReservation, setOpenReservation] = useState(false);
+  const [expanded, setExpanded] = useState(false);
+  const [openUsers, setOpenUsers] = useState(false);
+  const [openProducts, setOpenProducts] = useState(false);
+  const [openOrders, setOpenOrders] = useState(false);
+  const [openPromotion, setOpenPromotion] = useState(false);
+  const [openPayout, setOpenPayout] = useState(false);
 
-  const go = (path) => {
-    navigate(path);
-  };
+  const itemClass = ({ isActive }) =>
+    `group flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition ${
+      isActive
+        ? "bg-white text-secondary shadow-sm"
+        : "text-white/85 hover:bg-white/10 hover:text-white"
+    }`;
+
+  const subItemClass = ({ isActive }) =>
+    `block rounded-lg px-3 py-2 text-sm transition ${
+      isActive
+        ? "bg-white/15 font-semibold text-white"
+        : "text-white/70 hover:bg-white/10 hover:text-white"
+    }`;
+
+  const labelClass = `truncate transition-all duration-200 ${
+    expanded ? "max-w-48 opacity-100" : "max-w-0 overflow-hidden opacity-0"
+  }`;
+
+  const chevronClass = `shrink-0 text-xs text-white/60 transition ${
+    expanded ? "opacity-100" : "opacity-0"
+  }`;
 
   return (
-    <div className="w-[260px] h-screen bg-secondary text-white flex flex-col overflow-hidden">
-      {/* HEADER */}
-      <div className="h-[70px] flex flex-col justify-center  items-center px-4 mb-5  border-b border-white/10">
-        <h2
-          onClick={() => navigate("/admin")}
-          className="flex items-center font-bold text-xl md:text-[24px] tracking-wide cursor-pointer"
+    <aside
+      onMouseEnter={() => setExpanded(true)}
+      onMouseLeave={() => setExpanded(false)}
+      onFocus={() => setExpanded(true)}
+      className={`flex h-screen shrink-0 flex-col overflow-hidden bg-secondary text-white transition-all duration-300 ${
+        expanded ? "w-[270px]" : "w-[76px]"
+      }`}
+    >
+      <div className="border-b border-white/10 px-3 py-5">
+        <button
+          onClick={() => navigate("/")}
+          className={`flex w-full items-center font-bold tracking-wide transition ${
+            expanded ? "justify-center text-2xl" : "justify-center text-xl"
+          }`}
+          title="OSYUSO"
         >
-          OSY <PiShoppingCartSimpleFill /> SO
-        </h2>
-        <span className="text-sm text-gray-100">Admin Panel</span>
+          {expanded && <span>OSY</span>}
+          <PiShoppingCartSimpleFill className="mx-1 text-3xl" />
+          {expanded && <span>SO</span>}
+        </button>
+
+        <div
+          className={`mt-3 overflow-hidden rounded-xl bg-white/10 text-center transition-all duration-300 ${
+            expanded
+              ? "max-h-24 px-3 py-2 opacity-100"
+              : "max-h-0 px-0 py-0 opacity-0"
+          }`}
+        >
+          <p className="text-xs font-semibold uppercase tracking-wide text-white/60">
+            Admin Panel
+          </p>
+          <p className="mt-0.5 text-sm font-medium text-white">
+            System Management
+          </p>
+        </div>
       </div>
 
-      {/* MENU */}
-      <div className="flex-1 overflow-y-auto p-2 flex flex-col gap-1">
-        {/* HOME */}
+      <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-4">
+        <NavLink to="/admin" end className={itemClass} title="Dashboard">
+          <FaChartLine className="shrink-0 text-lg" />
+          <span className={labelClass}>Dashboard</span>
+        </NavLink>
+
         <button
-          onClick={() => go("/admin")}
-          className="w-full flex items-center gap-2 px-3 py-2 rounded-md hover:bg-white/10 transition min-w-0"
+          onClick={() => {
+            setExpanded(true);
+            setOpenUsers((prev) => !prev);
+          }}
+          className="flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-sm font-medium text-white/85 transition hover:bg-white/10 hover:text-white"
+          title="Users"
         >
-          <FaBox />
-          <span className="truncate">Dashboard</span>
+          <span className="flex min-w-0 items-center gap-3">
+            <FaUsers className="shrink-0 text-lg" />
+            <span className={labelClass}>Users</span>
+          </span>
+
+          {openUsers ? (
+            <FaChevronDown className={chevronClass} />
+          ) : (
+            <FaChevronRight className={chevronClass} />
+          )}
         </button>
 
-        {/* _______________________________________SHOP______________________________________________ */}
-        <button
-          onClick={() => setOpenReservation(!openReservation)}
-          className="w-full flex items-center justify-between px-3 py-2 rounded-md hover:bg-white/10 transition min-w-0"
-        >
-          <div className="flex items-center gap-2 min-w-0">
-            <FaClipboardList />
-            <span className="truncate">Shop</span>
-          </div>
-
-          {openReservation ? <FaChevronDown /> : <FaChevronRight />}
-        </button>
-
-        {/* SUB MENU */}
         <div
-          className={`flex flex-col pl-6 overflow-hidden transition-all duration-300 min-w-0 ${
-            openReservation ? "max-h-40 mt-1" : "max-h-0"
+          className={`overflow-hidden transition-all duration-300 ${
+            expanded && openUsers ? "max-h-36 pb-1 pl-8" : "max-h-0"
           }`}
         >
-          <button
-            onClick={() => go("/admin/active-shop")}
-            className="text-left px-3 py-2 text-sm rounded-md hover:bg-white/10 transition min-w-0"
-          >
-            <span className="truncate">Active Shop</span>
-          </button>
-
-          <button
-            onClick={() => go("/admin/not-active-shop")}
-            className="text-left px-3 py-2 text-sm rounded-md hover:bg-white/10 transition min-w-0"
-          >
-            <span className="truncate">Not Active Shop</span>
-          </button>
+          <div className="space-y-1 border-l border-white/10 pl-3">
+            <NavLink to="/admin/vendors" className={subItemClass}>
+              Vendors
+            </NavLink>
+            <NavLink to="/admin/registered-customers" className={subItemClass}>
+              Reg Customers
+            </NavLink>
+            <NavLink
+              to="/admin/unregistered-customers"
+              className={subItemClass}
+            >
+              Unreg Customers
+            </NavLink>
+          </div>
         </div>
 
-        {/* _______________________________________CUSTOMER______________________________________________ */}
         <button
-          // onClick={() => setOpenReservation(!openReservation)}
-          className="w-full flex items-center justify-between px-3 py-2 rounded-md hover:bg-white/10 transition min-w-0"
+          onClick={() => {
+            setExpanded(true);
+            setOpenProducts((prev) => !prev);
+          }}
+          className="flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-sm font-medium text-white/85 transition hover:bg-white/10 hover:text-white"
+          title="Products"
         >
-          <div className="flex items-center gap-2 min-w-0">
-            <FaClipboardList />
-            <span className="truncate">Customer</span>
-          </div>
+          <span className="flex min-w-0 items-center gap-3">
+            <FaBox className="shrink-0 text-lg" />
+            <span className={labelClass}>Products</span>
+          </span>
 
-          {openReservation ? <FaChevronDown /> : <FaChevronRight />}
+          {openProducts ? (
+            <FaChevronDown className={chevronClass} />
+          ) : (
+            <FaChevronRight className={chevronClass} />
+          )}
         </button>
 
-        {/* SUB MENU */}
         <div
-          className={`flex flex-col pl-6 overflow-hidden transition-all duration-300 min-w-0 ${
-            openReservation ? "max-h-0 mt-1" : "max-h-0"
+          className={`overflow-hidden transition-all duration-300 ${
+            expanded && openProducts ? "max-h-28 pb-1 pl-8" : "max-h-0"
           }`}
         >
-          <button
-            onClick={() => go("/admin/verified-account")}
-            className="text-left px-3 py-2 text-sm rounded-md hover:bg-white/10 transition min-w-0"
-          >
-            <span className="truncate">Verified Account</span>
-          </button>
-
-          <button
-            onClick={() => go("/admin/not-verified-account")}
-            className="text-left px-3 py-2 text-sm rounded-md hover:bg-white/10 transition min-w-0"
-          >
-            <span className="truncate">Not Verified Account</span>
-          </button>
-
-          <button
-            onClick={() => go("/admin/not-active-account")}
-            className="text-left px-3 py-2 text-sm rounded-md hover:bg-white/10 transition min-w-0"
-          >
-            <span className="truncate">Not Active Account</span>
-          </button>
+          <div className="space-y-1 border-l border-white/10 pl-3">
+            <NavLink to="/admin/products" className={subItemClass}>
+              Products
+            </NavLink>
+            <NavLink to="/admin/archive-products" className={subItemClass}>
+              Archive Products
+            </NavLink>
+          </div>
         </div>
 
-        {/* _______________________________________CATEGORIES______________________________________________ */}
         <button
-          // onClick={() => setOpenReservation(!openReservation)}
-          className="w-full flex items-center justify-between px-3 py-2 rounded-md hover:bg-white/10 transition min-w-0"
+          onClick={() => {
+            setExpanded(true);
+            setOpenOrders((prev) => !prev);
+          }}
+          className="flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-sm font-medium text-white/85 transition hover:bg-white/10 hover:text-white"
+          title="Orders"
         >
-          <div className="flex items-center gap-2 min-w-0">
-            <FaClipboardList />
-            <span className="truncate">Categories</span>
-          </div>
+          <span className="flex min-w-0 items-center gap-3">
+            <FaClipboardList className="shrink-0 text-lg" />
+            <span className={labelClass}>Orders</span>
+          </span>
 
-          {openReservation ? <FaChevronDown /> : <FaChevronRight />}
+          {openOrders ? (
+            <FaChevronDown className={chevronClass} />
+          ) : (
+            <FaChevronRight className={chevronClass} />
+          )}
         </button>
 
-        {/* SUB MENU */}
         <div
-          className={`flex flex-col pl-6 overflow-hidden transition-all duration-300 min-w-0 ${
-            openReservation ? "max-h-0 mt-1" : "max-h-0"
+          className={`overflow-hidden transition-all duration-300 ${
+            expanded && openOrders ? "max-h-36 pb-1 pl-8" : "max-h-0"
           }`}
         >
-          <button
-            onClick={() => go("/admin/main-categories")}
-            className="text-left px-3 py-2 text-sm rounded-md hover:bg-white/10 transition min-w-0"
-          >
-            <span className="truncate">Main Categories</span>
-          </button>
-
-          <button
-            onClick={() => go("/admin/sub-categories")}
-            className="text-left px-3 py-2 text-sm rounded-md hover:bg-white/10 transition min-w-0"
-          >
-            <span className="truncate">Sub Categories</span>
-          </button>
+          <div className="space-y-1 border-l border-white/10 pl-3">
+            <NavLink to="/admin/orders" className={subItemClass}>
+              Orders
+            </NavLink>
+            <NavLink to="/admin/reservations" className={subItemClass}>
+              Reservations
+            </NavLink>
+            <NavLink to="/admin/order-history" className={subItemClass}>
+              Order History
+            </NavLink>
+          </div>
         </div>
 
-        {/* _______________________________________SALES______________________________________________ */}
         <button
-          onClick={() => setOpenReservation(!openReservation)}
-          className="w-full flex items-center justify-between px-3 py-2 rounded-md hover:bg-white/10 transition min-w-0"
+          onClick={() => {
+            setExpanded(true);
+            setOpenPromotion((prev) => !prev);
+          }}
+          className="flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-sm font-medium text-white/85 transition hover:bg-white/10 hover:text-white"
+          title="Featured Promotion"
         >
-          <div className="flex items-center gap-2 min-w-0">
-            <FaClipboardList />
-            <span className="truncate">Sales</span>
-          </div>
+          <span className="flex min-w-0 items-center gap-3">
+            <FaTags className="shrink-0 text-lg" />
+            <span className={labelClass}>Featured Promotion</span>
+          </span>
 
-          {openReservation ? <FaChevronDown /> : <FaChevronRight />}
+          {openPromotion ? (
+            <FaChevronDown className={chevronClass} />
+          ) : (
+            <FaChevronRight className={chevronClass} />
+          )}
         </button>
 
-        {/* SUB MENU */}
         <div
-          className={`flex flex-col pl-6 overflow-hidden transition-all duration-300 min-w-0 ${
-            openReservation ? "max-h-40 mt-1" : "max-h-0"
+          className={`overflow-hidden transition-all duration-300 ${
+            expanded && openPromotion ? "max-h-28 pb-1 pl-8" : "max-h-0"
           }`}
         >
-          <button
-            onClick={() => go("/admin/todays-sales")}
-            className="text-left px-3 py-2 text-sm rounded-md hover:bg-white/10 transition min-w-0"
-          >
-            <span className="truncate">Today's Sales</span>
-          </button>
-
-          <button
-            onClick={() => go("/admin/sales-log")}
-            className="text-left px-3 py-2 text-sm rounded-md hover:bg-white/10 transition min-w-0"
-          >
-            <span className="truncate">Sales Log</span>
-          </button>
+          <div className="space-y-1 border-l border-white/10 pl-3">
+            <NavLink to="/admin/featured-promotion" className={subItemClass}>
+              Promotions
+            </NavLink>
+            <NavLink
+              to="/admin/featured-promotion-logs"
+              className={subItemClass}
+            >
+              Promotion Logs
+            </NavLink>
+          </div>
         </div>
 
-        {/* _______________________________________PAYOUT______________________________________________ */}
-        <button
-          onClick={() => setOpenReservation(!openReservation)}
-          className="w-full flex items-center justify-between px-3 py-2 rounded-md hover:bg-white/10 transition min-w-0"
-        >
-          <div className="flex items-center gap-2 min-w-0">
-            <FaClipboardList />
-            <span className="truncate">Payout</span>
-          </div>
+        <NavLink to="/admin/shops" className={itemClass} title="Shops">
+          <FaStore className="shrink-0 text-lg" />
+          <span className={labelClass}>Shops</span>
+        </NavLink>
 
-          {openReservation ? <FaChevronDown /> : <FaChevronRight />}
+        <button
+          onClick={() => {
+            setExpanded(true);
+            setOpenPayout((prev) => !prev);
+          }}
+          className="flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-sm font-medium text-white/85 transition hover:bg-white/10 hover:text-white"
+          title="Vendor Payouts"
+        >
+          <span className="flex min-w-0 items-center gap-3">
+            <FaMoneyBillWave className="shrink-0 text-lg" />
+            <span className={labelClass}>Vendor Payouts</span>
+          </span>
+
+          {openPayout ? (
+            <FaChevronDown className={chevronClass} />
+          ) : (
+            <FaChevronRight className={chevronClass} />
+          )}
         </button>
 
-        {/* SUB MENU */}
         <div
-          className={`flex flex-col pl-6 overflow-hidden transition-all duration-300 min-w-0 ${
-            openReservation ? "max-h-40 mt-1" : "max-h-0"
+          className={`overflow-hidden transition-all duration-300 ${
+            expanded && openPayout ? "max-h-24 pb-1 pl-8" : "max-h-0"
           }`}
         >
-          <button
-            onClick={() => go("/admin/payout")}
-            className="text-left px-3 py-2 text-sm rounded-md hover:bg-white/10 transition min-w-0"
-          >
-            <span className="truncate">Payout</span>
-          </button>
-
-          <button
-            onClick={() => go("/admin/payout-log")}
-            className="text-left px-3 py-2 text-sm rounded-md hover:bg-white/10 transition min-w-0"
-          >
-            <span className="truncate">Payout History</span>
-          </button>
+          <div className="space-y-1 border-l border-white/10 pl-3">
+            <NavLink to="/admin/payout-request" className={subItemClass}>
+              Requests
+            </NavLink>
+            <NavLink to="/admin/payout-history" className={subItemClass}>
+              History
+            </NavLink>
+          </div>
         </div>
 
-        {/* _______________________________________PRODOCT MANAGEMENT______________________________________________ */}
-        <button
-          onClick={() => setOpenReservation(!openReservation)}
-          className="w-full flex items-center justify-between px-3 py-2 rounded-md hover:bg-white/10 transition min-w-0"
+        <NavLink
+          to="/admin/settings"
+          className={itemClass}
+          title="Admin Settings"
         >
-          <div className="flex items-center gap-2 min-w-0">
-            <FaClipboardList />
-            <span className="truncate">About Product</span>
-          </div>
+          <FaCog className="shrink-0 text-lg" />
+          <span className={labelClass}>Admin Settings</span>
+        </NavLink>
+      </nav>
 
-          {openReservation ? <FaChevronDown /> : <FaChevronRight />}
-        </button>
-
-        {/* SUB MENU */}
+      <div className="border-t border-white/10 p-3">
         <div
-          className={`flex flex-col pl-6 overflow-hidden transition-all duration-300 min-w-0 ${
-            openReservation ? "max-h-40 mt-1" : "max-h-0"
+          className={`overflow-hidden rounded-xl bg-white/10 text-center transition-all duration-300 ${
+            expanded
+              ? "max-h-24 px-3 py-3 opacity-100"
+              : "max-h-0 px-0 py-0 opacity-0"
           }`}
         >
-          <button
-            onClick={() => go("/admin/products")}
-            className="text-left px-3 py-2 text-sm rounded-md hover:bg-white/10 transition min-w-0"
-          >
-            <span className="truncate">Products</span>
-          </button>
-
-          <button
-            onClick={() => go("/admin/special-offer")}
-            className="text-left px-3 py-2 text-sm rounded-md hover:bg-white/10 transition min-w-0"
-          >
-            <span className="truncate">Special Offer</span>
-          </button>
-
-          <button
-            onClick={() => go("/admin/new-arrival")}
-            className="text-left px-3 py-2 text-sm rounded-md hover:bg-white/10 transition min-w-0"
-          >
-            <span className="truncate">New Arrival</span>
-          </button>
+          <p className="text-xs text-white/60">Signed in as</p>
+          <p className="mt-0.5 text-sm font-semibold text-white">Admin</p>
         </div>
 
-        {/* SETTINGS */}
-        <button
-          onClick={() => go("/vendor/settings")}
-          className="w-full flex items-center gap-2 px-3 py-2 rounded-md hover:bg-white/10 transition min-w-0"
+        <p
+          className={`mt-3 text-center text-xs text-white/50 transition ${
+            expanded ? "opacity-100" : "opacity-0"
+          }`}
         >
-          <FaCog />
-          <span className="truncate">Settings</span>
-        </button>
+          © OSYUSO Admin
+        </p>
       </div>
-
-      {/* FOOTER */}
-      <div className="p-3 text-center text-xs text-white/60 border-t border-white/10">
-        © OSYUSO Vendor
-      </div>
-    </div>
+    </aside>
   );
 }
 

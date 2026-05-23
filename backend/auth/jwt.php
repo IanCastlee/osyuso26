@@ -5,6 +5,22 @@ use Firebase\JWT\Key;
 
 require_once __DIR__ . '/../config/config.php';
 
+// function generateJWT($user) {
+//     global $secret_key, $jwt_expire;
+
+//     $payload = [
+//         "iat" => time(),
+//         "exp" => time() + $jwt_expire,
+//         "data" => [
+//             "user_id" => $user['user_id'],
+//             "email" => $user['email'],
+//             "role" => $user['role']
+//         ]
+//     ];
+
+//     return JWT::encode($payload, $secret_key, 'HS256');
+// }
+
 function generateJWT($user) {
     global $secret_key, $jwt_expire;
 
@@ -14,7 +30,8 @@ function generateJWT($user) {
         "data" => [
             "user_id" => $user['user_id'],
             "email" => $user['email'],
-            "role" => $user['role']
+            "role" => $user['role'],
+            "status" => $user['status'] ?? 'active'
         ]
     ];
 

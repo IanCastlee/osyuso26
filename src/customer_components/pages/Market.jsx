@@ -192,6 +192,36 @@ function Market() {
     return <MarketSkeletonLoader />;
   }
 
+  const openDirections = () => {
+    const destination = market?.address?.trim();
+
+    if (!destination) return;
+
+    const fallbackUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(
+      destination,
+    )}&travelmode=driving`;
+
+    if (!navigator.geolocation) {
+      window.open(fallbackUrl, "_blank", "noopener,noreferrer");
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const origin = `${position.coords.latitude},${position.coords.longitude}`;
+
+        const url = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(
+          origin,
+        )}&destination=${encodeURIComponent(destination)}&travelmode=driving`;
+
+        window.open(url, "_blank", "noopener,noreferrer");
+      },
+      () => {
+        window.open(fallbackUrl, "_blank", "noopener,noreferrer");
+      },
+    );
+  };
+
   return (
     <main className="min-h-[calc(100vh-4rem)] bg-slate-50">
       <section className="mx-auto w-full max-w-7xl px-2 py-5  lg:px-[120px]">
@@ -226,17 +256,14 @@ function Market() {
 
           <div className="grid gap-4 p-5 lg:grid-cols-[1fr_auto] lg:items-center">
             <div className="space-y-2">
-              <a
-                href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
-                  market?.address || "",
-                )}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex max-w-3xl items-start gap-2 text-sm text-slate-600 transition hover:text-secondary hover:underline"
+              <button
+                type="button"
+                onClick={openDirections}
+                className="flex max-w-3xl items-start gap-2 text-left text-sm text-slate-600 transition hover:text-secondary hover:underline"
               >
                 <CiLocationOn className="mt-0.5 shrink-0 text-lg text-secondary" />
                 <span>{market?.address || "Address unavailable"}</span>
-              </a>
+              </button>
 
               <div className="flex items-start gap-2 text-sm text-slate-500">
                 <icons.CiLocationArrow1 className="mt-0.5 shrink-0 text-secondary" />

@@ -1,10 +1,12 @@
 <?php
+ob_start();
 
 include("../header.php");
 header("Content-Type: application/json; charset=UTF-8");
 
 error_reporting(E_ALL);
-ini_set('display_errors', 0);
+ini_set("display_errors", 0);
+date_default_timezone_set("Asia/Manila");
 
 require_once "../vendor/autoload.php";
 
@@ -15,6 +17,32 @@ mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
 
 require_once "../dbConn.php";
 require_once "../auth/middleware.php";
+
+function response($success, $message, $statusCode = 200, $payload = null) {
+    if (ob_get_length()) {
+        ob_clean();
+    }
+
+    http_response_code($statusCode);
+
+    $body = [
+        "success" => $success,
+        "message" => $message
+    ];
+
+    if (is_array($payload)) {
+        $body = array_merge($body, $payload);
+
+        if (!array_key_exists("data", $body)) {
+            $body["data"] = $payload;
+        }
+    } else {
+        $body["data"] = $payload;
+    }
+
+    echo json_encode($body);
+    exit;
+}
 
 function createXenditInvoice($payload, $secretKey) {
     $ch = curl_init("https://api.xendit.co/v2/invoices");
@@ -48,11 +76,77 @@ function createXenditInvoice($payload, $secretKey) {
     }
 
     if ($statusCode < 200 || $statusCode >= 300) {
-        $message = $result['message'] ?? $result['error_code'] ?? "Failed to create Xendit invoice";
+        $message = $result["message"] ?? $result["error_code"] ?? "Failed to create Xendit invoice";
         throw new Exception($message);
     }
 
     return $result;
+}
+
+function isSaleActive($product) {
+    $saleType = $product["sale_type"] ?? "none";
+    $saleValue = (float)($product["sale_value"] ?? 0);
+    $now = date("Y-m-d H:i:s");
+
+    if ($saleType === "none" || $saleValue <= 0) {
+        return false;
+    }
+
+    if (!empty($product["sale_starts_at"]) && $product["sale_starts_at"] > $now) {
+        return false;
+    }
+
+    if (!empty($product["sale_ends_at"]) && $product["sale_ends_at"] < $now) {
+        return false;
+    }
+
+    return true;
+}
+
+function calculateFinalPrice($product) {
+    $originalPrice = round((float)$product["price"], 2);
+    $saleType = $product["sale_type"] ?? "none";
+    $saleValue = (float)($product["sale_value"] ?? 0);
+
+    if (!isSaleActive($product)) {
+        return [
+            "original_price" => $originalPrice,
+            "final_price" => $originalPrice,
+            "is_on_sale" => false,
+            "sale_label" => null
+        ];
+    }
+
+    if ($saleType === "percent") {
+        $discountPercent = min($saleValue, 100);
+        $finalPrice = max(0, $originalPrice - ($originalPrice * ($discountPercent / 100)));
+
+        return [
+            "original_price" => $originalPrice,
+            "final_price" => round($finalPrice, 2),
+            "is_on_sale" => true,
+            "sale_label" => rtrim(rtrim(number_format($discountPercent, 2, ".", ""), "0"), ".") . "% OFF"
+        ];
+    }
+
+    if ($saleType === "fixed") {
+        $discount = min($saleValue, $originalPrice);
+        $finalPrice = max(0, $originalPrice - $discount);
+
+        return [
+            "original_price" => $originalPrice,
+            "final_price" => round($finalPrice, 2),
+            "is_on_sale" => true,
+            "sale_label" => "PHP " . number_format($discount, 2) . " OFF"
+        ];
+    }
+
+    return [
+        "original_price" => $originalPrice,
+        "final_price" => $originalPrice,
+        "is_on_sale" => false,
+        "sale_label" => null
+    ];
 }
 
 try {
@@ -68,7 +162,7 @@ try {
     if (is_object($user)) {
         $user_id = $user->user_id ?? null;
     } elseif (is_array($user)) {
-        $user_id = $user['user_id'] ?? null;
+        $user_id = $user["user_id"] ?? null;
     } else {
         $user_id = null;
     }
@@ -83,9 +177,9 @@ try {
         throw new Exception("Invalid JSON input");
     }
 
-    $product_id = filter_var($input['product_id'] ?? null, FILTER_VALIDATE_INT);
-    $quantity = filter_var($input['quantity'] ?? 0, FILTER_VALIDATE_INT);
-    $weight = filter_var($input['weight'] ?? 0, FILTER_VALIDATE_FLOAT);
+    $product_id = filter_var($input["product_id"] ?? null, FILTER_VALIDATE_INT);
+    $quantity = filter_var($input["quantity"] ?? 0, FILTER_VALIDATE_INT);
+    $weight = filter_var($input["weight"] ?? 0, FILTER_VALIDATE_FLOAT);
 
     $quantity = $quantity === false ? 0 : $quantity;
     $weight = $weight === false ? 0 : $weight;
@@ -93,6 +187,8 @@ try {
     if (!$product_id) {
         throw new Exception("Product ID is required");
     }
+
+    $conn->begin_transaction();
 
     $stmt = $conn->prepare("
         SELECT 
@@ -102,11 +198,17 @@ try {
             p.unit_type,
             p.stock,
             p.shop_id,
-            p.status
+            p.status,
+            p.sale_type,
+            p.sale_value,
+            p.sale_starts_at,
+            p.sale_ends_at
         FROM products p
-        INNER JOIN shops s ON s.id = p.shop_id
+        INNER JOIN shops s
+            ON s.id = p.shop_id
         WHERE p.id = ?
         LIMIT 1
+        FOR UPDATE
     ");
 
     $stmt->bind_param("i", $product_id);
@@ -118,37 +220,55 @@ try {
         throw new Exception("Product not found");
     }
 
-    if ($product['status'] !== 'active') {
+    if ($product["status"] !== "active") {
         throw new Exception("Product is not available");
     }
 
-    $unit_price = (float) $product['price'];
-    $stock = (float) $product['stock'];
-    $shop_id = (int) $product['shop_id'];
+    $stock = (float)$product["stock"];
+    $shop_id = (int)$product["shop_id"];
+    $unitType = $product["unit_type"];
 
     if ($stock <= 0) {
         throw new Exception("Out of stock");
     }
 
-    if ($product['unit_type'] === 'kg') {
-        if ($weight <= 0 || $weight > $stock) {
-            throw new Exception("Invalid or insufficient weight");
+    $priceData = calculateFinalPrice($product);
+    $unit_price = $priceData["final_price"];
+
+    if ($unit_price <= 0) {
+        throw new Exception("Free checkout is not supported yet");
+    }
+
+    if ($unitType === "kg") {
+        $weight = round((float)$weight, 2);
+
+        if ($weight <= 0) {
+            throw new Exception("Weight is required");
+        }
+
+        if ($weight > $stock) {
+            throw new Exception("Insufficient stock. Available stock: {$stock} kg");
         }
 
         $quantity = 0;
         $total = round($weight * $unit_price, 2);
-        $itemName = $product['name'] . " (" . $weight . " kg)";
+        $itemName = $product["name"] . " (" . $weight . " kg)";
         $invoiceQuantity = 1;
         $invoicePrice = $total;
     } else {
-        if ($quantity <= 0 || $quantity > $stock) {
-            throw new Exception("Invalid or insufficient quantity");
+        $quantity = (int)$quantity;
+
+        if ($quantity <= 0) {
+            throw new Exception("Quantity is required");
         }
 
-        $quantity = (int) $quantity;
+        if ($quantity > $stock) {
+            throw new Exception("Insufficient stock. Available stock: {$stock} pcs");
+        }
+
         $weight = 0;
         $total = round($quantity * $unit_price, 2);
-        $itemName = $product['name'];
+        $itemName = $product["name"];
         $invoiceQuantity = $quantity;
         $invoicePrice = $unit_price;
     }
@@ -156,8 +276,6 @@ try {
     if ($total <= 0) {
         throw new Exception("Invalid order total");
     }
-
-    $conn->begin_transaction();
 
     $order = $conn->prepare("
         INSERT INTO orders (
@@ -168,8 +286,11 @@ try {
             weight,
             unit_price,
             total_amount,
-            payment_status
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, 'pending')
+            payment_status,
+            claim_status,
+            created_at
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, 'pending', 'unclaimed', NOW())
     ");
 
     $order->bind_param(
@@ -203,14 +324,17 @@ try {
         ]],
         "metadata" => [
             "order_id" => $order_id,
-            "user_id" => (int) $user_id,
+            "user_id" => (int)$user_id,
             "shop_id" => $shop_id,
-            "product_id" => $product_id
+            "product_id" => $product_id,
+            "unit_price" => $unit_price,
+            "original_price" => $priceData["original_price"],
+            "is_on_sale" => $priceData["is_on_sale"]
         ]
     ], $xenditSecretKey);
 
-    $xendit_invoice_id = $invoice['id'] ?? null;
-    $xendit_checkout_url = $invoice['invoice_url'] ?? null;
+    $xendit_invoice_id = $invoice["id"] ?? null;
+    $xendit_checkout_url = $invoice["invoice_url"] ?? null;
 
     if (!$xendit_invoice_id || !$xendit_checkout_url) {
         throw new Exception("Invalid Xendit invoice response");
@@ -218,7 +342,9 @@ try {
 
     $update = $conn->prepare("
         UPDATE orders
-        SET xendit_invoice_id = ?, xendit_checkout_url = ?
+        SET
+            xendit_invoice_id = ?,
+            xendit_checkout_url = ?
         WHERE id = ?
     ");
 
@@ -227,16 +353,26 @@ try {
 
     $conn->commit();
 
-    echo json_encode([
-        "success" => true,
-        "message" => "Checkout created successfully",
+    $responseData = [
         "order_id" => $order_id,
         "shop_id" => $shop_id,
         "payment_status" => "pending",
+        "quantity" => $quantity,
+        "weight" => $weight,
+        "unit_type" => $unitType,
+        "original_price" => $priceData["original_price"],
+        "unit_price" => $unit_price,
+        "is_on_sale" => $priceData["is_on_sale"],
+        "sale_label" => $priceData["sale_label"],
         "total" => $total,
         "checkout_url" => $xendit_checkout_url,
         "xendit_invoice_id" => $xendit_invoice_id
-    ]);
+    ];
+
+    response(true, "Checkout created successfully", 200, array_merge(
+        $responseData,
+        ["data" => $responseData]
+    ));
 } catch (Throwable $e) {
     if (isset($conn)) {
         try {
@@ -246,14 +382,9 @@ try {
         }
     }
 
-    error_log($e->getMessage());
+    error_log("Checkout failed: " . $e->getMessage());
 
-    http_response_code(400);
-
-    echo json_encode([
-        "success" => false,
-        "message" => $e->getMessage()
-    ]);
+    response(false, $e->getMessage(), 400);
 }
 
 exit;

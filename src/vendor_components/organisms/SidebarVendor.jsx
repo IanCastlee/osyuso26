@@ -8,6 +8,7 @@ import {
   FaChevronRight,
   FaChartLine,
   FaTags,
+  FaMoneyBillWave,
 } from "react-icons/fa";
 import { PiShoppingCartSimpleFill } from "react-icons/pi";
 
@@ -18,6 +19,7 @@ function SidebarVendor() {
   const [openReservation, setOpenReservation] = useState(false);
   const [openProducts, setOpenProducts] = useState(false);
   const [openPromotion, setOpenPromotion] = useState(false);
+  const [openPayout, setOpenPayout] = useState(false);
 
   const itemClass = ({ isActive }) =>
     `group flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition ${
@@ -194,6 +196,41 @@ function SidebarVendor() {
             >
               Promotion Logs
             </NavLink>
+          </div>
+        </div>
+
+        <button
+          onClick={() => {
+            setExpanded(true);
+            setOpenPayout((prev) => !prev);
+          }}
+          className="flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-sm font-medium text-white/85 transition hover:bg-white/10 hover:text-white"
+          title="Payout"
+        >
+          <span className="flex min-w-0 items-center gap-3">
+            <FaMoneyBillWave className="shrink-0 text-lg" />
+            <span className={labelClass}>Payout</span>
+          </span>
+
+          {openPayout ? (
+            <FaChevronDown className={chevronClass} />
+          ) : (
+            <FaChevronRight className={chevronClass} />
+          )}
+        </button>
+
+        <div
+          className={`overflow-hidden transition-all duration-300 ${
+            expanded && openPayout ? "max-h-24 pb-1 pl-8" : "max-h-0"
+          }`}
+        >
+          <div className="space-y-1 border-l border-white/10 pl-3">
+            <NavLink to="/vendor/vendor-payout" className={subItemClass}>
+              Payout
+            </NavLink>
+            {/* <NavLink to="/vendor/payout-history" className={subItemClass}>
+              Payout History
+            </NavLink> */}
           </div>
         </div>
 

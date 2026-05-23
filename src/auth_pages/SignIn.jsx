@@ -31,6 +31,15 @@ function SignIn() {
     });
   };
 
+  const handleUseTesterAccount = () => {
+    setForm({
+      email: "tester@gmail.com",
+      password: "Tester@8",
+    });
+
+    setErrors({});
+  };
+
   const { submit, loading } = useFormSubmit(
     "auth/sign-in.php",
     async (data) => {
@@ -175,6 +184,40 @@ function SignIn() {
               <p className="mt-2 text-sm leading-6 text-gray-500">
                 Sign in to continue shopping with OSYUSO.
               </p>
+            </div>
+
+            {/* Tester Account Suggestion */}
+            <div className="mb-5 rounded-xl border border-orange-200 bg-orange-50 p-4">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <p className="text-sm font-semibold text-secondary">
+                    Try Demo Account
+                  </p>
+
+                  <p className="mt-1 text-xs text-gray-600">
+                    Use our tester account for quick access.
+                  </p>
+
+                  <div className="mt-2 text-xs text-gray-700">
+                    <p>
+                      <span className="font-semibold">Email:</span>{" "}
+                      tester@gmail.com
+                    </p>
+
+                    <p>
+                      <span className="font-semibold">Password:</span> Tester@8
+                    </p>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={handleUseTesterAccount}
+                  className="rounded-lg bg-secondary px-4 py-2 text-sm font-semibold text-white transition hover:opacity-90"
+                >
+                  Use Account
+                </button>
+              </div>
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-4">

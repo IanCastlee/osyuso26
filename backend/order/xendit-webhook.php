@@ -52,6 +52,30 @@ function toMysqlDateTime($value) {
     }
 }
 
+function getPlatformCommissionRate($conn) {
+    $rate = 10.00;
+
+    $stmt = $conn->prepare("
+        SELECT platform_commission_rate
+        FROM admin_settings
+        ORDER BY id ASC
+        LIMIT 1
+    ");
+
+    $stmt->execute();
+    $setting = $stmt->get_result()->fetch_assoc();
+
+    if ($setting && $setting["platform_commission_rate"] !== null) {
+        $rate = (float)$setting["platform_commission_rate"];
+    }
+
+    if ($rate < 0 || $rate > 100) {
+        throw new Exception("Invalid platform commission rate");
+    }
+
+    return $rate;
+}
+
 function createNotification(
     $conn,
     $userId,
@@ -320,6 +344,7 @@ try {
     $receiptCreated = false;
     $notificationCreated = false;
     $emailQueued = false;
+    $vendorEarningSynced = false;
 
     if ($payment_status === "paid") {
         $checkReceipt = $conn->prepare("
@@ -384,6 +409,66 @@ try {
             $receiptStmt->execute();
             $receiptCreated = true;
         }
+
+        $commissionRate = getPlatformCommissionRate($conn);
+        $orderIdForEarning = (int)$order["id"];
+
+        $earningStmt = $conn->prepare("
+            INSERT INTO vendor_earnings (
+                vendor_id,
+                order_id,
+                order_item_id,
+                product_id,
+                gross_amount,
+                commission_rate,
+                commission_amount,
+                net_amount,
+                status,
+                available_at
+            )
+            SELECT
+                s.owner_id AS vendor_id,
+                o.id AS order_id,
+                o.id AS order_item_id,
+                o.product_id,
+                o.total_amount AS gross_amount,
+                ? AS commission_rate,
+                ROUND(o.total_amount * (? / 100), 2) AS commission_amount,
+                ROUND(o.total_amount - (o.total_amount * (? / 100)), 2) AS net_amount,
+                'available' AS status,
+                NOW() AS available_at
+            FROM orders o
+            INNER JOIN shops s
+                ON s.id = o.shop_id
+            WHERE o.id = ?
+              AND o.payment_status = 'paid'
+              AND s.owner_id IS NOT NULL
+            LIMIT 1
+            ON DUPLICATE KEY UPDATE
+                status = IF(
+                    payout_id IS NULL AND status IN ('pending', 'available'),
+                    'available',
+                    status
+                ),
+                available_at = IF(
+                    payout_id IS NULL AND available_at IS NULL,
+                    NOW(),
+                    available_at
+                ),
+                updated_at = NOW()
+        ");
+
+        $earningStmt->bind_param(
+            "dddi",
+            $commissionRate,
+            $commissionRate,
+            $commissionRate,
+            $orderIdForEarning
+        );
+
+        $earningStmt->execute();
+
+        $vendorEarningSynced = $earningStmt->affected_rows > 0;
 
         $orderId = (int)$order["id"];
         $productName = $order["product_name"] ?: "your product";
@@ -488,6 +573,7 @@ try {
         "stock_deducted" => $stockDeducted,
         "deducted_amount" => $deductAmount,
         "receipt_created" => $receiptCreated,
+        "vendor_earning_synced" => $vendorEarningSynced,
         "notification_created" => $notificationCreated,
         "email_queued" => $emailQueued
     ]);

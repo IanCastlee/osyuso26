@@ -37,8 +37,6 @@ import MainCategory from "./admin_components/pages/MainCategory";
 import SubCategory from "./admin_components/pages/SubCategory";
 import TodaysSales from "./admin_components/pages/TodaysSales";
 import SalesLog from "./admin_components/pages/SalesLog";
-import Payout from "./admin_components/pages/Payout";
-import PayoutLog from "./admin_components/pages/PayoutLog";
 import Products from "./admin_components/pages/Products";
 import SpecialOffer from "./admin_components/pages/SpecialOffer";
 import NewArrival from "./admin_components/pages/NewArrival";
@@ -56,6 +54,12 @@ import Orders from "./customer_components/pages/Orders";
 import Search from "./customer_components/pages/Search";
 import PendingReservation from "./vendor_components/pages/PendingReservation";
 import ArchiveVendorProducts from "./vendor_components/pages/ArchiveVendorProducts";
+import VendorPayout from "./vendor_components/pages/VendorPayout";
+import PayoutRequest from "./admin_components/pages/PayoutRequest";
+import PayoutHistoryAdmin from "./admin_components/pages/PayoutHistoryAdmin";
+import Vendors from "./admin_components/pages/Vendors";
+import RegisteredCustomer from "./admin_components/pages/RegisteredCustomer";
+import UnregisteredCustomer from "./admin_components/pages/UnregisteredCustomer";
 
 const CustomerLayout = () => {
   const location = useLocation();
@@ -126,6 +130,7 @@ const VendorLayout = () => {
           <Route index element={<DashboardVendor />} />
           <Route path="/vendor-products" element={<ProductsVendor />} />
           <Route path="/featured-promotion" element={<FeaturedPromotion />} />
+          <Route path="/vendor-payout" element={<VendorPayout />} />
           <Route
             path="/featured-promotion-logs"
             element={<FeaturedPromotionLogs />}
@@ -144,14 +149,10 @@ const VendorLayout = () => {
 
 const AdminLayout = () => {
   return (
-    <div className="w-full h-screen flex overflow-hidden">
-      {/* SIDEBAR */}
-      <div className="w-[260px] h-full bg-secondary text-white flex flex-col">
-        <SidebarAdmin />
-      </div>
+    <div className="flex h-screen w-full overflow-hidden">
+      <SidebarAdmin />
 
-      {/* MAIN CONTENT */}
-      <div className="flex-1 h-full overflow-y-auto bg-gray-100">
+      <main className="min-w-0 flex-1 overflow-y-auto bg-gray-100">
         <Routes>
           <Route index element={<DashboardAdmin />} />
 
@@ -163,6 +164,12 @@ const AdminLayout = () => {
           <Route path="verified-account" element={<VerifiedAccount />} />
           <Route path="not-verified-account" element={<NotVerifiedAccount />} />
           <Route path="not-active-account" element={<NotActiveAccount />} />
+          <Route path="vendors" element={<Vendors />} />
+          <Route path="registered-customers" element={<RegisteredCustomer />} />
+          <Route
+            path="unregistered-customers"
+            element={<UnregisteredCustomer />}
+          />
 
           {/* categories */}
           <Route path="main-categories" element={<MainCategory />} />
@@ -173,15 +180,15 @@ const AdminLayout = () => {
           <Route path="sales-log" element={<SalesLog />} />
 
           {/* payout */}
-          <Route path="payout" element={<Payout />} />
-          <Route path="payout-log" element={<PayoutLog />} />
+          <Route path="payout-request" element={<PayoutRequest />} />
+          <Route path="payout-history" element={<PayoutHistoryAdmin />} />
 
           {/* products */}
           <Route path="products" element={<Products />} />
           <Route path="special-offer" element={<SpecialOffer />} />
           <Route path="new-arrival" element={<NewArrival />} />
         </Routes>
-      </div>
+      </main>
     </div>
   );
 };

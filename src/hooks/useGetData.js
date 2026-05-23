@@ -36,10 +36,14 @@ function useGetData(url, options = {}, autoFetch = true) {
         return;
       }
 
-      if (res?.success === false) {
-        throw new Error(res.message || "API error");
-      }
+      // if (res?.success === false) {
+      //   throw new Error(res.message || "API error");
+      // }
 
+      if (res?.success === false) {
+        console.log("API ERROR RESPONSE:", res);
+        throw new Error(res?.data?.error || res.message || "API error");
+      }
       setData(res.data ?? res);
       setError(null);
     } catch (err) {

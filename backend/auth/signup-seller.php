@@ -106,7 +106,7 @@ try {
         VALUES (
             ?, ?, ?, ?, ?,
             'vendor',
-            'pending',
+            'active',
             0,
             ?,
             ?
