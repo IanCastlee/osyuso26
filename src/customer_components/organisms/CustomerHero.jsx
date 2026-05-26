@@ -6,10 +6,21 @@ import { LazyLoadImage } from "react-lazy-load-image-component";
 import { useNavigate } from "react-router-dom";
 import useGetData from "../../hooks/useGetData";
 
+const ASSET_BASE_URL = "http://localhost/OSYUSO26/backend/";
+
 function CustomerHero() {
   const navigate = useNavigate();
 
   const { data, loading } = useGetData("product/get-new-subcategories.php");
+
+  const fallbackImages = [adobo, milkTea];
+
+  const getImageUrl = (path, fallback) => {
+    if (!path) return fallback;
+    if (path.startsWith("http")) return path;
+
+    return ASSET_BASE_URL + path.replace(/^(\.\.\/|\/)+/, "");
+  };
 
   const subcategories = useMemo(() => {
     if (Array.isArray(data)) return data;
@@ -17,16 +28,18 @@ function CustomerHero() {
     return [];
   }, [data]);
 
-  const fallbackImages = [adobo, milkTea];
-
-  const arrivals = subcategories.map((item, index) => ({
-    id: item.id,
-    categoryId: item.category_id,
-    image: item.image_path || fallbackImages[index] || adobo,
-    title: item.name,
-    subtitle: item.category_name || "New arrival",
-    productCount: item.product_count || 0,
-  }));
+  const arrivals = useMemo(
+    () =>
+      subcategories.slice(0, 2).map((item, index) => ({
+        id: item.id,
+        categoryId: item.category_id,
+        image: getImageUrl(item.image_path, fallbackImages[index] || adobo),
+        title: item.name || "New Arrival",
+        subtitle: item.category_name || "New arrival",
+        productCount: Number(item.product_count || 0),
+      })),
+    [subcategories],
+  );
 
   const fallbackPromos = [
     {
@@ -72,13 +85,6 @@ function CustomerHero() {
             <div>
               <h2 className="text-sm font-bold text-gray-900">New in Market</h2>
             </div>
-
-            {/* <button
-              onClick={() => navigate("/all-markets")}
-              className="text-xs font-semibold text-orange-500 hover:opacity-80"
-            >
-              See all
-            </button> */}
           </div>
 
           <div className="grid grid-cols-2 gap-3 lg:grid-cols-1">
@@ -92,6 +98,9 @@ function CustomerHero() {
                 <LazyLoadImage
                   src={item.image}
                   alt={item.title}
+                  onError={(e) => {
+                    e.currentTarget.src = adobo;
+                  }}
                   className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
                 />
 

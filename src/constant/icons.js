@@ -31,10 +31,15 @@ import { CiLocationArrow1 } from "react-icons/ci";
 import { GoChecklist } from "react-icons/go";
 import { PiShoppingCartSimpleLight } from "react-icons/pi";
 import { IoSearchOutline } from "react-icons/io5";
-
+import { PiPhoneThin } from "react-icons/pi";
+import { LuCircleUserRound } from "react-icons/lu";
+import { FiLogOut } from "react-icons/fi";
 export const icons = {
   BsCart4,
+  LuCircleUserRound,
+  FiLogOut,
   IoSearchOutline,
+  PiPhoneThin,
   PiShoppingCartSimpleLight,
   GoChecklist,
   MdOutlineChevronLeft,

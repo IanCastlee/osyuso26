@@ -45,7 +45,7 @@ function ShopInfo({ product }) {
             <button
               onClick={handleViewShop}
               disabled={!shopRouteId}
-              className="mt-3 inline-flex items-center gap-2 rounded-lg border border-gray-200 px-4 py-2 text-xs font-semibold text-secondary transition hover:bg-orange-50 disabled:cursor-not-allowed disabled:opacity-50"
+              className="mt-3 cursor-pointer inline-flex items-center gap-2 rounded-lg border border-gray-200 px-4 py-2 text-xs font-semibold text-secondary transition hover:bg-orange-50 disabled:cursor-not-allowed disabled:opacity-50"
             >
               <CiShop className="text-base" />
               View Shop

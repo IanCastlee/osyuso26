@@ -9,6 +9,7 @@ import {
   FaPhoneAlt,
   FaFileUpload,
 } from "react-icons/fa";
+import { FiCheck } from "react-icons/fi";
 
 import { PiShoppingCartSimpleFill } from "react-icons/pi";
 import { RxQuestionMarkCircled } from "react-icons/rx";
@@ -34,6 +35,7 @@ function SignUpSeller() {
     email: "",
     password: "",
     confirmPassword: "",
+    agree: false,
   });
 
   const [errors, setErrors] = useState({});
@@ -45,11 +47,33 @@ function SignUpSeller() {
   ];
 
   const handleChange = (e) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
+    const { name, value, type, checked } = e.target;
+
+    setForm((prev) => ({
+      ...prev,
+      [name]: type === "checkbox" ? checked : value,
+    }));
+
+    setErrors((prev) => ({
+      ...prev,
+      [name]: "",
+    }));
   };
 
   const handleFile = (e) => {
-    setForm({ ...form, permit: e.target.files[0] });
+    setForm((prev) => ({
+      ...prev,
+      permit: e.target.files[0],
+    }));
+
+    setErrors((prev) => ({
+      ...prev,
+      permit: "",
+    }));
+  };
+
+  const openLegalPage = (path) => {
+    window.open(path, "_blank", "noopener,noreferrer");
   };
 
   const { submit, loading } = useFormSubmit("auth/signup-seller.php", () => {
@@ -63,32 +87,32 @@ function SignUpSeller() {
   });
 
   const validateStep = (step) => {
-    let errors = {};
+    const errors = {};
 
     if (step === 1) {
-      if (!form.shopName) errors.shopName = "Shop name is required";
-      if (!form.fname) errors.fname = "First name is required";
-      if (!form.lname) errors.lname = "Last name is required";
+      if (!form.shopName.trim()) errors.shopName = "Shop name is required";
+      if (!form.fname.trim()) errors.fname = "First name is required";
+      if (!form.lname.trim()) errors.lname = "Last name is required";
 
-      if (!form.phone) {
+      if (!form.phone.trim()) {
         errors.phone = "Phone number is required";
-      } else if (!/^09\d{9}$/.test(form.phone)) {
+      } else if (!/^09\d{9}$/.test(form.phone.trim())) {
         errors.phone = "Must start with 09 and be 11 digits";
       }
 
-      if (!form.address) errors.address = "Address is required";
-      if (!form.nearby) errors.nearby = "Nearby landmark is required";
+      if (!form.address.trim()) errors.address = "Address is required";
+      if (!form.nearby.trim()) errors.nearby = "Nearby landmark is required";
     }
 
     if (step === 2) {
       if (!form.permit) errors.permit = "Business permit is required";
-      if (!form.permit_number) {
+      if (!form.permit_number.trim()) {
         errors.permit_number = "Permit number is required";
       }
     }
 
     if (step === 3) {
-      if (!form.email) errors.email = "Email is required";
+      if (!form.email.trim()) errors.email = "Email is required";
 
       if (!form.password) {
         errors.password = "Password is required";
@@ -102,6 +126,11 @@ function SignUpSeller() {
         errors.confirmPassword = "Confirm password is required";
       } else if (form.confirmPassword !== form.password) {
         errors.confirmPassword = "Passwords do not match";
+      }
+
+      if (!form.agree) {
+        errors.agree =
+          "You must agree to the Terms and Conditions and Privacy Policy.";
       }
     }
 
@@ -139,6 +168,11 @@ function SignUpSeller() {
     const data = new FormData();
 
     Object.entries(form).forEach(([key, value]) => {
+      if (key === "agree") {
+        data.append("agreed_to_terms", value ? "1" : "0");
+        return;
+      }
+
       data.append(key, value);
     });
 
@@ -204,6 +238,10 @@ function SignUpSeller() {
                 <span className="text-sm font-medium">{item.label}</span>
               </div>
             ))}
+          </div>
+
+          <div className="mt-8 rounded-xl bg-white/10 p-4 text-sm leading-6 text-white/80">
+            Seller accounts are reviewed by OSYUSO before shop activation.
           </div>
         </section>
 
@@ -376,6 +414,66 @@ function SignUpSeller() {
                   icon={FaLock}
                   error={errors.confirmPassword}
                 />
+
+                <label
+                  className={`flex cursor-pointer gap-3 rounded-lg border p-3 transition ${
+                    errors.agree
+                      ? "border-red-300 bg-red-50"
+                      : form.agree
+                        ? "border-orange-200 bg-orange-50"
+                        : "border-slate-200 bg-slate-50 hover:bg-slate-100"
+                  }`}
+                >
+                  <input
+                    type="checkbox"
+                    name="agree"
+                    checked={form.agree}
+                    onChange={handleChange}
+                    className="sr-only"
+                  />
+
+                  <span
+                    className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-md border transition ${
+                      form.agree
+                        ? "border-secondary bg-secondary text-white"
+                        : "border-slate-300 bg-white text-transparent"
+                    }`}
+                  >
+                    <FiCheck className="text-sm" />
+                  </span>
+
+                  <span className="text-xs leading-6 text-slate-600">
+                    I have read and agree to OSYUSO's{" "}
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        openLegalPage("/terms-and-conditions");
+                      }}
+                      className="font-bold text-secondary hover:underline"
+                    >
+                      Terms and Conditions
+                    </button>{" "}
+                    and{" "}
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        openLegalPage("/privacy-policy");
+                      }}
+                      className="font-bold text-secondary hover:underline"
+                    >
+                      Privacy Policy
+                    </button>
+                    .
+                  </span>
+                </label>
+
+                {errors.agree && (
+                  <p className="-mt-2 text-xs font-medium text-red-500">
+                    {errors.agree}
+                  </p>
+                )}
               </div>
             )}
 

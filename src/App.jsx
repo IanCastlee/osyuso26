@@ -60,6 +60,14 @@ import PayoutHistoryAdmin from "./admin_components/pages/PayoutHistoryAdmin";
 import Vendors from "./admin_components/pages/Vendors";
 import RegisteredCustomer from "./admin_components/pages/RegisteredCustomer";
 import UnregisteredCustomer from "./admin_components/pages/UnregisteredCustomer";
+import Contact from "./customer_components/pages/Contact";
+import AllVendorNotifcation from "./vendor_components/pages/AllVendorNotifcation";
+import AdminSetting from "./admin_components/pages/AdminSetting";
+import AdminLegalPages from "./admin_components/pages/AdminLegalPages";
+import TermsAndConditions from "./customer_components/pages/TermsAndConditions";
+import PrivacyPolicy from "./customer_components/pages/PrivacyPolicy";
+import AdminPromotionApprovals from "./admin_components/pages/AdminPromotionApprovals";
+import FeaturedPromotions from "./customer_components/pages/FeaturedPromotions";
 
 const CustomerLayout = () => {
   const location = useLocation();
@@ -77,6 +85,9 @@ const CustomerLayout = () => {
     "/payment-success",
     "/payment-failed",
     "/search",
+    "/contact",
+    "/terms-and-conditions",
+    "/privacy-policy",
   ].includes(location.pathname);
 
   return (
@@ -98,11 +109,13 @@ const CustomerLayout = () => {
           <Route path="notification" element={<Notifcation />} />
           <Route path="faq" element={<FAQ />} />
           <Route path="about" element={<AboutCostumer />} />
+          <Route path="contact" element={<Contact />} />
           {/* special offer */}
           <Route path="all-special-offers" element={<AllSpecialOffer />} />
           <Route path="checkout" element={<CheckoutSummary />} />
           <Route path="payment-failed" element={<PaymentFailed />} />
           <Route path="payment-success" element={<PaymentSuccess />} />
+          <Route path="featured-promotions" element={<FeaturedPromotions />} />
           <Route path="orders" element={<Orders />} />
           {/* auths */}
           <Route path="signin" element={<SignIn />} />
@@ -111,6 +124,12 @@ const CustomerLayout = () => {
           <Route path="forgot-password" element={<ForgotPassword />} />
           <Route path="signup-seller" element={<SignUpSeller />} />
           <Route path="reset-password" element={<ResetPassword />} />
+          {/* legal */}
+          <Route
+            path="/terms-and-conditions"
+            element={<TermsAndConditions />}
+          />
+          <Route path="/privacy-policy" element={<PrivacyPolicy />} />
         </Routes>
       </main>
 
@@ -141,6 +160,7 @@ const VendorLayout = () => {
           <Route path="/archive-products" element={<ArchiveVendorProducts />} />
           <Route path="about" element={<AboutVendor />} />
           <Route path="market-settings" element={<MarketSetting />} />
+          <Route path="notifications" element={<AllVendorNotifcation />} />
         </Routes>
       </main>
     </div>
@@ -175,6 +195,11 @@ const AdminLayout = () => {
           <Route path="main-categories" element={<MainCategory />} />
           <Route path="sub-categories" element={<SubCategory />} />
 
+          {/* setting */}
+          <Route path="admin-settings" element={<AdminSetting />} />
+
+          <Route path="/legal-pages" element={<AdminLegalPages />} />
+
           {/* sales */}
           <Route path="todays-sales" element={<TodaysSales />} />
           <Route path="sales-log" element={<SalesLog />} />
@@ -187,6 +212,9 @@ const AdminLayout = () => {
           <Route path="products" element={<Products />} />
           <Route path="special-offer" element={<SpecialOffer />} />
           <Route path="new-arrival" element={<NewArrival />} />
+
+          {/* promotions */}
+          <Route path="/promotions" element={<AdminPromotionApprovals />} />
         </Routes>
       </main>
     </div>

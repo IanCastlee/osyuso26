@@ -27,7 +27,7 @@ try {
         FROM users u
         INNER JOIN shops s 
             ON s.owner_id = u.user_id
-        WHERE u.role = 'vendor'
+        WHERE u.role = 'vendor' AND u.status = 'active' AND s.status = 'active'
     ";
 
     $params = [];

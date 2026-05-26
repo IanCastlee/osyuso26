@@ -18,6 +18,8 @@ function CustomerHeader() {
   const {
     IoMdNotificationsOutline,
     CiShop,
+    LuCircleUserRound,
+    FiLogOut,
     RxQuestionMarkCircled,
     PiShoppingCartSimpleFill,
     PiShoppingCartSimpleLight,
@@ -26,6 +28,7 @@ function CustomerHeader() {
     HiMiniUserCircle,
     MdKeyboardArrowDown,
     GoChecklist,
+    PiPhoneThin,
   } = icons;
 
   const SearchIcon = icons.IoSearchOutline || icons.CiSearch || icons.FiSearch;
@@ -136,7 +139,7 @@ function CustomerHeader() {
     return (
       <button
         onClick={onClick}
-        className="group inline-flex h-10 items-center gap-2 rounded-full px-3 text-sm font-semibold text-white/90 transition hover:bg-white/10 hover:text-white focus:outline-none focus:ring-2 focus:ring-white/40"
+        className="group inline-flex h-10 items-center gap-2 rounded-full px-3 text-sm font-semibold text-white/90 transition hover:bg-white/10 cursor-pointer hover:text-white focus:outline-none focus:ring-2 focus:ring-white/40"
         aria-label={label}
       >
         <span className="relative inline-flex">
@@ -163,7 +166,7 @@ function CustomerHeader() {
         <div className="hidden h-10 items-center justify-between border-b border-white/15 px-8 lg:flex lg:px-16">
           <button
             onClick={() => navigate("/signup-seller")}
-            className="inline-flex items-center gap-2 text-xs font-semibold text-white/85 transition hover:text-white"
+            className="inline-flex items-center gap-2 text-xs font-semibold text-white/85 transition cursor-pointer hover:text-white"
           >
             <CiShop className="text-lg" />
             Start Selling
@@ -171,16 +174,29 @@ function CustomerHeader() {
 
           <div className="flex items-center gap-4 text-xs font-semibold text-white/85">
             <button
-              onClick={() => navigate("/about")}
-              className="inline-flex items-center gap-1.5 transition hover:text-white"
+              onClick={() =>
+                window.open("/contact", "_blank", "noopener,noreferrer")
+              }
+              className="inline-flex items-center gap-1.5 transition cursor-pointer hover:text-white"
+            >
+              <PiPhoneThin className="text-base" />
+              Contact
+            </button>
+            <button
+              onClick={() =>
+                window.open("/about", "_blank", "noopener,noreferrer")
+              }
+              className="inline-flex items-center gap-1.5 transition cursor-pointer hover:text-white"
             >
               <IoIosInformationCircleOutline className="text-base" />
               About
             </button>
 
             <button
-              onClick={() => navigate("/faq")}
-              className="inline-flex items-center gap-1.5 transition hover:text-white"
+              onClick={() =>
+                window.open("/faq", "_blank", "noopener,noreferrer")
+              }
+              className="inline-flex items-center gap-1.5 transition cursor-pointer hover:text-white"
             >
               <RxQuestionMarkCircled className="text-base" />
               FAQ
@@ -192,7 +208,7 @@ function CustomerHeader() {
               <div ref={userMenuRef} className="relative">
                 <button
                   onClick={() => setOpenUserMenu((value) => !value)}
-                  className="inline-flex items-center gap-2 rounded-full py-1 pl-1 pr-2 transition hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-white/40"
+                  className="inline-flex cursor-pointer items-center gap-1 rounded-full py-1 pl-1 pr-2 transition hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-white/40"
                 >
                   <HiMiniUserCircle className="text-2xl" />
 
@@ -201,30 +217,66 @@ function CustomerHeader() {
                   </span>
 
                   <MdKeyboardArrowDown
-                    className={`text-base transition ${
-                      openUserMenu ? "rotate-180" : ""
-                    }`}
+                    className={`text-base transition ${openUserMenu ? "rotate-180" : ""}`}
                   />
                 </button>
 
                 {openUserMenu && (
-                  <div className="absolute right-0 z-50 mt-3 w-52 overflow-hidden rounded-xl border border-slate-100 bg-white py-1 text-sm text-slate-700 shadow-xl">
-                    <button
-                      onClick={() => {
-                        navigate("/account");
-                        setOpenUserMenu(false);
-                      }}
-                      className="w-full px-4 py-3 text-left font-medium transition hover:bg-slate-50"
-                    >
-                      My Account
-                    </button>
+                  <div className="absolute right-0 z-50 mt-3 w-64 overflow-hidden rounded-xl border border-slate-200 bg-white text-sm shadow-xl shadow-slate-900/10">
+                    <div className="border-b border-slate-100 px-4 py-3">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                        Signed in as
+                      </p>
 
-                    <button
-                      onClick={handleLogout}
-                      className="w-full px-4 py-3 text-left font-semibold text-red-600 transition hover:bg-red-50"
-                    >
-                      Logout
-                    </button>
+                      <p className="mt-1 truncate text-sm font-bold text-slate-900">
+                        {user?.fullname || "User"}
+                      </p>
+
+                      <p className="mt-0.5 truncate text-xs text-slate-500">
+                        {user?.email || "No email"}
+                      </p>
+                    </div>
+
+                    <div className="p-1.5">
+                      <button
+                        onClick={() => {
+                          navigate("/account");
+                          setOpenUserMenu(false);
+                        }}
+                        className="flex w-full cursor-pointer items-center gap-3 rounded-lg px-3 py-2.5 text-left font-medium text-slate-700 transition hover:bg-slate-50 hover:text-slate-950"
+                      >
+                        <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-slate-100 text-slate-600">
+                          <LuCircleUserRound className="text-lg" />
+                        </span>
+
+                        <span>
+                          <span className="block text-sm font-semibold">
+                            My Account
+                          </span>
+                          <span className="block text-xs text-slate-500">
+                            View profile settings
+                          </span>
+                        </span>
+                      </button>
+
+                      <button
+                        onClick={handleLogout}
+                        className="mt-1 flex w-full cursor-pointer items-center gap-3 rounded-lg px-3 py-2.5 text-left font-medium text-red-600 transition hover:bg-red-50"
+                      >
+                        <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-red-50 text-red-600">
+                          <FiLogOut className="text-lg" />
+                        </span>
+
+                        <span>
+                          <span className="block cursor-pointer text-sm font-semibold">
+                            Logout
+                          </span>
+                          <span className="block text-xs cursor-pointer text-red-400">
+                            End current session
+                          </span>
+                        </span>
+                      </button>
+                    </div>
                   </div>
                 )}
               </div>
@@ -232,14 +284,14 @@ function CustomerHeader() {
               <div className="flex items-center gap-3">
                 <button
                   onClick={() => navigate("/signin")}
-                  className="transition hover:text-white"
+                  className="transition hover:text-white cursor-pointer"
                 >
                   Sign In
                 </button>
 
                 <button
                   onClick={() => navigate("/signup")}
-                  className="rounded-full bg-white px-4 py-1.5 font-bold text-orange-500 transition hover:bg-orange-50"
+                  className="rounded-full cursor-pointer bg-white px-4 py-1.5 font-bold text-orange-500 transition hover:bg-orange-50"
                 >
                   Sign Up
                 </button>
@@ -251,7 +303,7 @@ function CustomerHeader() {
         <div className="flex min-h-16 w-full items-center gap-3 px-4 py-3 md:px-8 lg:px-16">
           <button
             onClick={() => navigate("/")}
-            className="flex shrink-0 items-center gap-1 text-xl font-black tracking-wide transition hover:opacity-90 md:text-2xl"
+            className="flex shrink-0 items-center cursor-pointer gap-1 text-xl font-black tracking-wide transition hover:opacity-90 md:text-2xl"
           >
             OSY
             <PiShoppingCartSimpleFill className="text-white" />
@@ -260,7 +312,7 @@ function CustomerHeader() {
 
           <form
             onSubmit={handleNavbarSearch}
-            className="hidden flex-1 md:block"
+            className="hidden flex-1 md:block px-6"
           >
             <div className="flex h-9 overflow-hidden rounded-full bg-white p-1 shadow-sm ring-1 ring-white/20 focus-within:ring-2 focus-within:ring-white/70">
               <input
@@ -273,7 +325,7 @@ function CustomerHeader() {
 
               <button
                 type="submit"
-                className="flex h-7 w-14 items-center justify-center rounded-full bg-orange-500 text-white transition hover:bg-orange-600 focus:outline-none focus:ring-2 focus:ring-orange-300"
+                className="flex cursor-pointer h-7 w-14 items-center justify-center rounded-full bg-orange-500 text-white transition hover:bg-orange-600 focus:outline-none focus:ring-2 focus:ring-orange-300"
                 aria-label="Search"
               >
                 {SearchIcon && <SearchIcon className="text-lg" />}
@@ -286,7 +338,7 @@ function CustomerHeader() {
               icon={CiShop}
               label="Markets"
               count={0}
-              onClick={() => navigate("/markets")}
+              onClick={() => navigate("/all-markets")}
             />
 
             {user && (

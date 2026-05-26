@@ -45,21 +45,25 @@ function FeaturedPromotion() {
     };
   }, [preview]);
 
+  // const { submit, loading: submitLoading } = useFormSubmit(
+  //   "promotion/add-feature-promotion.php",
+  //   () => {
+  //     showToast({
+  //       type: "success",
+  //       message: "Promotion submitted.",
+  //       duration: 5000,
+  //     });
+
+  //     preview.forEach((url) => URL.revokeObjectURL(url));
+  //     setForm(emptyForm);
+  //     setPreview([]);
+  //     setImages([]);
+  //     setErrors({});
+  //   },
+  // );
+
   const { submit, loading: submitLoading } = useFormSubmit(
     "promotion/add-feature-promotion.php",
-    () => {
-      showToast({
-        type: "success",
-        message: "Promotion submitted to the admin. Please wait for approval.",
-        duration: 5000,
-      });
-
-      preview.forEach((url) => URL.revokeObjectURL(url));
-      setForm(emptyForm);
-      setPreview([]);
-      setImages([]);
-      setErrors({});
-    },
   );
 
   const query = useMemo(() => {
@@ -173,7 +177,20 @@ function FeaturedPromotion() {
     }
 
     try {
-      await submit(formData);
+      // await submit(formData);
+      const res = await submit(formData);
+
+      const checkoutUrl =
+        res?.data?.checkout_url ||
+        res?.checkout_url ||
+        res?.data?.xendit_checkout_url ||
+        res?.xendit_checkout_url;
+
+      if (!checkoutUrl) {
+        throw new Error("Payment link was not returned by the server.");
+      }
+
+      window.location.assign(checkoutUrl);
     } catch (err) {
       showToast({
         type: "error",

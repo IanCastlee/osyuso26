@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { FaUser, FaEnvelope, FaLock } from "react-icons/fa";
+import { FiCheck } from "react-icons/fi";
 import InputField from "../customer_components/atoms/InputField";
 import { useNavigate } from "react-router-dom";
 import { RxQuestionMarkCircled } from "react-icons/rx";
@@ -17,12 +18,23 @@ function SignUp() {
     email: "",
     password: "",
     confirm: "",
+    agree: false,
   });
 
   const [errors, setErrors] = useState({});
 
   const handleChange = (e) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
+    const { name, value, type, checked } = e.target;
+
+    setForm((prev) => ({
+      ...prev,
+      [name]: type === "checkbox" ? checked : value,
+    }));
+
+    setErrors((prev) => ({
+      ...prev,
+      [name]: "",
+    }));
   };
 
   const handleFaqClick = () => {
@@ -31,6 +43,10 @@ function SignUp() {
 
   const handleSignInClick = () => {
     navigate("/signin");
+  };
+
+  const openLegalPage = (path) => {
+    window.open(path, "_blank", "noopener,noreferrer");
   };
 
   const { submit, loading, error } = useFormSubmit("auth/sign-up.php", () => {
@@ -56,14 +72,20 @@ function SignUp() {
       return;
     }
 
-    let newErrors = {};
+    const newErrors = {};
 
-    if (!form.fname) newErrors.fname = "First name is required";
-    if (!form.lname) newErrors.lname = "Last name is required";
-    if (!form.email) newErrors.email = "Email is required";
+    if (!form.fname.trim()) newErrors.fname = "First name is required";
+    if (!form.lname.trim()) newErrors.lname = "Last name is required";
+    if (!form.email.trim()) newErrors.email = "Email is required";
     if (!form.password) newErrors.password = "Password is required";
+
     if (form.password !== form.confirm) {
       newErrors.confirm = "Passwords do not match";
+    }
+
+    if (!form.agree) {
+      newErrors.agree =
+        "You must agree to the Terms and Conditions and Privacy Policy.";
     }
 
     setErrors(newErrors);
@@ -71,9 +93,10 @@ function SignUp() {
     if (Object.keys(newErrors).length === 0) {
       try {
         await submit({
-          name: `${form.fname} ${form.lname}`,
-          email: form.email,
+          name: `${form.fname.trim()} ${form.lname.trim()}`,
+          email: form.email.trim(),
           password: form.password,
+          agreed_to_terms: 1,
         });
       } catch (err) {
         showToast({
@@ -205,6 +228,66 @@ function SignUp() {
                 icon={FaLock}
                 error={errors.confirm}
               />
+
+              <label
+                className={`flex cursor-pointer gap-3 rounded-lg border p-3 transition ${
+                  errors.agree
+                    ? "border-red-300 bg-red-50"
+                    : form.agree
+                      ? "border-orange-200 bg-orange-50"
+                      : "border-slate-200 bg-slate-50 hover:bg-slate-100"
+                }`}
+              >
+                <input
+                  type="checkbox"
+                  name="agree"
+                  checked={form.agree}
+                  onChange={handleChange}
+                  className="sr-only"
+                />
+
+                <span
+                  className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-md border transition ${
+                    form.agree
+                      ? "border-secondary bg-secondary text-white"
+                      : "border-slate-300 bg-white text-transparent"
+                  }`}
+                >
+                  <FiCheck className="text-sm" />
+                </span>
+
+                <span className="text-xs leading-6 text-slate-600">
+                  I have read and agree to OSYUSO's{" "}
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      openLegalPage("/terms-and-conditions");
+                    }}
+                    className="font-bold text-secondary hover:underline"
+                  >
+                    Terms and Conditions
+                  </button>{" "}
+                  and{" "}
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      openLegalPage("/privacy-policy");
+                    }}
+                    className="font-bold text-secondary hover:underline"
+                  >
+                    Privacy Policy
+                  </button>
+                  .
+                </span>
+              </label>
+
+              {errors.agree && (
+                <p className="-mt-2 text-xs font-medium text-red-500">
+                  {errors.agree}
+                </p>
+              )}
 
               {error && (
                 <div className="rounded-lg bg-red-50 px-4 py-3 text-center text-xs font-medium text-red-600">

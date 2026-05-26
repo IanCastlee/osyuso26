@@ -122,7 +122,7 @@ function ProductCard({
             type="button"
             disabled={!isAvailable}
             onClick={handleBuyNow}
-            className="flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-secondary px-3 text-xs font-bold text-white shadow-sm transition hover:bg-orange-600 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-500"
+            className="flex cursor-pointer h-10 w-full items-center justify-center gap-2 rounded-lg bg-secondary px-3 text-xs font-bold text-white shadow-sm transition hover:bg-orange-600 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-500"
           >
             <FiShoppingCart className="text-sm" />
             {isAvailable ? "Buy Now" : "Unavailable"}

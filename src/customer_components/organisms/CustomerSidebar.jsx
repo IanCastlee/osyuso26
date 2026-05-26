@@ -20,6 +20,7 @@ function CustomerSidebar({ isOpen, onClose }) {
     GoChecklist,
     HiMiniUserCircle,
     MdKeyboardArrowDown,
+    PiPhoneThin,
   } = icons;
 
   const navigate = useNavigate();
@@ -77,6 +78,7 @@ function CustomerSidebar({ isOpen, onClose }) {
   const infoItems = [
     { label: "About", icon: IoIosInformationCircleOutline, path: "/about" },
     { label: "FAQ", icon: RxQuestionMarkCircled, path: "/faq" },
+    { label: "Contact", icon: PiPhoneThin, path: "/contact" },
   ];
 
   const renderCount = (count) => {
@@ -170,7 +172,9 @@ function CustomerSidebar({ isOpen, onClose }) {
               return (
                 <button
                   key={item.path}
-                  onClick={() => go(item.path)}
+                  onClick={() =>
+                    window.open(item.path, "_blank", "noopener,noreferrer")
+                  }
                   className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-white/90 transition hover:bg-white/10 hover:text-white"
                 >
                   <Icon className="text-xl" />

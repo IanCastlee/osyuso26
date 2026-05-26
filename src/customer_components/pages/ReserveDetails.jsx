@@ -226,7 +226,7 @@ function ReserveDetails() {
             <button
               onClick={handleAddToCart}
               disabled={cartLoading || isOutOfStock}
-              className="flex items-center justify-center gap-2 rounded-xl border border-slate-200 px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+              className="flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-slate-200 px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
             >
               <BsCartPlus />
               {cartLoading ? "Adding..." : "Add to Cart"}
@@ -235,7 +235,7 @@ function ReserveDetails() {
             <button
               onClick={handleBuyNow}
               disabled={isOutOfStock}
-              className="rounded-xl bg-secondary px-6 py-3 text-sm font-semibold text-white shadow-sm transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+              className="rounded-xl cursor-pointer bg-secondary px-6 py-3 text-sm font-semibold text-white shadow-sm transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
             >
               Buy Now
             </button>

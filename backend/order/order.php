@@ -83,6 +83,10 @@ function createXenditInvoice($payload, $secretKey) {
     return $result;
 }
 
+function makePaymentReference($orderId) {
+    return "PAY-" . date("Ymd") . "-O" . $orderId . "-" . strtoupper(bin2hex(random_bytes(4)));
+}
+
 function isSaleActive($product) {
     $saleType = $product["sale_type"] ?? "none";
     $saleValue = (float)($product["sale_value"] ?? 0);
@@ -158,16 +162,9 @@ try {
     }
 
     $user = requireRole(["customer"]);
+    $user_id = (int)($user->user_id ?? 0);
 
-    if (is_object($user)) {
-        $user_id = $user->user_id ?? null;
-    } elseif (is_array($user)) {
-        $user_id = $user["user_id"] ?? null;
-    } else {
-        $user_id = null;
-    }
-
-    if (!$user_id) {
+    if ($user_id <= 0) {
         throw new Exception("Unauthorized user");
     }
 
@@ -188,8 +185,6 @@ try {
         throw new Exception("Product ID is required");
     }
 
-    $conn->begin_transaction();
-
     $stmt = $conn->prepare("
         SELECT 
             p.id,
@@ -202,13 +197,13 @@ try {
             p.sale_type,
             p.sale_value,
             p.sale_starts_at,
-            p.sale_ends_at
+            p.sale_ends_at,
+            s.status AS shop_status
         FROM products p
         INNER JOIN shops s
             ON s.id = p.shop_id
         WHERE p.id = ?
         LIMIT 1
-        FOR UPDATE
     ");
 
     $stmt->bind_param("i", $product_id);
@@ -220,7 +215,7 @@ try {
         throw new Exception("Product not found");
     }
 
-    if ($product["status"] !== "active") {
+    if ($product["status"] !== "active" || $product["shop_status"] !== "active") {
         throw new Exception("Product is not available");
     }
 
@@ -277,6 +272,8 @@ try {
         throw new Exception("Invalid order total");
     }
 
+    $conn->begin_transaction();
+
     $order = $conn->prepare("
         INSERT INTO orders (
             user_id,
@@ -307,7 +304,39 @@ try {
     $order->execute();
 
     $order_id = $order->insert_id;
-    $external_id = "ORDER-" . $order_id;
+    $reference_no = makePaymentReference($order_id);
+    $external_id = $reference_no;
+    $currency = "PHP";
+    $paymentStatus = "pending";
+
+    $payment = $conn->prepare("
+        INSERT INTO order_payments (
+            order_id,
+            user_id,
+            amount,
+            currency,
+            status,
+            reference_no,
+            external_id,
+            created_at
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, NOW())
+    ");
+
+    $payment->bind_param(
+        "iidssss",
+        $order_id,
+        $user_id,
+        $total,
+        $currency,
+        $paymentStatus,
+        $reference_no,
+        $external_id
+    );
+
+    $payment->execute();
+
+    $order_payment_id = $payment->insert_id;
 
     $invoice = createXenditInvoice([
         "external_id" => $external_id,
@@ -323,8 +352,10 @@ try {
             "price" => $invoicePrice
         ]],
         "metadata" => [
+            "type" => "order",
             "order_id" => $order_id,
-            "user_id" => (int)$user_id,
+            "order_payment_id" => $order_payment_id,
+            "user_id" => $user_id,
             "shop_id" => $shop_id,
             "product_id" => $product_id,
             "unit_price" => $unit_price,
@@ -340,7 +371,19 @@ try {
         throw new Exception("Invalid Xendit invoice response");
     }
 
-    $update = $conn->prepare("
+    $updatePayment = $conn->prepare("
+        UPDATE order_payments
+        SET
+            xendit_invoice_id = ?,
+            xendit_checkout_url = ?,
+            updated_at = NOW()
+        WHERE id = ?
+    ");
+
+    $updatePayment->bind_param("ssi", $xendit_invoice_id, $xendit_checkout_url, $order_payment_id);
+    $updatePayment->execute();
+
+    $updateOrder = $conn->prepare("
         UPDATE orders
         SET
             xendit_invoice_id = ?,
@@ -348,13 +391,16 @@ try {
         WHERE id = ?
     ");
 
-    $update->bind_param("ssi", $xendit_invoice_id, $xendit_checkout_url, $order_id);
-    $update->execute();
+    $updateOrder->bind_param("ssi", $xendit_invoice_id, $xendit_checkout_url, $order_id);
+    $updateOrder->execute();
 
     $conn->commit();
 
     $responseData = [
         "order_id" => $order_id,
+        "order_payment_id" => $order_payment_id,
+        "reference_no" => $reference_no,
+        "external_id" => $external_id,
         "shop_id" => $shop_id,
         "payment_status" => "pending",
         "quantity" => $quantity,

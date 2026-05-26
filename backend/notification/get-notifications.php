@@ -24,7 +24,7 @@ function response($success, $message, $data = null, $status = 200) {
 }
 
 try {
-    $user = requireRole(["customer"]);
+    $user = requireRole(["customer", "vendor", "admin"]);
     $user_id = (int)$user->user_id;
 
     $limit = min(max((int)($_GET["limit"] ?? 20), 1), 50);

@@ -1,8 +1,18 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { LazyLoadImage } from "react-lazy-load-image-component";
 import { BsCart4 } from "react-icons/bs";
-import { FiMinus, FiPlus, FiTrash2 } from "react-icons/fi";
-import { useNavigate } from "react-router-dom";
+import {
+  FiArrowLeft,
+  FiCheck,
+  FiCreditCard,
+  FiMinus,
+  FiPlus,
+  FiShoppingBag,
+  FiTag,
+  FiTrash2,
+} from "react-icons/fi";
+import { FaStore } from "react-icons/fa";
+import { Link, useNavigate } from "react-router-dom";
 
 import Loader from "../../reusable_components/Loader";
 import NoData from "../../reusable_components/NoData";
@@ -12,14 +22,17 @@ import { useToast } from "../../context/ToastContext";
 
 function Cart() {
   const navigate = useNavigate();
+  const { showToast } = useToast();
+
   const { data, loading } = useGetData("cart/get-cart.php");
+
+  console.log(data);
 
   const [items, setItems] = useState([]);
   const [selectedItem, setSelectedItem] = useState(null);
 
   const { submit: updateSubmit } = useFormSubmit("cart/update-cart.php");
   const { submit: removeSubmit } = useFormSubmit("cart/remove-cart-item.php");
-  const { showToast } = useToast();
 
   useEffect(() => {
     if (!Array.isArray(data)) return;
@@ -32,11 +45,78 @@ function Cart() {
     });
   }, [data]);
 
-  const formatPeso = (value) => `₱${Number(value || 0).toFixed(2)}`;
+  const selectedCartItem = useMemo(
+    () => items.find((item) => item.cart_item_id === selectedItem),
+    [items, selectedItem],
+  );
+
+  const formatPeso = (value) => {
+    return `₱${Number(value || 0).toLocaleString("en-PH", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    })}`;
+  };
+
+  const toBoolean = (value) => {
+    return value === true || value === 1 || value === "1" || value === "true";
+  };
+
+  const getOriginalPrice = (item) => {
+    return Number(item.originalPrice ?? item.original_price ?? item.price ?? 0);
+  };
+
+  const getFinalPrice = (item) => {
+    return Number(
+      item.finalPrice ??
+        item.final_price ??
+        item.sale_price ??
+        item.discounted_price ??
+        item.price ??
+        0,
+    );
+  };
+
+  const getUnitPrice = (item) => {
+    const finalPrice = getFinalPrice(item);
+    const originalPrice = getOriginalPrice(item);
+
+    return finalPrice > 0 ? finalPrice : originalPrice;
+  };
+
+  const isItemOnSale = (item) => {
+    const originalPrice = getOriginalPrice(item);
+    const unitPrice = getUnitPrice(item);
+    const explicitSale = toBoolean(item.isOnSale ?? item.is_on_sale);
+
+    return unitPrice > 0 && originalPrice > unitPrice && explicitSale;
+  };
+
+  const getSaleLabel = (item) => {
+    const label = item.saleLabel ?? item.sale_label;
+
+    if (label) return label;
+
+    const originalPrice = getOriginalPrice(item);
+    const unitPrice = getUnitPrice(item);
+
+    if (originalPrice > unitPrice && originalPrice > 0) {
+      const percent = Math.round(
+        ((originalPrice - unitPrice) / originalPrice) * 100,
+      );
+      return `${percent}% OFF`;
+    }
+
+    return "On Sale";
+  };
 
   const getItemAmount = (item) => {
     const amount = item.unit_type === "kg" ? item.weight : item.quantity;
-    return Number(item.price || 0) * Number(amount || 0);
+    return getUnitPrice(item) * Number(amount || 0);
+  };
+
+  const getItemOriginalAmount = (item) => {
+    const amount = item.unit_type === "kg" ? item.weight : item.quantity;
+    return getOriginalPrice(item) * Number(amount || 0);
   };
 
   const getQtyLabel = (item) => {
@@ -44,12 +124,16 @@ function Cart() {
     return `${Number(item.quantity || 0)} pcs`;
   };
 
-  const selectedCartItem = useMemo(
-    () => items.find((item) => item.cart_item_id === selectedItem),
-    [items, selectedItem],
-  );
-
   const total = selectedCartItem ? getItemAmount(selectedCartItem) : 0;
+
+  const originalTotal = selectedCartItem
+    ? getItemOriginalAmount(selectedCartItem)
+    : 0;
+
+  const savings =
+    selectedCartItem && isItemOnSale(selectedCartItem)
+      ? Math.max(0, originalTotal - total)
+      : 0;
 
   const updateCart = async (item, newValue) => {
     try {
@@ -86,7 +170,7 @@ function Cart() {
 
       showToast({
         type: "success",
-        message: "Cart updated!",
+        message: "Cart updated",
         duration: 2500,
       });
     } catch (err) {
@@ -136,6 +220,15 @@ function Cart() {
     const product = {
       ...selectedCartItem,
       id: selectedCartItem.product_id,
+      price: getUnitPrice(selectedCartItem),
+      originalPrice: getOriginalPrice(selectedCartItem),
+      finalPrice: getUnitPrice(selectedCartItem),
+      isOnSale: isItemOnSale(selectedCartItem),
+      saleLabel: getSaleLabel(selectedCartItem),
+      original_price: getOriginalPrice(selectedCartItem),
+      final_price: getUnitPrice(selectedCartItem),
+      is_on_sale: isItemOnSale(selectedCartItem) ? 1 : 0,
+      sale_label: getSaleLabel(selectedCartItem),
     };
 
     const unit = product.unit_type;
@@ -146,13 +239,14 @@ function Cart() {
     navigate("/checkout", {
       state: {
         product,
-        unit: product.unit_type,
+        unit,
         quantity,
         weight,
         total,
       },
     });
   };
+
   if (loading) return <Loader />;
 
   if (!items.length) {
@@ -160,88 +254,134 @@ function Cart() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 px-3 pb-28 pt-5 sm:px-5 lg:px-10 lg:pb-10">
-      <div className="mx-auto max-w-6xl">
-        <div className="mb-5 flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            <h1 className="flex items-center gap-2 text-xl font-black text-slate-950 sm:text-2xl">
-              <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-secondary/10 text-secondary">
-                <BsCart4 />
+    <div className="min-h-screen bg-slate-50 px-4 pb-28 pt-5 sm:px-6 lg:px-10 lg:pb-10">
+      <div className="mx-auto flex max-w-7xl flex-col gap-5">
+        <div className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-start gap-3">
+              <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-orange-50 text-secondary">
+                <BsCart4 className="text-2xl" />
               </span>
-              Your Cart
-            </h1>
 
-            <p className="mt-1 text-sm text-slate-500">
-              Select one item to checkout.
-            </p>
+              <div>
+                <h1 className="text-xl font-black text-slate-950 sm:text-2xl">
+                  Your Cart
+                </h1>
+
+                <p className="mt-1 text-sm text-slate-500">
+                  Select one item to checkout. Sale prices are applied
+                  automatically when available.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={() => navigate("/")}
+                className="inline-flex h-10 items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 text-sm font-bold text-slate-700 transition hover:bg-slate-50"
+              >
+                <FiArrowLeft />
+                Continue Shopping
+              </button>
+
+              <span className="inline-flex h-10 items-center rounded-lg bg-orange-50 px-4 text-sm font-black text-secondary">
+                {items.length} {items.length === 1 ? "item" : "items"}
+              </span>
+            </div>
           </div>
-
-          <span className="shrink-0 rounded-full bg-white px-3 py-2 text-xs font-bold text-slate-600 shadow-sm ring-1 ring-slate-200">
-            {items.length} {items.length === 1 ? "item" : "items"}
-          </span>
         </div>
 
-        <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_360px]">
+        <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_380px]">
           <div className="space-y-3">
             {items.map((item) => {
               const isSelected = selectedItem === item.cart_item_id;
+              const isOnSale = isItemOnSale(item);
+              const originalPrice = getOriginalPrice(item);
+              const unitPrice = getUnitPrice(item);
+              const saleLabel = getSaleLabel(item);
+
               const qtyValue =
                 item.unit_type === "kg"
                   ? Number(item.weight || 0)
                   : Number(item.quantity || 0);
+
               const subtotal = getItemAmount(item);
+              const originalSubtotal = getItemOriginalAmount(item);
 
               return (
                 <article
                   key={item.cart_item_id}
                   onClick={() => setSelectedItem(item.cart_item_id)}
-                  className={`cursor-pointer rounded-xl border bg-white p-3 shadow-sm transition sm:p-4 ${
+                  className={`cursor-pointer rounded-lg border bg-white p-4 shadow-sm transition hover:shadow-md ${
                     isSelected
-                      ? "border-orange-500 bg-secondary/5"
+                      ? "border-secondary/50 ring-2 ring-orange-100"
                       : "border-slate-200 hover:border-slate-300"
                   }`}
                 >
-                  <div className="grid grid-cols-[20px_80px_minmax(0,1fr)] gap-3 sm:grid-cols-[20px_112px_minmax(0,1fr)] sm:gap-4">
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setSelectedItem(item.cart_item_id);
-                      }}
-                      className={`mt-1 grid h-5 w-5 shrink-0 place-items-center rounded-full border transition focus:outline-none focus:ring-0 ${
-                        isSelected
-                          ? "border-secondary bg-secondary"
-                          : "border-slate-300 bg-white"
-                      }`}
-                      aria-label="Select item"
-                    >
-                      {isSelected && (
-                        <span className="h-2 w-2 rounded-full bg-white" />
-                      )}
-                    </button>
+                  <div className="grid gap-4 sm:grid-cols-[128px_minmax(0,1fr)]">
+                    <div className="relative">
+                      <div className="aspect-square overflow-hidden rounded-lg bg-slate-100">
+                        <LazyLoadImage
+                          src={item.image_path || "/placeholder.png"}
+                          alt={item.name}
+                          className="h-full w-full object-cover"
+                        />
+                      </div>
 
-                    <div className="h-20 w-20 overflow-hidden rounded-lg bg-slate-100 sm:h-28 sm:w-28">
-                      <LazyLoadImage
-                        src={item.image_path || "/placeholder.png"}
-                        alt={item.name}
-                        className="h-full w-full object-cover"
-                      />
+                      {isSelected && (
+                        <span className="absolute left-2 top-2 inline-flex items-center gap-1 rounded-full bg-secondary px-2.5 py-1 text-[11px] font-bold text-white shadow-sm">
+                          <FiCheck />
+                          Selected
+                        </span>
+                      )}
+
+                      {isOnSale && !isSelected && (
+                        <span className="absolute left-2 top-2 inline-flex items-center gap-1 rounded-full bg-red-600 px-2.5 py-1 text-[11px] font-bold text-white shadow-sm">
+                          <FiTag />
+                          {saleLabel}
+                        </span>
+                      )}
                     </div>
 
                     <div className="min-w-0">
-                      <div className="flex items-start gap-2">
-                        <div className="min-w-0 flex-1">
-                          <h3 className="line-clamp-2 break-words text-sm font-bold leading-snug text-slate-950 sm:text-base">
-                            {item.name}
-                          </h3>
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <Link
+                            to={`/reserve/${item.product_id}`}
+                            onClick={(e) => e.stopPropagation()}
+                            className="group"
+                          >
+                            <h3 className="line-clamp-2 text-base font-black leading-snug text-slate-950 group-hover:text-secondary">
+                              {item.name}
+                            </h3>
+                          </Link>
 
-                          <p className="mt-1 truncate text-xs font-medium text-slate-500">
-                            {item.shop_name}
-                          </p>
+                          <div className="mt-2 flex items-center gap-1.5 text-xs font-medium text-slate-500">
+                            <FaStore className="shrink-0" />
+                            <span className="truncate">
+                              {item.shop_name || "Store"}
+                            </span>
+                          </div>
 
-                          <p className="mt-2 text-sm font-black text-secondary">
-                            {formatPeso(item.price)} / {item.unit_type}
-                          </p>
+                          <div className="mt-3 flex flex-wrap items-center gap-2">
+                            <p className="text-sm font-black text-secondary">
+                              {formatPeso(unitPrice)} / {item.unit_type}
+                            </p>
+
+                            {isOnSale && (
+                              <>
+                                <p className="text-xs font-semibold text-slate-400 line-through">
+                                  {formatPeso(originalPrice)}
+                                </p>
+
+                                <span className="inline-flex items-center gap-1 rounded-full bg-red-50 px-2 py-0.5 text-[11px] font-bold text-red-600">
+                                  <FiTag />
+                                  {saleLabel}
+                                </span>
+                              </>
+                            )}
+                          </div>
                         </div>
 
                         <button
@@ -250,22 +390,22 @@ function Cart() {
                             e.stopPropagation();
                             removeItem(item.cart_item_id);
                           }}
-                          className="grid h-8 w-8 shrink-0 place-items-center rounded-full text-red-500 transition hover:bg-red-50 focus:outline-none focus:ring-0 sm:h-9 sm:w-9"
+                          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-red-50 text-red-600 transition hover:bg-red-100"
                           title="Remove item"
                         >
                           <FiTrash2 />
                         </button>
                       </div>
 
-                      <div className="mt-4 grid gap-3 sm:flex sm:items-end sm:justify-between">
+                      <div className="mt-5 grid gap-4 border-t border-slate-100 pt-4 md:grid-cols-[1fr_auto] md:items-end">
                         <div>
-                          <p className="mb-2 text-[10px] font-bold uppercase tracking-wide text-slate-400 sm:text-[11px]">
+                          <p className="mb-2 text-xs font-bold uppercase tracking-wide text-slate-400">
                             {item.unit_type === "kg" ? "Weight" : "Quantity"}
                           </p>
 
                           <div
                             onClick={(e) => e.stopPropagation()}
-                            className="inline-flex h-9 max-w-full items-center overflow-hidden rounded-full border border-slate-200 bg-slate-50 sm:h-10"
+                            className="inline-flex h-10 items-center overflow-hidden rounded-lg border border-slate-200 bg-slate-50"
                           >
                             <button
                               type="button"
@@ -277,13 +417,13 @@ function Cart() {
                                     : qtyValue - 1,
                                 )
                               }
-                              className="grid h-9 w-9 shrink-0 place-items-center text-slate-600 transition hover:bg-slate-100 focus:outline-none focus:ring-0 sm:h-10 sm:w-10"
+                              className="flex h-10 w-10 items-center justify-center text-slate-600 transition hover:bg-slate-100"
                               aria-label="Decrease"
                             >
                               <FiMinus />
                             </button>
 
-                            <span className="min-w-16 px-2 text-center text-xs font-bold text-slate-800 sm:min-w-20 sm:px-3 sm:text-sm">
+                            <span className="min-w-24 px-3 text-center text-sm font-black text-slate-800">
                               {getQtyLabel(item)}
                             </span>
 
@@ -297,7 +437,7 @@ function Cart() {
                                     : qtyValue + 1,
                                 )
                               }
-                              className="grid h-9 w-9 shrink-0 place-items-center text-slate-600 transition hover:bg-slate-100 focus:outline-none focus:ring-0 sm:h-10 sm:w-10"
+                              className="flex h-10 w-10 items-center justify-center text-slate-600 transition hover:bg-slate-100"
                               aria-label="Increase"
                             >
                               <FiPlus />
@@ -305,12 +445,18 @@ function Cart() {
                           </div>
                         </div>
 
-                        <div className="flex items-center justify-between rounded-lg bg-slate-50 px-3 py-2 sm:block sm:bg-transparent sm:px-0 sm:py-0 sm:text-right">
-                          <p className="text-[10px] font-bold uppercase tracking-wide text-slate-400 sm:text-[11px]">
+                        <div className="rounded-lg bg-slate-50 px-4 py-3 md:min-w-44 md:text-right">
+                          <p className="text-xs font-bold uppercase tracking-wide text-slate-400">
                             Subtotal
                           </p>
 
-                          <p className="text-base font-black text-slate-950 sm:text-lg">
+                          {isOnSale && (
+                            <p className="mt-1 text-xs font-semibold text-slate-400 line-through">
+                              {formatPeso(originalSubtotal)}
+                            </p>
+                          )}
+
+                          <p className="mt-1 text-lg font-black text-slate-950">
                             {formatPeso(subtotal)}
                           </p>
                         </div>
@@ -322,14 +468,25 @@ function Cart() {
             })}
           </div>
 
-          <aside className="hidden h-fit rounded-xl border border-slate-200 bg-white p-5 shadow-sm lg:sticky lg:top-24 lg:block">
-            <h2 className="text-base font-black text-slate-950">
-              Order Summary
-            </h2>
+          <aside className="hidden h-fit rounded-lg border border-slate-200 bg-white p-5 shadow-sm lg:sticky lg:top-24 lg:block">
+            <div className="flex items-center gap-3 border-b border-slate-100 pb-4">
+              <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-orange-50 text-secondary">
+                <FiCreditCard />
+              </span>
+
+              <div>
+                <h2 className="text-base font-black text-slate-950">
+                  Order Summary
+                </h2>
+                <p className="text-xs text-slate-500">
+                  Checkout selected item only
+                </p>
+              </div>
+            </div>
 
             {selectedCartItem ? (
               <>
-                <div className="mt-4 rounded-xl border border-slate-200 p-3">
+                <div className="mt-5 rounded-lg border border-slate-200 p-3">
                   <div className="flex gap-3">
                     <div className="h-16 w-16 shrink-0 overflow-hidden rounded-lg bg-slate-100">
                       <img
@@ -340,7 +497,7 @@ function Cart() {
                     </div>
 
                     <div className="min-w-0 flex-1">
-                      <h3 className="line-clamp-2 text-sm font-bold text-slate-950">
+                      <h3 className="line-clamp-2 text-sm font-black text-slate-950">
                         {selectedCartItem.name}
                       </h3>
 
@@ -348,9 +505,18 @@ function Cart() {
                         {selectedCartItem.shop_name}
                       </p>
 
-                      <p className="mt-2 text-sm font-black text-secondary">
-                        {formatPeso(selectedCartItem.price)}
-                      </p>
+                      <div className="mt-2 flex flex-wrap items-center gap-2">
+                        <p className="text-sm font-black text-secondary">
+                          {formatPeso(getUnitPrice(selectedCartItem))} /{" "}
+                          {selectedCartItem.unit_type}
+                        </p>
+
+                        {isItemOnSale(selectedCartItem) && (
+                          <span className="rounded-full bg-red-50 px-2 py-0.5 text-[11px] font-bold text-red-600">
+                            {getSaleLabel(selectedCartItem)}
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -358,15 +524,40 @@ function Cart() {
                 <div className="mt-5 space-y-3 text-sm">
                   <div className="flex justify-between">
                     <span className="text-slate-500">Selected item</span>
-                    <span className="font-bold text-slate-800">1</span>
+                    <span className="font-bold text-slate-900">1</span>
                   </div>
 
                   <div className="flex justify-between">
                     <span className="text-slate-500">Amount</span>
-                    <span className="font-bold text-slate-800">
+                    <span className="font-bold text-slate-900">
                       {getQtyLabel(selectedCartItem)}
                     </span>
                   </div>
+
+                  <div className="flex justify-between">
+                    <span className="text-slate-500">Unit price</span>
+                    <span className="font-bold text-slate-900">
+                      {formatPeso(getUnitPrice(selectedCartItem))}
+                    </span>
+                  </div>
+
+                  {isItemOnSale(selectedCartItem) && (
+                    <>
+                      <div className="flex justify-between">
+                        <span className="text-slate-500">Original price</span>
+                        <span className="font-bold text-slate-400 line-through">
+                          {formatPeso(getOriginalPrice(selectedCartItem))}
+                        </span>
+                      </div>
+
+                      <div className="flex justify-between rounded-lg bg-red-50 px-3 py-2">
+                        <span className="font-bold text-red-600">Savings</span>
+                        <span className="font-black text-red-600">
+                          {formatPeso(savings)}
+                        </span>
+                      </div>
+                    </>
+                  )}
 
                   <div className="flex items-end justify-between border-t border-slate-200 pt-4">
                     <span className="font-black text-slate-950">Total</span>
@@ -379,8 +570,9 @@ function Cart() {
                 <button
                   type="button"
                   onClick={handleCheckoutSelected}
-                  className="mt-6 w-full rounded-lg bg-secondary px-4 py-3 text-sm font-black text-white shadow-sm transition hover:opacity-90 focus:outline-none focus:ring-0"
+                  className="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-lg bg-secondary px-4 py-3 text-sm font-black text-white shadow-sm transition hover:opacity-90"
                 >
+                  <FiShoppingBag />
                   Checkout Selected
                 </button>
               </>
@@ -394,23 +586,32 @@ function Cart() {
       </div>
 
       <div className="fixed inset-x-0 bottom-0 z-20 border-t border-slate-200 bg-white p-3 shadow-[0_-10px_30px_rgba(15,23,42,0.12)] lg:hidden">
-        <div className="mx-auto flex max-w-6xl items-center gap-3">
+        <div className="mx-auto flex max-w-7xl items-center gap-3">
           <div className="min-w-0 flex-1">
             <p className="truncate text-xs font-semibold text-slate-500">
               {selectedCartItem ? selectedCartItem.name : "No selected item"}
             </p>
 
-            <p className="text-lg font-black text-secondary">
-              {formatPeso(total)}
-            </p>
+            <div className="flex items-center gap-2">
+              <p className="text-lg font-black text-secondary">
+                {formatPeso(total)}
+              </p>
+
+              {selectedCartItem && isItemOnSale(selectedCartItem) && (
+                <span className="rounded-full bg-red-50 px-2 py-0.5 text-[10px] font-bold text-red-600">
+                  {getSaleLabel(selectedCartItem)}
+                </span>
+              )}
+            </div>
           </div>
 
           <button
             type="button"
             onClick={handleCheckoutSelected}
             disabled={!selectedCartItem}
-            className="shrink-0 rounded-lg bg-secondary px-5 py-3 text-sm font-black text-white shadow-sm transition hover:opacity-90 focus:outline-none focus:ring-0 disabled:cursor-not-allowed disabled:bg-slate-300"
+            className="inline-flex shrink-0 items-center gap-2 rounded-lg bg-secondary px-5 py-3 text-sm font-black text-white shadow-sm transition hover:opacity-90 disabled:cursor-not-allowed disabled:bg-slate-300"
           >
+            <FiShoppingBag />
             Checkout
           </button>
         </div>

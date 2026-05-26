@@ -2,15 +2,16 @@ import React, { useState } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import {
   FaBox,
-  FaCog,
   FaClipboardList,
   FaChevronDown,
   FaChevronRight,
+  FaCog,
   FaChartLine,
   FaMoneyBillWave,
   FaStore,
   FaTags,
   FaUsers,
+  FaBookOpen,
 } from "react-icons/fa";
 import { PiShoppingCartSimpleFill } from "react-icons/pi";
 
@@ -207,49 +208,6 @@ function SidebarAdmin() {
         <button
           onClick={() => {
             setExpanded(true);
-            setOpenPromotion((prev) => !prev);
-          }}
-          className="flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-sm font-medium text-white/85 transition hover:bg-white/10 hover:text-white"
-          title="Featured Promotion"
-        >
-          <span className="flex min-w-0 items-center gap-3">
-            <FaTags className="shrink-0 text-lg" />
-            <span className={labelClass}>Featured Promotion</span>
-          </span>
-
-          {openPromotion ? (
-            <FaChevronDown className={chevronClass} />
-          ) : (
-            <FaChevronRight className={chevronClass} />
-          )}
-        </button>
-
-        <div
-          className={`overflow-hidden transition-all duration-300 ${
-            expanded && openPromotion ? "max-h-28 pb-1 pl-8" : "max-h-0"
-          }`}
-        >
-          <div className="space-y-1 border-l border-white/10 pl-3">
-            <NavLink to="/admin/featured-promotion" className={subItemClass}>
-              Promotions
-            </NavLink>
-            <NavLink
-              to="/admin/featured-promotion-logs"
-              className={subItemClass}
-            >
-              Promotion Logs
-            </NavLink>
-          </div>
-        </div>
-
-        <NavLink to="/admin/shops" className={itemClass} title="Shops">
-          <FaStore className="shrink-0 text-lg" />
-          <span className={labelClass}>Shops</span>
-        </NavLink>
-
-        <button
-          onClick={() => {
-            setExpanded(true);
             setOpenPayout((prev) => !prev);
           }}
           className="flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-sm font-medium text-white/85 transition hover:bg-white/10 hover:text-white"
@@ -283,7 +241,25 @@ function SidebarAdmin() {
         </div>
 
         <NavLink
-          to="/admin/settings"
+          to="/admin/promotions"
+          className={itemClass}
+          title="Admin Settings"
+        >
+          <FaTags className="shrink-0 text-lg" />
+          <span className={labelClass}>Promotions</span>
+        </NavLink>
+
+        <NavLink
+          to="/admin/legal-pages"
+          className={itemClass}
+          title="Admin Settings"
+        >
+          <FaBookOpen className="shrink-0 text-lg" />
+          <span className={labelClass}>Legal Pages</span>
+        </NavLink>
+
+        <NavLink
+          to="/admin/admin-settings"
           className={itemClass}
           title="Admin Settings"
         >

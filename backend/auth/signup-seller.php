@@ -106,7 +106,7 @@ try {
         VALUES (
             ?, ?, ?, ?, ?,
             'vendor',
-            'active',
+            'inactive',
             0,
             ?,
             ?

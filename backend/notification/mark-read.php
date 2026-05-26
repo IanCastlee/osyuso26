@@ -24,7 +24,8 @@ function response($success, $message, $data = null, $status = 200) {
 }
 
 try {
-    $user = requireRole(["customer"]);
+       $user = requireRole(["customer", "vendor", "admin"]);
+
     $user_id = (int)$user->user_id;
 
     $payload = json_decode(file_get_contents("php://input"), true);

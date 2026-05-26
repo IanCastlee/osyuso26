@@ -1,7 +1,7 @@
 <?php
 
 error_reporting(E_ALL);
-ini_set('display_errors', 0);
+ini_set("display_errors", 0);
 
 header("Content-Type: application/json");
 
@@ -10,25 +10,26 @@ include("../dbConn.php");
 
 require_once __DIR__ . "/jwt.php";
 
-$data = json_decode(file_get_contents("php://input"), true);
+function response($success, $message, $extra = []) {
+    echo json_encode(array_merge([
+        "success" => $success,
+        "message" => $message
+    ], $extra));
 
-if (!$data) {
-    echo json_encode([
-        "success" => false,
-        "message" => "Invalid JSON input"
-    ]);
     exit;
 }
 
-$email = trim($data['email'] ?? '');
-$password = trim($data['password'] ?? '');
+$data = json_decode(file_get_contents("php://input"), true);
 
-if ($email === '' || $password === '') {
-    echo json_encode([
-        "success" => false,
-        "message" => "Email and password are required"
-    ]);
-    exit;
+if (!$data) {
+    response(false, "Invalid JSON input");
+}
+
+$email = trim($data["email"] ?? "");
+$password = trim($data["password"] ?? "");
+
+if ($email === "" || $password === "") {
+    response(false, "Email and password are required");
 }
 
 $stmt = $conn->prepare("
@@ -43,46 +44,33 @@ $stmt->execute();
 
 $user = $stmt->get_result()->fetch_assoc();
 
-if (!$user || !password_verify($password, $user['password'])) {
-    echo json_encode([
-        "success" => false,
-        "message" => "Invalid credentials"
-    ]);
-    exit;
+if (!$user) {
+    response(false, "This email is not registered.");
 }
 
-if ((int)$user['email_verified'] !== 1) {
-    echo json_encode([
-        "success" => false,
-        "message" => "Please verify your email before signing in."
-    ]);
-    exit;
+if (!password_verify($password, $user["password"])) {
+    response(false, "Incorrect password.");
 }
 
-$status = $user['status'] ?? 'active';
-
-if ($status === 'banned') {
-    echo json_encode([
-        "success" => false,
-        "message" => "Your account has been restricted. Please contact OSYUSO support for assistance."
-    ]);
-    exit;
+if ((int)$user["email_verified"] !== 1) {
+    response(false, "Please verify your email before signing in.");
 }
 
-if ($status === 'inactive') {
-    echo json_encode([
-        "success" => false,
-        "message" => "Your account is currently inactive. Please contact OSYUSO support for assistance."
-    ]);
-    exit;
+$status = $user["status"] ?? "active";
+
+if ($status === "banned") {
+    response(false, "Your account has been restricted. Please contact OSYUSO support for assistance.");
 }
 
-$role = $user['role'] ?? 'customer';
+if ($status === "inactive") {
+    response(false, "Your account is currently inactive. Please contact OSYUSO support for assistance.");
+}
+
+$role = $user["role"] ?? "customer";
 
 $token = generateJWT($user);
 
-echo json_encode([
-    "success" => true,
+response(true, "Login successful", [
     "token" => $token,
     "role" => $role,
     "user" => [
