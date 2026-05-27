@@ -135,41 +135,6 @@ function SidebarAdmin() {
         <button
           onClick={() => {
             setExpanded(true);
-            setOpenProducts((prev) => !prev);
-          }}
-          className="flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-sm font-medium text-white/85 transition hover:bg-white/10 hover:text-white"
-          title="Products"
-        >
-          <span className="flex min-w-0 items-center gap-3">
-            <FaBox className="shrink-0 text-lg" />
-            <span className={labelClass}>Products</span>
-          </span>
-
-          {openProducts ? (
-            <FaChevronDown className={chevronClass} />
-          ) : (
-            <FaChevronRight className={chevronClass} />
-          )}
-        </button>
-
-        <div
-          className={`overflow-hidden transition-all duration-300 ${
-            expanded && openProducts ? "max-h-28 pb-1 pl-8" : "max-h-0"
-          }`}
-        >
-          <div className="space-y-1 border-l border-white/10 pl-3">
-            <NavLink to="/admin/products" className={subItemClass}>
-              Products
-            </NavLink>
-            <NavLink to="/admin/archive-products" className={subItemClass}>
-              Archive Products
-            </NavLink>
-          </div>
-        </div>
-
-        <button
-          onClick={() => {
-            setExpanded(true);
             setOpenOrders((prev) => !prev);
           }}
           className="flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-sm font-medium text-white/85 transition hover:bg-white/10 hover:text-white"
@@ -239,6 +204,46 @@ function SidebarAdmin() {
             </NavLink>
           </div>
         </div>
+
+        {/* <button
+          onClick={() => {
+            setExpanded(true);
+            setOpenProducts((prev) => !prev);
+          }}
+          className="flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-sm font-medium text-white/85 transition hover:bg-white/10 hover:text-white"
+          title="Products"
+        >
+          <span className="flex min-w-0 items-center gap-3">
+            <FaBox className="shrink-0 text-lg" />
+            <span className={labelClass}>Products</span>
+          </span>
+
+          {openProducts ? (
+            <FaChevronDown className={chevronClass} />
+          ) : (
+            <FaChevronRight className={chevronClass} />
+          )}
+        </button>
+
+        <div
+          className={`overflow-hidden transition-all duration-300 ${
+            expanded && openProducts ? "max-h-28 pb-1 pl-8" : "max-h-0"
+          }`}
+        >
+          <div className="space-y-1 border-l border-white/10 pl-3">
+            <NavLink to="/admin/products" className={subItemClass}>
+              Products
+            </NavLink>
+            <NavLink to="/admin/archive-products" className={subItemClass}>
+              Archive Products
+            </NavLink>
+          </div>
+        </div> */}
+
+        <NavLink to="/admin/products" className={itemClass} title="Products">
+          <FaBox className="shrink-0 text-[20px]" />
+          <span className={labelClass}>Products</span>
+        </NavLink>
 
         <NavLink
           to="/admin/promotions"

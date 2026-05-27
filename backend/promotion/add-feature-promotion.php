@@ -348,8 +348,12 @@ try {
         "currency" => "PHP",
         "description" => "Featured Promotion #" . $promotion_id,
         "invoice_duration" => 86400,
-        "success_redirect_url" => $frontendUrl . "/vendor/promotions?payment=success&promotion_id=" . $promotion_id,
-        "failure_redirect_url" => $frontendUrl . "/vendor/promotions?payment=failed&promotion_id=" . $promotion_id,
+
+
+        "success_redirect_url" => $frontendUrl . "/vendor/promotions/payment-success?promotion_id=" . $promotion_id,
+        "failure_redirect_url" => $frontendUrl . "/vendor/promotions/payment-failed?promotion_id=" . $promotion_id,
+
+        
         "items" => [[
             "name" => "Featured Promotion: " . $title,
             "quantity" => 1,

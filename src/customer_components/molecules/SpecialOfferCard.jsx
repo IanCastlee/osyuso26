@@ -11,8 +11,6 @@ import {
 import useGetData from "../../hooks/useGetData";
 import offer1 from "../../assets/hero_images/offer1.png";
 
-const ASSET_BASE_URL = "http://localhost/OSYUSO26/backend/";
-
 function SpecialOfferCard() {
   const navigate = useNavigate();
 
@@ -30,12 +28,24 @@ function SpecialOfferCard() {
     return [];
   }, [data]);
 
-  const current = offers[index] || {};
+  const hasPromo = offers.length > 0;
+
+  const current = hasPromo
+    ? offers[index] || {}
+    : {
+        tag: "Become a Seller",
+        title: "Promote your products on OSYUSO",
+        description:
+          "Reach nearby customers, feature your best products, and grow your local shop with OSYUSO.",
+        image_path: offer1,
+        product_id: null,
+      };
+
+  // const current = offers[index] || {};
 
   const getImageUrl = (path) => {
-    if (!path) return offer1;
-    if (path.startsWith("http")) return path;
-    return ASSET_BASE_URL + path.replace(/^(\.\.\/|\/)+/, "");
+    if (!path) return "";
+    return path;
   };
 
   const formatDate = (value) => {
@@ -118,10 +128,6 @@ function SpecialOfferCard() {
     );
   }
 
-  if (!offers.length) {
-    return null;
-  }
-
   return (
     <>
       <section
@@ -133,23 +139,25 @@ function SpecialOfferCard() {
         }}
         className="relative h-[150px] w-full cursor-pointer overflow-hidden rounded-xl bg-secondary text-white shadow-sm transition hover:shadow-md sm:h-[220px] lg:h-[331px]"
       >
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            navigate("/featured-promotions");
-          }}
-          className="absolute right-2 top-2 z-20 inline-flex h-5 items-center gap-0.5 rounded-full bg-white/90 px-1.5 text-[8px] font-bold leading-none text-secondary shadow-sm backdrop-blur transition hover:bg-white sm:right-3 sm:top-3 sm:h-7 sm:gap-1.5 sm:px-3 sm:text-xs"
-        >
-          <FiGrid className="text-[9px] sm:text-sm" />
-          <span>See All</span>
-        </button>
+        {hasPromo && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              navigate("/featured-promotions");
+            }}
+            className="absolute right-2 top-2 z-20 inline-flex h-5 items-center gap-0.5 rounded-full bg-white/90 px-1.5 text-[8px] font-bold leading-none text-secondary shadow-sm backdrop-blur transition hover:bg-white sm:right-3 sm:top-3 sm:h-7 sm:gap-1.5 sm:px-3 sm:text-xs"
+          >
+            <FiGrid className="text-[9px] sm:text-sm" />
+            <span>See All</span>
+          </button>
+        )}
 
         <div className="flex h-full">
           <div className="relative h-full w-[36%] shrink-0 overflow-hidden bg-orange-600 sm:w-[38%]">
             <img
-              src={getImageUrl(current?.image_path)}
-              alt={current?.title || "Special offer"}
+              src={getImageUrl(current?.image_path || offer1)}
+              alt={current?.title || "Become an OSYUSO seller"}
               onError={(e) => {
                 e.currentTarget.src = offer1;
               }}
@@ -159,33 +167,39 @@ function SpecialOfferCard() {
             <div className="absolute inset-0 bg-black/10" />
           </div>
 
-          <div className="flex min-w-0 flex-1 flex-col justify-center px-3 py-3 pr-4 sm:p-6 lg:p-8">
-            <span className="mb-1.5 w-fit max-w-[120px] truncate rounded-full bg-white/15 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-white backdrop-blur-sm sm:mb-2 sm:max-w-none sm:px-2.5 sm:py-1 sm:text-xs">
-              {current?.tag || "Limited Offer"}
+          <div className="flex gap-1 min-w-0 flex-1 flex-col justify-center px-2 pr-2.5 sm:p-6 lg:p-8">
+            <span className="mb-1 w-fit max-w-[120px] truncate rounded-full bg-white/15 px-1.5 py-0.5 text-[7px] font-semibold uppercase leading-none tracking-wide text-white backdrop-blur-sm sm:mb-2 sm:max-w-none sm:px-2.5 sm:py-1 sm:text-xs">
+              {current?.tag || "Become a Seller"}
             </span>
 
-            <h2 className="line-clamp-2 pr-12 text-sm font-bold leading-tight sm:pr-0 sm:text-2xl lg:text-4xl">
-              {current?.title || "Special Vendor Offer!"}
+            <h2 className="line-clamp-2 text-[15px] font-bold leading-[1.15] text-white sm:text-2xl sm:leading-tight lg:text-4xl">
+              {current?.title || "Promote your products on OSYUSO"}
             </h2>
 
-            <p className="mt-1 line-clamp-2 pr-2 text-[10px] leading-4 text-white/85 sm:mt-2 sm:text-sm sm:leading-5 lg:mt-3 lg:max-w-xl lg:text-base">
-              {current?.description || "Don't miss out on this amazing offer!"}
+            <p className="mt-1 lg:pr-4 line-clamp-2 text-[10px] leading-[1.25] text-white/85 sm:mt-2 sm:text-sm sm:leading-5 lg:mt-3 lg:max-w-xl lg:text-base">
+              {current?.description ||
+                "Reach nearby customers, feature your best products, and grow your local shop with OSYUSO."}
             </p>
 
             <button
               type="button"
               onClick={(e) => {
                 e.stopPropagation();
-                handleShopNow(current);
+
+                if (hasPromo) {
+                  handleShopNow(current);
+                  return;
+                }
+
+                navigate("/signup-seller");
               }}
-              disabled={!current?.product_id}
-              className="mt-2 inline-flex h-5 w-fit cursor-pointer items-center justify-center rounded-md bg-white px-2.5 text-[10px] font-semibold leading-none text-secondary shadow-sm transition hover:bg-orange-50 disabled:cursor-not-allowed disabled:opacity-60 sm:mt-4 sm:h-auto sm:rounded-lg sm:px-4 sm:py-2 sm:text-sm"
+              disabled={hasPromo && !current?.product_id}
+              className="mt-1.5 inline-flex h-6 w-fit cursor-pointer items-center justify-center rounded-md bg-white px-2.5 text-[10px] font-semibold leading-none text-secondary shadow-sm transition hover:bg-orange-50 disabled:cursor-not-allowed disabled:opacity-60 sm:mt-4 sm:h-auto sm:rounded-lg sm:px-4 sm:py-2 sm:text-sm"
             >
-              Shop Now
+              {hasPromo ? "Shop Now" : "Register Now"}
             </button>
           </div>
         </div>
-
         {offers.length > 1 && (
           <div className="absolute bottom-2 right-3 z-20 flex items-center gap-1 sm:bottom-3 sm:right-4 sm:gap-1.5">
             {offers.map((offer, i) => (

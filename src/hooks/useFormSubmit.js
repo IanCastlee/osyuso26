@@ -162,8 +162,12 @@ function useFormSubmit(url, onSuccess) {
 
       const message = err?.message || "Something went wrong";
 
-      if (err?.status === 401) {
-        redirectToSignin(message);
+      if (err?.status === 401 || err?.status === 403) {
+        redirectToSignin(
+          err?.status === 403
+            ? "You do not have permission to perform this action. Please sign in with the correct account."
+            : message,
+        );
         return;
       }
 

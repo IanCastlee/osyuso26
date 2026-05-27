@@ -1,6 +1,6 @@
 import React from "react";
 import { FaBox, FaMoneyBill } from "react-icons/fa";
-import { FiCalendar, FiImage, FiPackage, FiTag } from "react-icons/fi";
+import { FiCalendar, FiImage, FiPackage, FiTag, FiX } from "react-icons/fi";
 
 import offer1 from "../../assets/hero_images/offer1.png";
 import addImage from "../../assets/icons/addimage.png";
@@ -16,6 +16,9 @@ function AddFeaturedPromotion({
   handleImages,
   handleSubmit,
   submitLoading,
+  isEditMode = false,
+  editingPromotion = null,
+  handleCancelEdit,
 }) {
   const { data, loading } = useGetData("admin_setting/admin-setting.php");
 
@@ -40,25 +43,44 @@ function AddFeaturedPromotion({
     return Math.ceil(diffMs / (1000 * 60 * 60));
   };
 
-  const totalHours = calculateHours();
-  const totalPrice = totalHours * PRICE_PER_HOUR;
+  const totalHours = Number(editingPromotion?.total_hours || calculateHours());
+  const totalPrice = Number(
+    editingPromotion?.total_price || totalHours * PRICE_PER_HOUR,
+  );
   const imageError = errors.image || errors.images;
 
   return (
     <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-      <div className="mb-5 flex items-center gap-3 border-b border-slate-100 pb-4">
-        <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-orange-50 text-secondary">
-          <FiTag className="text-xl" />
-        </span>
+      <div className="mb-5 flex items-center justify-between gap-3 border-b border-slate-100 pb-4">
+        <div className="flex items-center gap-3">
+          <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-orange-50 text-secondary">
+            <FiTag className="text-xl" />
+          </span>
 
-        <div>
-          <h2 className="text-lg font-bold text-slate-950">
-            Create Featured Promotion
-          </h2>
-          <p className="mt-1 text-sm text-slate-500">
-            Submit a product promotion for admin approval.
-          </p>
+          <div>
+            <h2 className="text-lg font-bold text-slate-950">
+              {isEditMode
+                ? "Revise Rejected Promotion"
+                : "Create Featured Promotion"}
+            </h2>
+            <p className="mt-1 text-sm text-slate-500">
+              {isEditMode
+                ? "Update the content and send it back for admin review. No new payment is required."
+                : "Submit a product promotion for admin approval."}
+            </p>
+          </div>
         </div>
+
+        {isEditMode && (
+          <button
+            type="button"
+            onClick={handleCancelEdit}
+            className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-slate-500 transition hover:bg-slate-100"
+            title="Cancel edit"
+          >
+            <FiX />
+          </button>
+        )}
       </div>
 
       <form
@@ -75,16 +97,23 @@ function AddFeaturedPromotion({
             </div>
 
             <div className="grid gap-4 sm:grid-cols-2">
-              <InputField
-                label="Product ID"
-                name="product_id"
-                type="number"
-                placeholder="Eg. 55"
-                value={form.product_id}
-                onChange={handleChange}
-                icon={FiPackage}
-                error={errors.product_id}
-              />
+              {isEditMode ? (
+                <ReadOnlyBox
+                  label="Product ID"
+                  value={`#${form.product_id || "-"}`}
+                />
+              ) : (
+                <InputField
+                  label="Product ID"
+                  name="product_id"
+                  type="number"
+                  placeholder="Eg. 55"
+                  value={form.product_id}
+                  onChange={handleChange}
+                  icon={FiPackage}
+                  error={errors.product_id}
+                />
+              )}
 
               <InputField
                 label="Tag"
@@ -127,6 +156,14 @@ function AddFeaturedPromotion({
               <h3 className="text-sm font-semibold text-slate-950">Schedule</h3>
             </div>
 
+            {isEditMode && (
+              <p className="mb-4 rounded-xl bg-orange-50 px-4 py-3 text-sm text-orange-700">
+                Schedule and duration are locked because this promotion is
+                already paid. Once admin approves it, the paid duration will
+                start from approval time.
+              </p>
+            )}
+
             <div className="grid gap-4 sm:grid-cols-2">
               <DateField
                 label="Start Date"
@@ -135,6 +172,7 @@ function AddFeaturedPromotion({
                 min={localDateTime}
                 onChange={handleChange}
                 error={errors.start_date}
+                disabled={isEditMode}
               />
 
               <DateField
@@ -144,6 +182,7 @@ function AddFeaturedPromotion({
                 min={form.start_date || localDateTime}
                 onChange={handleChange}
                 error={errors.expires_at}
+                disabled={isEditMode}
               />
             </div>
           </div>
@@ -257,7 +296,7 @@ function AddFeaturedPromotion({
                 value={loading ? "Loading..." : `₱${PRICE_PER_HOUR} / hour`}
               />
               <SummaryRow
-                label="Estimated Cost"
+                label={isEditMode ? "Paid Cost" : "Estimated Cost"}
                 value={`₱${totalPrice}`}
                 bold
               />
@@ -266,11 +305,16 @@ function AddFeaturedPromotion({
 
           <button
             type="submit"
-            disabled={submitLoading || !form.start_date || !form.expires_at}
+            disabled={
+              submitLoading ||
+              (!isEditMode && (!form.start_date || !form.expires_at))
+            }
             className="flex w-full items-center justify-center gap-2 rounded-xl bg-secondary px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {submitLoading ? (
               <LoaderWithText text="Submitting..." />
+            ) : isEditMode ? (
+              "Submit Revised Promotion"
             ) : (
               `Submit Promotion • ₱${totalPrice}`
             )}
@@ -281,7 +325,21 @@ function AddFeaturedPromotion({
   );
 }
 
-function DateField({ label, name, value, min, onChange, error }) {
+function ReadOnlyBox({ label, value }) {
+  return (
+    <div>
+      <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-slate-400">
+        {label}
+      </label>
+
+      <div className="flex h-11 items-center rounded-xl border border-slate-200 bg-slate-100 px-3 text-sm font-semibold text-slate-700">
+        {value}
+      </div>
+    </div>
+  );
+}
+
+function DateField({ label, name, value, min, onChange, error, disabled }) {
   return (
     <div>
       <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-slate-400">
@@ -294,7 +352,8 @@ function DateField({ label, name, value, min, onChange, error }) {
         value={value}
         min={min}
         onChange={onChange}
-        className="h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-800 outline-none transition focus:border-secondary"
+        disabled={disabled}
+        className="h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-800 outline-none transition focus:border-secondary disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500"
       />
 
       {error && (

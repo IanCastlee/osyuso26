@@ -8,6 +8,7 @@ import {
   FiShoppingCart,
   FiTrendingUp,
 } from "react-icons/fi";
+import { LuPhilippinePeso } from "react-icons/lu";
 
 import {
   CartesianGrid,
@@ -122,7 +123,7 @@ function DashboardAdmin() {
 
         <div className="flex items-center gap-3 rounded-xl bg-white p-4 shadow-sm transition hover:shadow-md">
           <div className="rounded-lg bg-blue-100 p-3 text-blue-600">
-            <FiDollarSign className="text-lg" />
+            <LuPhilippinePeso className="text-lg" />
           </div>
 
           <div>

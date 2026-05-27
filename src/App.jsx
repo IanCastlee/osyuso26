@@ -68,6 +68,9 @@ import TermsAndConditions from "./customer_components/pages/TermsAndConditions";
 import PrivacyPolicy from "./customer_components/pages/PrivacyPolicy";
 import AdminPromotionApprovals from "./admin_components/pages/AdminPromotionApprovals";
 import FeaturedPromotions from "./customer_components/pages/FeaturedPromotions";
+import PromotionPaymentSuccess from "./vendor_components/organisms/PromotionPaymentSuccess";
+import PromotionPaymentFailed from "./vendor_components/organisms/PromotionPaymentFailed";
+import HomeRedirect from "./HomeRedirect";
 
 const CustomerLayout = () => {
   const location = useLocation();
@@ -98,7 +101,7 @@ const CustomerLayout = () => {
       {/* MAIN CONTENT */}
       <main className="flex-1">
         <Routes>
-          <Route index element={<CustomerHomePage />} />
+          <Route path="/" element={<HomeRedirect />} />
           <Route path="categories/:categoryId" element={<Categories />} />{" "}
           <Route path="all-categories" element={<AllCategories />} />
           <Route path="market/:id" element={<Market />} />{" "}
@@ -161,6 +164,17 @@ const VendorLayout = () => {
           <Route path="about" element={<AboutVendor />} />
           <Route path="market-settings" element={<MarketSetting />} />
           <Route path="notifications" element={<AllVendorNotifcation />} />
+
+          {/* payment redirect status */}
+          <Route
+            path="/promotions/payment-success"
+            element={<PromotionPaymentSuccess />}
+          />
+
+          <Route
+            path="/promotions/payment-failed"
+            element={<PromotionPaymentFailed />}
+          />
         </Routes>
       </main>
     </div>

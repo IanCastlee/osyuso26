@@ -16,8 +16,6 @@ import useGetData from "../../hooks/useGetData";
 import useFormSubmit from "../../hooks/useFormSubmit";
 import { useToast } from "../../context/ToastContext";
 
-const ASSET_BASE_URL = "http://localhost/OSYUSO26/backend/";
-
 const rejectionReasons = [
   "The submitted image does not meet OSYUSO promotion guidelines.",
   "The promotion title or description needs to be revised for clarity.",
@@ -86,9 +84,8 @@ function AdminPromotionApprovals() {
   );
 
   const fileUrl = (path) => {
-    if (!path) return "#";
-    if (path.startsWith("http")) return path;
-    return ASSET_BASE_URL + path.replace(/^(\.\.\/|\/)+/, "");
+    if (!path) return "";
+    return path;
   };
 
   const formatPeso = (value) =>

@@ -1,12 +1,12 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { IoMdTrash } from "react-icons/io";
 import {
   FiChevronLeft,
   FiChevronRight,
+  FiCreditCard,
   FiEdit,
   FiPlusCircle,
-  FiSearch,
   FiRefreshCw,
+  FiSearch,
   FiStar,
 } from "react-icons/fi";
 
@@ -33,38 +33,40 @@ function FeaturedPromotion() {
   const [preview, setPreview] = useState([]);
   const [images, setImages] = useState([]);
   const [errors, setErrors] = useState({});
+  const [editingPromotion, setEditingPromotion] = useState(null);
 
   const [search, setSearch] = useState("");
   const [limit, setLimit] = useState(10);
   const [cursor, setCursor] = useState(null);
   const [history, setHistory] = useState([]);
 
+  const isEditMode = Boolean(editingPromotion);
+
   useEffect(() => {
     return () => {
-      preview.forEach((url) => URL.revokeObjectURL(url));
+      preview.forEach((url) => {
+        if (String(url).startsWith("blob:")) URL.revokeObjectURL(url);
+      });
     };
   }, [preview]);
 
-  // const { submit, loading: submitLoading } = useFormSubmit(
-  //   "promotion/add-feature-promotion.php",
-  //   () => {
-  //     showToast({
-  //       type: "success",
-  //       message: "Promotion submitted.",
-  //       duration: 5000,
-  //     });
-
-  //     preview.forEach((url) => URL.revokeObjectURL(url));
-  //     setForm(emptyForm);
-  //     setPreview([]);
-  //     setImages([]);
-  //     setErrors({});
-  //   },
-  // );
-
-  const { submit, loading: submitLoading } = useFormSubmit(
+  const { submit: createPromotion, loading: createLoading } = useFormSubmit(
     "promotion/add-feature-promotion.php",
   );
+
+  const { submit: updateRejectedPromotion, loading: updateLoading } =
+    useFormSubmit("promotion/update-rejected-promotion.php", () => {
+      showToast({
+        type: "success",
+        message: "Promotion updated and sent for admin review.",
+        duration: 4000,
+      });
+
+      resetForm();
+      refetch();
+    });
+
+  const submitLoading = createLoading || updateLoading;
 
   const query = useMemo(() => {
     const q = new URLSearchParams();
@@ -83,6 +85,7 @@ function FeaturedPromotion() {
   const promotions = useMemo(() => {
     if (Array.isArray(data)) return data;
     if (Array.isArray(data?.rows)) return data.rows;
+    if (Array.isArray(data?.data?.rows)) return data.data.rows;
     if (Array.isArray(data?.data)) return data.data;
     return [];
   }, [data]);
@@ -90,12 +93,55 @@ function FeaturedPromotion() {
   const nextCursor =
     data?.next_cursor || data?.data?.next_cursor || promotions.at(-1)?.id;
 
-  const hasMore = Boolean(data?.has_more ?? data?.data?.has_more ?? nextCursor);
+  const hasMore = Boolean(data?.has_more ?? data?.data?.has_more ?? false);
 
   useEffect(() => {
     setCursor(null);
     setHistory([]);
   }, [search, limit]);
+
+  const toDateTimeLocal = (value) => {
+    if (!value) return "";
+    return String(value).replace(" ", "T").slice(0, 16);
+  };
+
+  const resetForm = () => {
+    preview.forEach((url) => {
+      if (String(url).startsWith("blob:")) URL.revokeObjectURL(url);
+    });
+
+    setForm(emptyForm);
+    setPreview([]);
+    setImages([]);
+    setErrors({});
+    setEditingPromotion(null);
+  };
+
+  const handleEdit = (row) => {
+    if (row.status !== "rejected" || row.payment_status !== "paid") {
+      showToast({
+        type: "error",
+        message: "Only paid rejected promotions can be revised.",
+        duration: 3500,
+      });
+      return;
+    }
+
+    setEditingPromotion(row);
+    setForm({
+      product_id: String(row.product_id || ""),
+      tag: row.tag || "",
+      title: row.title || "",
+      description: row.description || "",
+      start_date: toDateTimeLocal(row.start_date),
+      expires_at: toDateTimeLocal(row.expires_at),
+    });
+    setPreview(row.image_path ? [row.image_path] : []);
+    setImages([]);
+    setErrors({});
+
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -114,7 +160,9 @@ function FeaturedPromotion() {
   const handleImages = (e) => {
     const files = Array.from(e.target.files || []);
 
-    preview.forEach((url) => URL.revokeObjectURL(url));
+    preview.forEach((url) => {
+      if (String(url).startsWith("blob:")) URL.revokeObjectURL(url);
+    });
 
     setImages(files);
     setPreview(files.map((file) => URL.createObjectURL(file)));
@@ -128,20 +176,28 @@ function FeaturedPromotion() {
   const validate = () => {
     const newErrors = {};
 
-    if (!form.product_id) newErrors.product_id = "Product ID is required";
+    if (!isEditMode && !form.product_id) {
+      newErrors.product_id = "Product ID is required";
+    }
+
     if (!form.title.trim()) newErrors.title = "Title is required";
+
     if (!form.description.trim()) {
       newErrors.description = "Description is required";
     }
-    if (!form.start_date) newErrors.start_date = "Start date is required";
-    if (!form.expires_at) newErrors.expires_at = "Expiration date is required";
 
-    if (form.start_date && form.expires_at) {
-      const start = new Date(form.start_date);
-      const end = new Date(form.expires_at);
+    if (!isEditMode) {
+      if (!form.start_date) newErrors.start_date = "Start date is required";
+      if (!form.expires_at)
+        newErrors.expires_at = "Expiration date is required";
 
-      if (end <= start) {
-        newErrors.expires_at = "Expiration must be greater than start date";
+      if (form.start_date && form.expires_at) {
+        const start = new Date(form.start_date);
+        const end = new Date(form.expires_at);
+
+        if (end <= start) {
+          newErrors.expires_at = "Expiration must be greater than start date";
+        }
       }
     }
 
@@ -165,20 +221,26 @@ function FeaturedPromotion() {
 
     const formData = new FormData();
 
-    formData.append("product_id", form.product_id);
     formData.append("tag", form.tag);
     formData.append("title", form.title.trim());
     formData.append("description", form.description.trim());
-    formData.append("start_date", form.start_date);
-    formData.append("expires_at", form.expires_at);
 
     if (images[0]) {
       formData.append("image", images[0]);
     }
 
     try {
-      // await submit(formData);
-      const res = await submit(formData);
+      if (isEditMode) {
+        formData.append("promotion_id", editingPromotion.id);
+        await updateRejectedPromotion(formData);
+        return;
+      }
+
+      formData.append("product_id", form.product_id);
+      formData.append("start_date", form.start_date);
+      formData.append("expires_at", form.expires_at);
+
+      const res = await createPromotion(formData);
 
       const checkoutUrl =
         res?.data?.checkout_url ||
@@ -220,7 +282,7 @@ function FeaturedPromotion() {
   const formatDate = (value) => {
     if (!value) return "Not set";
 
-    const date = new Date(value);
+    const date = new Date(String(value).replace(" ", "T"));
     if (Number.isNaN(date.getTime())) return value;
 
     return date.toLocaleString("en-PH", {
@@ -232,10 +294,28 @@ function FeaturedPromotion() {
     });
   };
 
+  const formatPeso = (value) =>
+    `₱${Number(value || 0).toLocaleString("en-PH", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    })}`;
+
   const handleRefresh = () => {
     setCursor(null);
     setHistory([]);
     refetch();
+  };
+
+  const getStatusClass = (status) => {
+    if (status === "active" || status === "approved" || status === "paid") {
+      return "bg-emerald-50 text-emerald-700";
+    }
+
+    if (status === "rejected" || status === "failed" || status === "expired") {
+      return "bg-red-50 text-red-700";
+    }
+
+    return "bg-amber-50 text-amber-700";
   };
 
   const columns = [
@@ -269,18 +349,34 @@ function FeaturedPromotion() {
       ),
     },
     {
-      header: "Tag",
+      header: "Cost",
       render: (row) => (
-        <span className="text-sm font-medium text-slate-700">
-          {row.tag || "-"}
+        <span className="text-sm font-bold text-slate-800">
+          {formatPeso(row.total_price)}
         </span>
       ),
     },
     {
-      header: "Start Date",
+      header: "Payment",
       render: (row) => (
-        <span className="text-sm text-slate-500">
-          {formatDate(row.start_date)}
+        <span
+          className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold capitalize ${getStatusClass(
+            row.payment_status,
+          )}`}
+        >
+          {row.payment_status || "unpaid"}
+        </span>
+      ),
+    },
+    {
+      header: "Status",
+      render: (row) => (
+        <span
+          className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold capitalize ${getStatusClass(
+            row.status,
+          )}`}
+        >
+          {row.status || "pending"}
         </span>
       ),
     },
@@ -293,39 +389,31 @@ function FeaturedPromotion() {
       ),
     },
     {
-      header: "Status",
-      render: (row) => (
-        <span
-          className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold capitalize ${
-            row.status === "approved"
-              ? "bg-emerald-50 text-emerald-700"
-              : row.status === "rejected"
-                ? "bg-red-50 text-red-700"
-                : "bg-amber-50 text-amber-700"
-          }`}
-        >
-          {row.status || "pending"}
-        </span>
-      ),
-    },
-    {
       header: "Action",
       align: "right",
-      render: () => (
+      render: (row) => (
         <div className="flex justify-end gap-2">
-          <button
-            className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-blue-50 text-blue-600 transition hover:bg-blue-100"
-            title="Edit promotion"
-          >
-            <FiEdit className="text-lg" />
-          </button>
+          {row.status === "pending_payment" && row.xendit_checkout_url && (
+            <button
+              type="button"
+              onClick={() => window.location.assign(row.xendit_checkout_url)}
+              className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-orange-50 text-secondary transition hover:bg-orange-100"
+              title="Continue payment"
+            >
+              <FiCreditCard className="text-lg" />
+            </button>
+          )}
 
-          <button
-            className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-red-50 text-red-600 transition hover:bg-red-100"
-            title="Delete promotion"
-          >
-            <IoMdTrash className="text-lg" />
-          </button>
+          {row.status === "rejected" && row.payment_status === "paid" && (
+            <button
+              type="button"
+              onClick={() => handleEdit(row)}
+              className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-blue-50 text-blue-600 transition hover:bg-blue-100"
+              title="Revise rejected promotion"
+            >
+              <FiEdit className="text-lg" />
+            </button>
+          )}
         </div>
       ),
     },
@@ -369,6 +457,9 @@ function FeaturedPromotion() {
           handleImages={handleImages}
           handleSubmit={handleSubmit}
           submitLoading={submitLoading}
+          isEditMode={isEditMode}
+          editingPromotion={editingPromotion}
+          handleCancelEdit={resetForm}
         />
 
         <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
@@ -409,7 +500,7 @@ function FeaturedPromotion() {
               type="button"
               onClick={handleRefresh}
               disabled={loading}
-              className="inline-flex w-fit items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-semibold ml-5 text-slate-700 shadow-sm transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+              className="inline-flex w-fit items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
             >
               <FiRefreshCw
                 className={`text-green-600 ${loading ? "animate-spin" : ""}`}

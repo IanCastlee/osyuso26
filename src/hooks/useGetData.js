@@ -84,18 +84,6 @@ function useGetData(url, options = {}, autoFetch = true) {
   const [loading, setLoading] = useState(autoFetch);
   const [error, setError] = useState(null);
 
-  const isAccountBlockedError = (err) => {
-    const message = String(err?.message || "").toLowerCase();
-
-    return (
-      err?.status === 403 &&
-      (message.includes("restricted") ||
-        message.includes("inactive") ||
-        message.includes("banned") ||
-        message.includes("account no longer exists"))
-    );
-  };
-
   const redirectToSignin = (
     message = "Session expired. Please login again.",
   ) => {
@@ -140,13 +128,12 @@ function useGetData(url, options = {}, autoFetch = true) {
 
       const message = err?.message || "Network or server error";
 
-      if (err?.status === 401) {
-        redirectToSignin(message);
-        return;
-      }
-
-      if (isAccountBlockedError(err)) {
-        redirectToSignin(message);
+      if (err?.status === 401 || err?.status === 403) {
+        redirectToSignin(
+          err?.status === 403
+            ? "You do not have permission to access that page. Please sign in with the correct account."
+            : message,
+        );
         return;
       }
 
