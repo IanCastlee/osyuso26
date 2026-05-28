@@ -6,8 +6,6 @@ import { LazyLoadImage } from "react-lazy-load-image-component";
 import { useNavigate } from "react-router-dom";
 import useGetData from "../../hooks/useGetData";
 
-const ASSET_BASE_URL = "http://localhost/OSYUSO26/backend/";
-
 function CustomerHero() {
   const navigate = useNavigate();
 
@@ -15,11 +13,9 @@ function CustomerHero() {
 
   const fallbackImages = [adobo, milkTea];
 
-  const getImageUrl = (path, fallback) => {
-    if (!path) return fallback;
-    if (path.startsWith("http")) return path;
-
-    return ASSET_BASE_URL + path.replace(/^(\.\.\/|\/)+/, "");
+  const getImageUrl = (path) => {
+    if (!path) return "";
+    return path;
   };
 
   const subcategories = useMemo(() => {

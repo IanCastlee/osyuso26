@@ -132,7 +132,7 @@ function SidebarVendor() {
         >
           <span className="flex min-w-0 items-center gap-3">
             <FaClipboardList className="shrink-0 text-lg" />
-            <span className={labelClass}>Reservation</span>
+            <span className={labelClass}>Orders</span>
           </span>
 
           {openReservation ? (
@@ -149,7 +149,7 @@ function SidebarVendor() {
         >
           <div className="space-y-1 border-l border-white/10 pl-3">
             <NavLink to="/vendor/reserved" className={subItemClass}>
-              Reserved
+              Orders
             </NavLink>
             <NavLink to="/vendor/pending" className={subItemClass}>
               Pending

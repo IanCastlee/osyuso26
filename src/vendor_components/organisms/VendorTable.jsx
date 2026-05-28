@@ -64,12 +64,11 @@ function VendorTable({ columns = [], data = [], loading = false }) {
                     </div>
 
                     <p className="text-sm font-semibold text-slate-800">
-                      No products found
+                      No data found
                     </p>
 
                     <p className="mt-1 max-w-sm text-sm text-slate-500">
-                      Try adjusting your search or add a new product to your
-                      shop.
+                      Try adjusting your search or add a new data.
                     </p>
                   </div>
                 </td>

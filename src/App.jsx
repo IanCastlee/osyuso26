@@ -28,18 +28,8 @@ import DashboardAdmin from "./admin_components/pages/DashboardAdmin";
 import SidebarAdmin from "./admin_components/organisms/SidebarAdmin";
 import Reserved from "./vendor_components/pages/Reserved";
 import ReservationHistory from "./vendor_components/pages/ReservationHistory";
-import ActiveShop from "./admin_components/pages/ActiveShop";
-import NotActiveShop from "./admin_components/pages/NotActiveShop";
-import VerifiedAccount from "./admin_components/pages/VerifiedAccount";
-import NotVerifiedAccount from "./admin_components/pages/NotVerifiedAccount";
-import NotActiveAccount from "./admin_components/pages/NotActiveAccount";
-import MainCategory from "./admin_components/pages/MainCategory";
-import SubCategory from "./admin_components/pages/SubCategory";
-import TodaysSales from "./admin_components/pages/TodaysSales";
-import SalesLog from "./admin_components/pages/SalesLog";
+
 import Products from "./admin_components/pages/Products";
-import SpecialOffer from "./admin_components/pages/SpecialOffer";
-import NewArrival from "./admin_components/pages/NewArrival";
 import AllSpecialOffer from "./customer_components/pages/AllSpecialOffer";
 import MarketSetting from "./vendor_components/pages/MarketSetting";
 import ForgotPassword from "./auth_pages/ForgotPassword";
@@ -71,6 +61,10 @@ import FeaturedPromotions from "./customer_components/pages/FeaturedPromotions";
 import PromotionPaymentSuccess from "./vendor_components/organisms/PromotionPaymentSuccess";
 import PromotionPaymentFailed from "./vendor_components/organisms/PromotionPaymentFailed";
 import HomeRedirect from "./HomeRedirect";
+import OrdersFromVendor from "./admin_components/pages/OrdersFromVendor";
+import MyAccount from "./customer_components/pages/MyAccount ";
+import VendorPersonalAccount from "./vendor_components/pages/VendorPersonalAccount";
+import AdminPersonalAccount from "./admin_components/pages/AdminPersonalAccount";
 
 const CustomerLayout = () => {
   const location = useLocation();
@@ -127,6 +121,7 @@ const CustomerLayout = () => {
           <Route path="forgot-password" element={<ForgotPassword />} />
           <Route path="signup-seller" element={<SignUpSeller />} />
           <Route path="reset-password" element={<ResetPassword />} />
+          <Route path="/my-account" element={<MyAccount />} />
           {/* legal */}
           <Route
             path="/terms-and-conditions"
@@ -163,6 +158,7 @@ const VendorLayout = () => {
           <Route path="/archive-products" element={<ArchiveVendorProducts />} />
           <Route path="about" element={<AboutVendor />} />
           <Route path="market-settings" element={<MarketSetting />} />
+          <Route path="/my-account" element={<VendorPersonalAccount />} />
           <Route path="notifications" element={<AllVendorNotifcation />} />
 
           {/* payment redirect status */}
@@ -190,14 +186,8 @@ const AdminLayout = () => {
         <Routes>
           <Route index element={<DashboardAdmin />} />
 
-          {/* shop */}
-          <Route path="active-shop" element={<ActiveShop />} />
-          <Route path="not-active-shop" element={<NotActiveShop />} />
-
           {/* customer accnt */}
-          <Route path="verified-account" element={<VerifiedAccount />} />
-          <Route path="not-verified-account" element={<NotVerifiedAccount />} />
-          <Route path="not-active-account" element={<NotActiveAccount />} />
+
           <Route path="vendors" element={<Vendors />} />
           <Route path="registered-customers" element={<RegisteredCustomer />} />
           <Route
@@ -205,18 +195,14 @@ const AdminLayout = () => {
             element={<UnregisteredCustomer />}
           />
 
-          {/* categories */}
-          <Route path="main-categories" element={<MainCategory />} />
-          <Route path="sub-categories" element={<SubCategory />} />
+          {/* orders */}
+          <Route path="orders" element={<OrdersFromVendor />} />
 
           {/* setting */}
           <Route path="admin-settings" element={<AdminSetting />} />
+          <Route path="admin-account" element={<AdminPersonalAccount />} />
 
           <Route path="/legal-pages" element={<AdminLegalPages />} />
-
-          {/* sales */}
-          <Route path="todays-sales" element={<TodaysSales />} />
-          <Route path="sales-log" element={<SalesLog />} />
 
           {/* payout */}
           <Route path="payout-request" element={<PayoutRequest />} />
@@ -224,8 +210,6 @@ const AdminLayout = () => {
 
           {/* products */}
           <Route path="products" element={<Products />} />
-          <Route path="special-offer" element={<SpecialOffer />} />
-          <Route path="new-arrival" element={<NewArrival />} />
 
           {/* promotions */}
           <Route path="/promotions" element={<AdminPromotionApprovals />} />

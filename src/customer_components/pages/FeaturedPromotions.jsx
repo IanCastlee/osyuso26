@@ -12,8 +12,6 @@ import { FaBullhorn } from "react-icons/fa";
 import useGetData from "../../hooks/useGetData";
 import offer1 from "../../assets/hero_images/offer1.png";
 
-const ASSET_BASE_URL = "http://localhost/OSYUSO26/backend/";
-
 function FeaturedPromotions() {
   const navigate = useNavigate();
   const { data, loading } = useGetData("promotion/get-featured-promotions.php");
@@ -23,8 +21,7 @@ function FeaturedPromotions() {
 
   const getImageUrl = (path) => {
     if (!path) return offer1;
-    if (path.startsWith("http")) return path;
-    return ASSET_BASE_URL + path.replace(/^(\.\.\/|\/)+/, "");
+    return path;
   };
 
   const formatDate = (value) => {
@@ -72,7 +69,7 @@ function FeaturedPromotions() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 px-4 py-6 sm:px-6 lg:px-10">
+    <div className="min-h-screen bg-slate-50 px-4 py-6 sm:px-6 lg:px-[120px]">
       <div className="mx-auto max-w-7xl">
         <div className="mb-5 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
           <button
@@ -152,7 +149,7 @@ function FeaturedPromotions() {
                     onError={(e) => {
                       e.currentTarget.src = offer1;
                     }}
-                    className="h-full w-full object-cover"
+                    className="h-full w-full object-contain"
                   />
 
                   <span className="absolute left-3 top-3 rounded-full bg-secondary px-3 py-1 text-xs font-bold uppercase tracking-wide text-white">
@@ -200,7 +197,7 @@ function FeaturedPromotions() {
                 onError={(e) => {
                   e.currentTarget.src = offer1;
                 }}
-                className="h-full w-full object-cover"
+                className="h-full w-full object-contain"
               />
 
               <button

@@ -203,16 +203,25 @@ function CustomerSidebar({ isOpen, onClose }) {
                 className="flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-sm font-semibold hover:bg-white/10"
               >
                 <span className="flex min-w-0 items-center gap-2">
-                  <HiMiniUserCircle className="shrink-0 text-2xl" />
+                  {user?.profile_picture ? (
+                    <img
+                      src={user.profile_picture}
+                      alt={user?.fullname || "User"}
+                      className="h-8 w-8 shrink-0 rounded-full border border-white/20 object-cover"
+                    />
+                  ) : (
+                    <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-white/15 text-xs font-black uppercase text-white">
+                      {getInitials(user?.fullname)}
+                    </span>
+                  )}
+
                   <span className="truncate">
                     {user?.fullname?.split(" ")[0] || "User"}
                   </span>
                 </span>
 
                 <MdKeyboardArrowDown
-                  className={`shrink-0 transition ${
-                    openUserMenu ? "rotate-180" : ""
-                  }`}
+                  className={`shrink-0 transition ${openUserMenu ? "rotate-180" : ""}`}
                 />
               </button>
 
@@ -220,7 +229,7 @@ function CustomerSidebar({ isOpen, onClose }) {
                 <div className="mt-2 space-y-1">
                   <button
                     onClick={() => {
-                      go("/account");
+                      go("/my-account");
                       setOpenUserMenu(false);
                     }}
                     className="w-full rounded-lg px-3 py-2 text-left text-sm text-white/85 hover:bg-white/10"
@@ -259,5 +268,15 @@ function CustomerSidebar({ isOpen, onClose }) {
     </>
   );
 }
+function getInitials(name = "") {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
 
+  if (!parts.length) return "U";
+
+  return parts
+    .slice(0, 2)
+    .map((part) => part[0])
+    .join("")
+    .toUpperCase();
+}
 export default CustomerSidebar;

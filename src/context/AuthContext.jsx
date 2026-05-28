@@ -5,24 +5,66 @@ const AuthContext = createContext();
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
+  const [token, setToken] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  //  AUTO RESTORE USER ON REFRESH
+  const getStoredAuth = () => {
+    try {
+      const raw = sessionStorage.getItem("auth-storage");
+      if (!raw) return { token: null, user: null };
+
+      const parsed = JSON.parse(raw);
+
+      return {
+        token: parsed?.state?.token || parsed?.token || null,
+        user: parsed?.state?.user || parsed?.user || null,
+      };
+    } catch {
+      return { token: null, user: null };
+    }
+  };
+
+  const saveAuth = (authToken, userData) => {
+    sessionStorage.setItem(
+      "auth-storage",
+      JSON.stringify({
+        state: {
+          token: authToken,
+          user: userData,
+        },
+      }),
+    );
+  };
+
   useEffect(() => {
     const initAuth = async () => {
       try {
-        const tokenData = sessionStorage.getItem("auth-storage");
+        const stored = getStoredAuth();
 
-        if (!tokenData) {
+        if (!stored.token) {
           setUser(null);
+          setToken(null);
           return;
         }
 
+        setToken(stored.token);
+
         const res = await fetchInstance("auth/user.php");
-        setUser(res.user);
+        const fetchedUser = res?.data?.user || res?.user || stored.user;
+
+        if (!fetchedUser) {
+          throw new Error("User not found");
+        }
+
+        setUser(fetchedUser);
+        saveAuth(stored.token, fetchedUser);
       } catch (err) {
         sessionStorage.removeItem("auth-storage");
+        localStorage.removeItem("auth-storage");
+        localStorage.removeItem("token");
+        localStorage.removeItem("user");
         setUser(null);
+        setToken(null);
       } finally {
         setLoading(false);
       }
@@ -31,19 +73,27 @@ export function AuthProvider({ children }) {
     initAuth();
   }, []);
 
-  //  LOGIN (ONLY SET STATE)
-  const login = (userData) => {
+  const login = (userData, authToken) => {
     setUser(userData);
+    setToken(authToken);
+
+    if (authToken && userData) {
+      saveAuth(authToken, userData);
+    }
   };
 
-  //  LOGOUT
   const logout = () => {
     sessionStorage.removeItem("auth-storage");
     localStorage.removeItem("auth-storage");
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+
     setUser(null);
+    setToken(null);
   };
+
   return (
-    <AuthContext.Provider value={{ user, login, logout, loading }}>
+    <AuthContext.Provider value={{ user, token, login, logout, loading }}>
       {children}
     </AuthContext.Provider>
   );

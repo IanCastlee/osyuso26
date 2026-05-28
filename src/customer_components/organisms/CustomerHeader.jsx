@@ -207,17 +207,29 @@ function CustomerHeader() {
             {user ? (
               <div ref={userMenuRef} className="relative">
                 <button
-                  onClick={() => setOpenUserMenu((value) => !value)}
-                  className="inline-flex cursor-pointer items-center gap-1 rounded-full py-1 pl-1 pr-2 transition hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-white/40"
+                  onClick={() => setOpenUserMenu(!openUserMenu)}
+                  className="flex w-full cursor-pointer items-center justify-between rounded-lg px-3 py-2.5 text-sm font-semibold hover:bg-white/10"
                 >
-                  <HiMiniUserCircle className="text-2xl" />
+                  <span className="flex min-w-0 items-center gap-2">
+                    {user?.profile_picture ? (
+                      <img
+                        src={user.profile_picture}
+                        alt={user?.fullname || "User"}
+                        className="h-6 w-6 shrink-0 rounded-full border border-white/20 object-cover"
+                      />
+                    ) : (
+                      <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-white/15 text-xs font-black uppercase text-white">
+                        {getInitials(user?.fullname)}
+                      </span>
+                    )}
 
-                  <span className="max-w-32 truncate font-semibold">
-                    {user?.fullname?.split(" ")[0] || "User"}
+                    <span className="truncate">
+                      {user?.fullname?.split(" ")[0] || "User"}
+                    </span>
                   </span>
 
                   <MdKeyboardArrowDown
-                    className={`text-base transition ${openUserMenu ? "rotate-180" : ""}`}
+                    className={`shrink-0 transition ${openUserMenu ? "rotate-180" : ""}`}
                   />
                 </button>
 
@@ -240,7 +252,7 @@ function CustomerHeader() {
                     <div className="p-1.5">
                       <button
                         onClick={() => {
-                          navigate("/account");
+                          navigate("/my-account");
                           setOpenUserMenu(false);
                         }}
                         className="flex w-full cursor-pointer items-center gap-3 rounded-lg px-3 py-2.5 text-left font-medium text-slate-700 transition hover:bg-slate-50 hover:text-slate-950"
@@ -409,5 +421,15 @@ function CustomerHeader() {
     </>
   );
 }
+function getInitials(name = "") {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
 
+  if (!parts.length) return "U";
+
+  return parts
+    .slice(0, 2)
+    .map((part) => part[0])
+    .join("")
+    .toUpperCase();
+}
 export default CustomerHeader;

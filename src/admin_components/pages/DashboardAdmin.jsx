@@ -85,7 +85,7 @@ function DashboardAdmin() {
             <div className="absolute right-0 z-50 mt-2 w-44 overflow-hidden rounded-md bg-white text-black shadow-lg">
               <button
                 onClick={() => {
-                  navigate("/account");
+                  navigate("/admin/admin-account");
                   setOpenUserMenu(false);
                 }}
                 className="w-full px-4 py-2 text-left hover:bg-gray-100"

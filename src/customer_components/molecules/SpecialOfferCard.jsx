@@ -232,7 +232,7 @@ function SpecialOfferCard() {
                 onError={(e) => {
                   e.currentTarget.src = offer1;
                 }}
-                className="h-full w-full object-cover"
+                className="h-full w-full object-contain"
               />
 
               <button

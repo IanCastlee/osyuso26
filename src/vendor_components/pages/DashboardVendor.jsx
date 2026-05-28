@@ -74,7 +74,7 @@ function DashboardVendor() {
                 <div className="p-1.5">
                   <button
                     onClick={() => {
-                      navigate("/account");
+                      navigate("/vendor/my-account");
                       setOpenUserMenu(false);
                     }}
                     className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left font-medium text-slate-700 transition hover:bg-slate-50 hover:text-slate-950"

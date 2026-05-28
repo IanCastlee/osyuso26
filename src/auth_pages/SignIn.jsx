@@ -1,8 +1,8 @@
 import React, { useState } from "react";
-import { FaEnvelope, FaLock, FaEye, FaEyeSlash } from "react-icons/fa";
-import { RxQuestionMarkCircled } from "react-icons/rx";
-import { useNavigate } from "react-router-dom";
+import { FaEnvelope, FaLock } from "react-icons/fa";
 import { PiShoppingCartSimpleFill } from "react-icons/pi";
+import { RxQuestionMarkCircled } from "react-icons/rx";
+import { useLocation, useNavigate } from "react-router-dom";
 
 import InputField from "../customer_components/atoms/InputField";
 import useFormSubmit from "../hooks/useFormSubmit";
@@ -12,6 +12,7 @@ import fetchInstance from "../utils/fetchInstance";
 
 function SignIn() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { showToast } = useToast();
   const { login } = useAuth();
 
@@ -20,64 +21,46 @@ function SignIn() {
     password: "",
   });
 
-  const [rememberMe, setRememberMe] = useState(false);
   const [errors, setErrors] = useState({});
-  const [showPassword, setShowPassword] = useState(false);
+
+  const { submit, loading, error } = useFormSubmit("auth/sign-in.php");
 
   const handleChange = (e) => {
-    setForm({
-      ...form,
-      [e.target.name]: e.target.value,
-    });
+    const { name, value } = e.target;
+
+    setForm((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+
+    setErrors((prev) => ({
+      ...prev,
+      [name]: "",
+    }));
   };
 
-  const handleUseTesterAccount = () => {
-    setForm({
-      email: "tester@gmail.com",
-      password: "Tester@8",
-    });
+  const redirectByRole = (userData) => {
+    const role = String(userData?.role || "").toLowerCase();
 
-    setErrors({});
+    if (role === "admin") {
+      navigate("/admin", { replace: true });
+      return;
+    }
+
+    if (role === "vendor") {
+      navigate("/vendor", { replace: true });
+      return;
+    }
+
+    const from = location.state?.from;
+
+    if (from && from !== "/signin") {
+      navigate(from, { replace: true });
+      return;
+    }
+
+    navigate("/", { replace: true });
   };
-
-  const { submit, loading } = useFormSubmit(
-    "auth/sign-in.php",
-    async (data) => {
-      try {
-        const storage = rememberMe ? localStorage : sessionStorage;
-
-        storage.setItem(
-          "auth-storage",
-          JSON.stringify({
-            state: {
-              token: data.token,
-              role: data.role,
-            },
-          }),
-        );
-
-        const res = await fetchInstance("auth/user.php");
-
-        login(res.user);
-
-        showToast({
-          type: "success",
-          message: "Login successful!",
-          duration: 3000,
-        });
-
-        if (data.role === "admin") {
-          navigate("/admin");
-        } else if (data.role === "vendor") {
-          navigate("/vendor");
-        } else {
-          navigate("/");
-        }
-      } catch (err) {
-        console.error(err);
-      }
-    },
-  );
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -88,13 +71,12 @@ function SignIn() {
         message: "No internet connection. Please check your network.",
         duration: 5000,
       });
-
       return;
     }
 
-    let newErrors = {};
+    const newErrors = {};
 
-    if (!form.email) {
+    if (!form.email.trim()) {
       newErrors.email = "Email is required";
     }
 
@@ -104,29 +86,56 @@ function SignIn() {
 
     setErrors(newErrors);
 
-    if (Object.keys(newErrors).length === 0) {
-      try {
-        await submit({
-          email: form.email,
-          password: form.password,
-        });
-      } catch (err) {
-        console.error(err.message);
+    if (Object.keys(newErrors).length > 0) return;
 
-        showToast({
-          type: "error",
-          message: navigator.onLine
-            ? err?.message || "Login failed"
-            : "No internet connection. Please check your network.",
-          duration: 5000,
-        });
+    try {
+      const res = await submit({
+        email: form.email.trim(),
+        password: form.password,
+      });
+
+      const payload = res?.data || res || {};
+      const authToken = payload?.token || res?.token;
+      const signinUser = payload?.user || res?.user || null;
+
+      if (!authToken) {
+        throw new Error("Login token was not returned by the server.");
       }
+
+      sessionStorage.setItem(
+        "auth-storage",
+        JSON.stringify({
+          state: {
+            token: authToken,
+            user: signinUser,
+          },
+        }),
+      );
+
+      const userRes = await fetchInstance("auth/user.php");
+      const fullUser = userRes?.data?.user || userRes?.user || signinUser;
+
+      if (!fullUser) {
+        throw new Error("User profile was not returned by the server.");
+      }
+
+      login(fullUser, authToken);
+
+      showToast({
+        type: "success",
+        message: "Signed in successfully.",
+        duration: 2500,
+      });
+
+      redirectByRole(fullUser);
+    } catch (err) {
+      showToast({
+        type: "error",
+        message: err?.message || "Sign in failed",
+        duration: 4000,
+      });
     }
   };
-
-  const handleFaqClick = () => navigate("/faq");
-  const handleSignUpClick = () => navigate("/signup");
-  const handleForgotPassword = () => navigate("/forgot-password");
 
   return (
     <div className="min-h-screen bg-gray-100">
@@ -135,12 +144,16 @@ function SignIn() {
           onClick={() => navigate("/")}
           className="flex cursor-pointer items-center text-xl font-bold tracking-wide sm:text-2xl"
         >
-          OSY <PiShoppingCartSimpleFill className="mx-1" /> SO
+          OSY
+          <PiShoppingCartSimpleFill className="mx-1" />
+          SO
         </h2>
 
         <button
-          onClick={handleFaqClick}
+          type="button"
+          onClick={() => navigate("/faq")}
           className="flex items-center gap-1 rounded-full px-3 py-2 text-xs font-medium transition hover:bg-white/15"
+          title="FAQ"
         >
           <RxQuestionMarkCircled className="text-base" />
           FAQ
@@ -156,68 +169,31 @@ function SignIn() {
               </div>
 
               <h1 className="mt-6 text-3xl font-bold leading-tight">
-                Welcome back to your local marketplace.
+                Welcome back to OSYUSO.
               </h1>
 
               <p className="mt-4 text-sm leading-7 text-white/80">
-                Sign in to continue browsing fresh products, manage your cart,
-                and track your orders from nearby sellers.
+                Sign in to continue shopping fresh local products, manage your
+                orders, and access your account.
               </p>
             </div>
 
             <div className="rounded-xl bg-white/10 p-4 text-sm leading-6 text-white/80">
-              Fresh meat, fruits, and vegetables from trusted local shops in
-              your community.
+              Fresh products from nearby sellers, ready when you are.
             </div>
           </section>
 
           <section className="p-5 sm:p-6 md:p-8">
             <div className="mb-6 text-center sm:text-left">
               <p className="text-xs font-semibold uppercase tracking-wide text-secondary">
-                Customer Login
+                Customer Account
               </p>
 
-              <h1 className="mt-2 text-2xl font-bold text-gray-900">
-                Welcome Back
-              </h1>
+              <h1 className="mt-2 text-2xl font-bold text-gray-900">Sign In</h1>
 
               <p className="mt-2 text-sm leading-6 text-gray-500">
-                Sign in to continue shopping with OSYUSO.
+                Enter your account details to continue.
               </p>
-            </div>
-
-            {/* Tester Account Suggestion */}
-            <div className="mb-5 rounded-xl border border-orange-200 bg-orange-50 p-4">
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                  <p className="text-sm font-semibold text-secondary">
-                    Try Demo Account
-                  </p>
-
-                  <p className="mt-1 text-xs text-gray-600">
-                    Use our tester account for quick access.
-                  </p>
-
-                  <div className="mt-2 text-xs text-gray-700">
-                    <p>
-                      <span className="font-semibold">Email:</span>{" "}
-                      tester@gmail.com
-                    </p>
-
-                    <p>
-                      <span className="font-semibold">Password:</span> Tester@8
-                    </p>
-                  </div>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={handleUseTesterAccount}
-                  className="rounded-lg bg-secondary px-4 py-2 text-sm font-semibold text-white transition hover:opacity-90"
-                >
-                  Use Account
-                </button>
-              </div>
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-4">
@@ -232,69 +208,50 @@ function SignIn() {
                 error={errors.email}
               />
 
-              <div className="relative">
-                <InputField
-                  label="Password"
-                  name="password"
-                  type={showPassword ? "text" : "password"}
-                  value={form.password}
-                  onChange={handleChange}
-                  placeholder="Enter password"
-                  icon={FaLock}
-                  error={errors.password}
-                />
+              <InputField
+                label="Password"
+                name="password"
+                type="password"
+                value={form.password}
+                onChange={handleChange}
+                placeholder="Enter your password"
+                icon={FaLock}
+                error={errors.password}
+              />
 
+              <div className="flex justify-end">
                 <button
                   type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-[38px] text-gray-500 transition hover:text-gray-700"
-                  aria-label={showPassword ? "Hide password" : "Show password"}
+                  onClick={() => navigate("/forgot-password")}
+                  className="text-xs font-semibold text-secondary hover:underline"
                 >
-                  {showPassword ? <FaEyeSlash /> : <FaEye />}
+                  Forgot password?
                 </button>
               </div>
 
-              <div className="flex items-center justify-between gap-3">
-                <label className="flex cursor-pointer select-none items-center gap-2 text-xs text-gray-600">
-                  <input
-                    type="checkbox"
-                    checked={rememberMe}
-                    onChange={(e) => setRememberMe(e.target.checked)}
-                    className="h-4 w-4 cursor-pointer accent-orange-500"
-                  />
-                  Remember me
-                </label>
-
-                <button
-                  type="button"
-                  onClick={handleForgotPassword}
-                  className="text-xs font-medium text-secondary hover:underline"
-                >
-                  Forgot Password?
-                </button>
-              </div>
+              {error && (
+                <div className="rounded-lg bg-red-50 px-4 py-3 text-center text-xs font-medium text-red-600">
+                  {error}
+                </div>
+              )}
 
               <button
                 type="submit"
                 disabled={loading}
-                className="flex w-full items-center justify-center gap-2 rounded-lg bg-secondary px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+                className="w-full rounded-lg bg-secondary px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
               >
-                {loading && (
-                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                )}
-
                 {loading ? "Signing in..." : "Sign In"}
               </button>
             </form>
 
             <p className="mt-6 text-center text-xs text-gray-500">
-              Don’t have an account?{" "}
+              Don&apos;t have an account?{" "}
               <button
                 type="button"
-                onClick={handleSignUpClick}
+                onClick={() => navigate("/signup")}
                 className="font-semibold text-secondary hover:underline"
               >
-                Sign Up
+                Create Account
               </button>
             </p>
           </section>
