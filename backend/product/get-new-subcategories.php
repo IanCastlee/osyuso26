@@ -8,6 +8,7 @@ error_reporting(E_ALL);
 ini_set("display_errors", 0);
 
 require_once "../dbConn.php";
+require_once "../helpers/cache.php";
 
 function response($success, $message, $data = null, $status = 200) {
     if (ob_get_length()) {
@@ -26,7 +27,19 @@ function response($success, $message, $data = null, $status = 200) {
 }
 
 try {
-    $limit = 2;
+    $cacheKey = "new_subcategories:" . ($_SERVER["QUERY_STRING"] ?? "");
+    $cached = appGetCache($cacheKey, 120);
+
+    if ($cached !== null) {
+        if (ob_get_length()) {
+            ob_clean();
+        }
+
+        echo json_encode($cached);
+        exit;
+    }
+
+    $limit = 5;
 
     $stmt = $conn->prepare("
         SELECT
@@ -57,12 +70,9 @@ try {
             ) AS product_count
 
         FROM subcategories sc
-
         INNER JOIN categories c
             ON c.id = sc.category_id
-
         ORDER BY sc.created_at DESC, sc.id DESC
-
         LIMIT ?
     ");
 
@@ -85,7 +95,20 @@ try {
         $rows[] = $row;
     }
 
-    response(true, "Newest subcategories fetched", $rows);
+    $response = [
+        "success" => true,
+        "message" => "Newest subcategories fetched",
+        "data" => $rows
+    ];
+
+    appSetCache($cacheKey, $response);
+
+    if (ob_get_length()) {
+        ob_clean();
+    }
+
+    echo json_encode($response);
+    exit;
 } catch (Throwable $e) {
     error_log("Newest subcategories failed: " . $e->getMessage());
 

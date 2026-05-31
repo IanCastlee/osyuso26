@@ -48,7 +48,7 @@ function SidebarVendor() {
       onMouseEnter={() => setExpanded(true)}
       onMouseLeave={() => setExpanded(false)}
       onFocus={() => setExpanded(true)}
-      className={`flex h-screen shrink-0 flex-col overflow-hidden bg-secondary text-white transition-all duration-300 ${
+      className={`flex h-screen cursor-pointer shrink-0 flex-col overflow-hidden bg-secondary text-white transition-all duration-300 ${
         expanded ? "w-[270px]" : "w-[76px]"
       }`}
     >

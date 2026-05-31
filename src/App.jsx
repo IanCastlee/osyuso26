@@ -65,6 +65,9 @@ import OrdersFromVendor from "./admin_components/pages/OrdersFromVendor";
 import MyAccount from "./customer_components/pages/MyAccount ";
 import VendorPersonalAccount from "./vendor_components/pages/VendorPersonalAccount";
 import AdminPersonalAccount from "./admin_components/pages/AdminPersonalAccount";
+import AdminCategoryManager from "./admin_components/pages/AdminCategoryManager";
+import AdminCategoryRequests from "./admin_components/pages/AdminCategoryRequests";
+import AllAdminNotification from "./admin_components/pages/AllAdminNotification";
 
 const CustomerLayout = () => {
   const location = useLocation();
@@ -201,6 +204,9 @@ const AdminLayout = () => {
           {/* setting */}
           <Route path="admin-settings" element={<AdminSetting />} />
           <Route path="admin-account" element={<AdminPersonalAccount />} />
+          <Route path="categories" element={<AdminCategoryManager />} />
+          <Route path="category-requests" element={<AdminCategoryRequests />} />
+          <Route path="notifications" element={<AllAdminNotification />} />
 
           <Route path="/legal-pages" element={<AdminLegalPages />} />
 

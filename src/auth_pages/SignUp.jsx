@@ -134,7 +134,7 @@ function SignUp() {
         </button>
       </header>
 
-      <main className="flex min-h-[calc(100vh-4rem)] w-full items-center justify-center px-4 py-8 sm:px-6">
+      <main className="flex min-h-[calc(100vh-4rem)] w-full items-center justify-center px-2 py-8 sm:px-6">
         <div className="grid w-full max-w-5xl overflow-hidden rounded-2xl bg-white shadow-sm lg:grid-cols-[0.9fr_1.1fr]">
           <section className="hidden bg-secondary p-8 text-white lg:flex lg:flex-col lg:justify-between">
             <div>
@@ -173,7 +173,7 @@ function SignUp() {
               </p>
             </div>
 
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={handleSubmit} className="space-y-4 mb-1">
               <div className="grid gap-4 sm:grid-cols-2">
                 <InputField
                   label="First Name"

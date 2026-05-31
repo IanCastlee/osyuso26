@@ -1,6 +1,15 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { FaBox, FaMoneyBill } from "react-icons/fa";
-import { FiImage, FiPackage, FiPercent, FiTag, FiX } from "react-icons/fi";
+import {
+  FiAlertCircle,
+  FiImage,
+  FiPackage,
+  FiPercent,
+  FiRefreshCw,
+  FiSend,
+  FiTag,
+  FiX,
+} from "react-icons/fi";
 
 import InputField from "../atoms/InputField";
 import useGetData from "../../hooks/useGetData";
@@ -41,6 +50,7 @@ function AddVendorProduct_Form({
   const [form, setForm] = useState(EMPTY_FORM);
   const [errors, setErrors] = useState({});
   const [preview, setPreview] = useState([]);
+  const [openCategoryRequest, setOpenCategoryRequest] = useState(false);
 
   const endpoint = isEdit
     ? "product/update-product.php"
@@ -104,6 +114,9 @@ function AddVendorProduct_Form({
 
     onSuccess?.(res);
   });
+
+  const { submit: requestCategorySubmit, loading: requestingCategory } =
+    useFormSubmit("category/request-category.php");
 
   useEffect(() => {
     if (!isEdit || !initialData) {
@@ -303,7 +316,6 @@ function AddVendorProduct_Form({
     data.append("category_id", form.category_id);
     data.append("subcategory_id", form.subcategory_id);
     data.append("unit_type", form.unit_type);
-
     data.append("sale_type", form.sale_type);
     data.append("sale_value", form.sale_type === "none" ? 0 : form.sale_value);
     data.append("sale_starts_at", form.sale_starts_at || "");
@@ -316,7 +328,31 @@ function AddVendorProduct_Form({
     try {
       await submit(data);
     } catch (err) {
-      console.error(err);
+      showToast({
+        type: "error",
+        message: err?.message || "Failed to save product.",
+        duration: 4000,
+      });
+    }
+  };
+
+  const handleCategoryRequest = async (payload) => {
+    try {
+      await requestCategorySubmit(payload);
+
+      showToast({
+        type: "success",
+        message: "Category request sent to admin.",
+        duration: 4000,
+      });
+
+      setOpenCategoryRequest(false);
+    } catch (err) {
+      showToast({
+        type: "error",
+        message: err?.message || "Failed to send category request.",
+        duration: 4000,
+      });
     }
   };
 
@@ -443,6 +479,7 @@ function AddVendorProduct_Form({
                     <label className="mb-1 block text-sm font-medium text-slate-700">
                       Sale Starts
                     </label>
+
                     <input
                       type="datetime-local"
                       name="sale_starts_at"
@@ -456,6 +493,7 @@ function AddVendorProduct_Form({
                     <label className="mb-1 block text-sm font-medium text-slate-700">
                       Sale Ends
                     </label>
+
                     <input
                       type="datetime-local"
                       name="sale_ends_at"
@@ -525,6 +563,34 @@ function AddVendorProduct_Form({
                 error={errors.subcategory_id}
               />
 
+              <div className="sm:col-span-2 rounded-xl border border-orange-100 bg-orange-50 p-4">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="flex gap-3">
+                    <FiAlertCircle className="mt-0.5 shrink-0 text-orange-500" />
+
+                    <div>
+                      <p className="text-sm font-bold text-orange-700">
+                        Can't find the right category?
+                      </p>
+
+                      <p className="mt-1 text-xs leading-5 text-orange-700/80">
+                        Send a request to admin. Once approved, you can use it
+                        for your product.
+                      </p>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => setOpenCategoryRequest(true)}
+                    className="inline-flex items-center justify-center gap-2 rounded-lg bg-secondary px-4 py-2 text-xs font-bold text-white shadow-sm transition hover:opacity-90"
+                  >
+                    <FiSend />
+                    Request
+                  </button>
+                </div>
+              </div>
+
               <div className="sm:col-span-2">
                 <SelectField
                   label="Unit Type"
@@ -593,7 +659,7 @@ function AddVendorProduct_Form({
               <div className="mt-4 grid grid-cols-3 gap-2">
                 {preview.map((img, index) => (
                   <div
-                    key={img}
+                    key={`${img}-${index}`}
                     className="group relative aspect-square overflow-hidden rounded-xl border border-slate-200 bg-slate-100"
                   >
                     <img
@@ -632,6 +698,216 @@ function AddVendorProduct_Form({
             )}
           </button>
         </aside>
+      </form>
+
+      <CategoryRequestModal
+        open={openCategoryRequest}
+        categories={categoryList}
+        defaultCategoryId={form.category_id}
+        loading={requestingCategory}
+        onClose={() => setOpenCategoryRequest(false)}
+        onSubmit={handleCategoryRequest}
+      />
+    </div>
+  );
+}
+
+function CategoryRequestModal({
+  open,
+  categories,
+  defaultCategoryId,
+  loading,
+  onClose,
+  onSubmit,
+}) {
+  const [form, setForm] = useState({
+    category_id: "",
+    category_name: "",
+    subcategory_name: "",
+    reason: "",
+  });
+
+  const [errors, setErrors] = useState({});
+
+  useEffect(() => {
+    if (!open) return;
+
+    setForm({
+      category_id: defaultCategoryId || "",
+      category_name: "",
+      subcategory_name: "",
+      reason: "",
+    });
+
+    setErrors({});
+  }, [open, defaultCategoryId]);
+
+  if (!open) return null;
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+
+    setForm((prev) => ({
+      ...prev,
+      [name]: value,
+      ...(name === "category_id" && value ? { category_name: "" } : {}),
+    }));
+
+    setErrors((prev) => ({
+      ...prev,
+      [name]: "",
+    }));
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    const err = {};
+
+    if (!form.category_id && !form.category_name.trim()) {
+      err.category_name = "Select existing category or enter new category";
+    }
+
+    if (!form.subcategory_name.trim()) {
+      err.subcategory_name = "Subcategory name is required";
+    }
+
+    setErrors(err);
+
+    if (Object.keys(err).length > 0) return;
+
+    await onSubmit({
+      category_id: form.category_id,
+      category_name: form.category_name.trim(),
+      subcategory_name: form.subcategory_name.trim(),
+      reason: form.reason.trim(),
+    });
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4">
+      <form
+        onSubmit={handleSubmit}
+        className="w-full max-w-lg rounded-2xl bg-white p-5 shadow-xl"
+      >
+        <div className="mb-5 flex items-start justify-between gap-4">
+          <div>
+            <h2 className="text-lg font-bold text-slate-950">
+              Request Category
+            </h2>
+
+            <p className="mt-1 text-sm text-slate-500">
+              Admin will review this before it becomes available.
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={onClose}
+            className="grid h-9 w-9 place-items-center rounded-lg bg-slate-100 text-slate-500 hover:bg-red-50 hover:text-red-500"
+          >
+            <FiX />
+          </button>
+        </div>
+
+        <div className="space-y-4">
+          <div>
+            <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-slate-400">
+              Existing Category
+            </label>
+
+            <select
+              name="category_id"
+              value={form.category_id}
+              onChange={handleChange}
+              className="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm outline-none focus:border-secondary focus:bg-white"
+            >
+              <option value="">Request a new category</option>
+
+              {categories.map((category) => (
+                <option key={category.id} value={category.id}>
+                  {category.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {!form.category_id && (
+            <div>
+              <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-slate-400">
+                New Category Name
+              </label>
+
+              <input
+                name="category_name"
+                value={form.category_name}
+                onChange={handleChange}
+                placeholder="Example: Native Delicacies"
+                className="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm outline-none focus:border-secondary focus:bg-white"
+              />
+
+              {errors.category_name && (
+                <p className="mt-1 text-xs font-medium text-red-500">
+                  {errors.category_name}
+                </p>
+              )}
+            </div>
+          )}
+
+          <div>
+            <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-slate-400">
+              Requested Subcategory
+            </label>
+
+            <input
+              name="subcategory_name"
+              value={form.subcategory_name}
+              onChange={handleChange}
+              placeholder="Example: Kakanin"
+              className="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm outline-none focus:border-secondary focus:bg-white"
+            />
+
+            {errors.subcategory_name && (
+              <p className="mt-1 text-xs font-medium text-red-500">
+                {errors.subcategory_name}
+              </p>
+            )}
+          </div>
+
+          <div>
+            <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-slate-400">
+              Reason / Example Product
+            </label>
+
+            <textarea
+              name="reason"
+              value={form.reason}
+              onChange={handleChange}
+              placeholder="Example: I want to add puto, kutsinta, and bibingka."
+              rows={4}
+              className="w-full resize-none rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm outline-none focus:border-secondary focus:bg-white"
+            />
+          </div>
+        </div>
+
+        <div className="mt-5 flex justify-end gap-2">
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-bold text-slate-700 hover:bg-slate-50"
+          >
+            Cancel
+          </button>
+
+          <button
+            type="submit"
+            disabled={loading}
+            className="inline-flex items-center gap-2 rounded-xl bg-secondary px-4 py-2 text-sm font-bold text-white hover:opacity-90 disabled:opacity-50"
+          >
+            {loading ? <FiRefreshCw className="animate-spin" /> : <FiSend />}
+            Send Request
+          </button>
+        </div>
       </form>
     </div>
   );

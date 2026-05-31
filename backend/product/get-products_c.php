@@ -3,10 +3,14 @@ ob_start();
 
 include("../header.php");
 include("../dbConn.php");
-header("Content-Type: application/json");
+require_once "../helpers/cache.php";
+
+header("Content-Type: application/json; charset=UTF-8");
 
 error_reporting(E_ALL);
 ini_set("display_errors", 0);
+
+date_default_timezone_set("Asia/Manila");
 
 function response($success, $message, $data = null, $extra = [], $status = 200) {
     if (ob_get_length()) {
@@ -39,6 +43,50 @@ function saleLabel($saleType, $saleValue) {
     return null;
 }
 
+function isShopOpen($shop) {
+    if (($shop["shop_status"] ?? "") !== "active") {
+        return false;
+    }
+
+    if ((int)($shop["is_accepting_orders"] ?? 1) !== 1) {
+        return false;
+    }
+
+    if ((int)($shop["operating_hours_enabled"] ?? 0) !== 1) {
+        return true;
+    }
+
+    if (empty($shop["opens_at"]) || empty($shop["closes_at"])) {
+        return true;
+    }
+
+    $now = date("H:i:s");
+    $opensAt = $shop["opens_at"];
+    $closesAt = $shop["closes_at"];
+
+    if ($opensAt <= $closesAt) {
+        return $now >= $opensAt && $now <= $closesAt;
+    }
+
+    return $now >= $opensAt || $now <= $closesAt;
+}
+
+function getShopClosedMessage($shop) {
+    if (($shop["shop_status"] ?? "") !== "active") {
+        return "Shop is unavailable.";
+    }
+
+    if (!empty($shop["closed_message"])) {
+        return $shop["closed_message"];
+    }
+
+    if ((int)($shop["is_accepting_orders"] ?? 1) !== 1) {
+        return "Shop is closed now.";
+    }
+
+    return "Shop is closed now. Please order during operating hours.";
+}
+
 try {
     $subcategory_id = $_GET["subcategory_id"] ?? null;
     $category_id = $_GET["category_id"] ?? null;
@@ -57,6 +105,18 @@ try {
         response(false, "Missing filter", null, [], 400);
     }
 
+    $cacheKey = "get-products_c:" . ($_SERVER["QUERY_STRING"] ?? "");
+    $cached = appGetCache($cacheKey, 30);
+
+    if ($cached !== null) {
+        if (ob_get_length()) {
+            ob_clean();
+        }
+
+        echo json_encode($cached);
+        exit;
+    }
+
     $sql = "
         SELECT
             p.id,
@@ -71,14 +131,21 @@ try {
 
             pi.image_path,
 
-            s.shop_name
+            s.id AS shop_id,
+            s.shop_name,
+            s.status AS shop_status,
+            s.is_accepting_orders,
+            s.operating_hours_enabled,
+            s.opens_at,
+            s.closes_at,
+            s.closed_message
         FROM products p
 
         LEFT JOIN product_images pi
             ON pi.product_id = p.id
             AND pi.is_primary = 1
 
-        LEFT JOIN shops s
+        INNER JOIN shops s
             ON s.id = p.shop_id
 
         WHERE p.status = 'active'
@@ -165,10 +232,29 @@ try {
             $finalPrice = max(0, $finalPrice);
         }
 
-        $row["original_price"] = $originalPrice;
-        $row["final_price"] = $finalPrice;
+        $isOpen = isShopOpen($row);
+
+        $row["id"] = (int)$row["id"];
+        $row["shop_id"] = (int)$row["shop_id"];
+        $row["price"] = $originalPrice;
+        $row["stock"] = (float)$row["stock"];
+        $row["original_price"] = round($originalPrice, 2);
+        $row["final_price"] = round($finalPrice, 2);
         $row["is_on_sale"] = $isOnSale ? 1 : 0;
         $row["sale_label"] = $isOnSale ? saleLabel($saleType, $saleValue) : null;
+
+        $row["is_shop_open"] = $isOpen ? 1 : 0;
+        $row["shop_closed_message"] = $isOpen ? null : getShopClosedMessage($row);
+        $row["shop_opens_at"] = $row["opens_at"];
+        $row["shop_closes_at"] = $row["closes_at"];
+
+        unset(
+            $row["is_accepting_orders"],
+            $row["operating_hours_enabled"],
+            $row["opens_at"],
+            $row["closes_at"],
+            $row["closed_message"]
+        );
 
         $data[] = $row;
     }
@@ -194,12 +280,25 @@ try {
         $prevCursor = $first["id"];
     }
 
-    response(true, "Products fetched successfully", $data, [
+    $response = array_merge([
+        "success" => true,
+        "message" => "Products fetched successfully",
+        "data" => $data
+    ], [
         "next_cursor" => $nextCursor,
         "prev_cursor" => $prevCursor,
         "has_more" => $hasMore,
         "limit" => $limit
     ]);
+
+    appSetCache($cacheKey, $response);
+
+    if (ob_get_length()) {
+        ob_clean();
+    }
+
+    echo json_encode($response);
+    exit;
 } catch (Throwable $e) {
     error_log("Get category products failed: " . $e->getMessage());
 

@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import {
   FiCamera,
+  FiClock,
   FiMapPin,
   FiPhone,
   FiSave,
@@ -9,7 +10,6 @@ import {
 } from "react-icons/fi";
 import { LazyLoadImage } from "react-lazy-load-image-component";
 
-import { icons } from "../../constant/icons";
 import bgImg from "../../assets/assets_osyuso/bg.webp";
 import profileImage from "../../assets/assets_osyuso/shop.png";
 import InputField from "../atoms/InputField";
@@ -45,6 +45,11 @@ function MarketSetting() {
     shop_name: "",
     shop_description: "",
     phone: "",
+    is_accepting_orders: "1",
+    operating_hours_enabled: "0",
+    opens_at: "",
+    closes_at: "",
+    closed_message: "",
   });
 
   const { submit, loading } = useFormSubmit(
@@ -68,6 +73,11 @@ function MarketSetting() {
       shop_name: data.shop_name || "",
       shop_description: data.shop_description || "",
       phone: data.phone || "",
+      is_accepting_orders: String(data.is_accepting_orders ?? 1),
+      operating_hours_enabled: String(data.operating_hours_enabled ?? 0),
+      opens_at: data.opens_at ? String(data.opens_at).slice(0, 5) : "",
+      closes_at: data.closes_at ? String(data.closes_at).slice(0, 5) : "",
+      closed_message: data.closed_message || "",
     });
 
     setProfilePreview(data.shop_logo || null);
@@ -90,6 +100,37 @@ function MarketSetting() {
     }));
   };
 
+  const handleToggle = (name) => {
+    setForm((prev) => ({
+      ...prev,
+      [name]: prev[name] === "1" ? "0" : "1",
+    }));
+  };
+
+  const validate = () => {
+    if (!form.shop_name.trim()) {
+      showToast({
+        type: "error",
+        message: "Shop name is required.",
+        duration: 3000,
+      });
+      return false;
+    }
+
+    if (form.operating_hours_enabled === "1") {
+      if (!form.opens_at || !form.closes_at) {
+        showToast({
+          type: "error",
+          message: "Please set both opening and closing time.",
+          duration: 3000,
+        });
+        return false;
+      }
+    }
+
+    return true;
+  };
+
   const handleSubmit = async () => {
     if (!navigator.onLine) {
       showToast({
@@ -99,6 +140,8 @@ function MarketSetting() {
       });
       return;
     }
+
+    if (!validate()) return;
 
     const formData = new FormData();
 
@@ -175,12 +218,14 @@ function MarketSetting() {
                   Market Settings
                 </h1>
                 <p className="mt-1 text-sm text-slate-500">
-                  Update your shop profile, location, and public details.
+                  Update your shop profile, location, public details, and
+                  availability.
                 </p>
               </div>
             </div>
 
             <button
+              type="button"
               onClick={handleSubmit}
               disabled={loading}
               className="inline-flex items-center justify-center gap-2 rounded-xl bg-secondary px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
@@ -242,6 +287,26 @@ function MarketSetting() {
                 {form.shop_description ||
                   "Add a short description so buyers know what your shop offers."}
               </p>
+
+              <div className="mt-3 flex flex-wrap gap-2">
+                <span
+                  className={`rounded-full px-3 py-1 text-xs font-bold ${
+                    form.is_accepting_orders === "1"
+                      ? "bg-emerald-50 text-emerald-700"
+                      : "bg-red-50 text-red-700"
+                  }`}
+                >
+                  {form.is_accepting_orders === "1"
+                    ? "Accepting Orders"
+                    : "Manually Closed"}
+                </span>
+
+                {form.operating_hours_enabled === "1" && (
+                  <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-bold text-blue-700">
+                    {form.opens_at || "--:--"} - {form.closes_at || "--:--"}
+                  </span>
+                )}
+              </div>
             </div>
           </div>
         </div>
@@ -330,7 +395,109 @@ function MarketSetting() {
             </div>
           </div>
         </div>
+
+        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+          <div className="mb-5 flex items-center gap-2">
+            <FiClock className="text-secondary" />
+            <h3 className="text-sm font-semibold text-slate-950">
+              Shop Availability
+            </h3>
+          </div>
+
+          <div className="grid gap-4 lg:grid-cols-2">
+            <ToggleCard
+              title="Accepting Orders"
+              description="Turn this off when your shop is temporarily closed."
+              checked={form.is_accepting_orders === "1"}
+              onChange={() => handleToggle("is_accepting_orders")}
+            />
+
+            <ToggleCard
+              title="Enable Operating Hours"
+              description="Automatically show your shop as closed outside your schedule."
+              checked={form.operating_hours_enabled === "1"}
+              onChange={() => handleToggle("operating_hours_enabled")}
+            />
+          </div>
+
+          {form.operating_hours_enabled === "1" && (
+            <div className="mt-5 grid gap-4 sm:grid-cols-2">
+              <TimeField
+                label="Opens At"
+                name="opens_at"
+                value={form.opens_at}
+                onChange={handleChange}
+              />
+
+              <TimeField
+                label="Closes At"
+                name="closes_at"
+                value={form.closes_at}
+                onChange={handleChange}
+              />
+            </div>
+          )}
+
+          <div className="mt-5">
+            <InputField
+              label="Closed Message"
+              name="closed_message"
+              value={form.closed_message}
+              onChange={handleChange}
+              placeholder="Example: Shop is closed now. Please order during store hours."
+            />
+          </div>
+        </div>
       </div>
+    </div>
+  );
+}
+
+function ToggleCard({ title, description, checked, onChange }) {
+  return (
+    <button
+      type="button"
+      onClick={onChange}
+      className={`flex items-center justify-between gap-4 rounded-xl border p-4 text-left transition ${
+        checked
+          ? "border-orange-200 bg-orange-50"
+          : "border-slate-200 bg-slate-50"
+      }`}
+    >
+      <span>
+        <span className="block text-sm font-bold text-slate-950">{title}</span>
+        <span className="mt-1 block text-xs text-slate-500">{description}</span>
+      </span>
+
+      <span
+        className={`relative h-6 w-11 shrink-0 rounded-full transition ${
+          checked ? "bg-secondary" : "bg-slate-300"
+        }`}
+      >
+        <span
+          className={`absolute top-1 h-4 w-4 rounded-full bg-white transition ${
+            checked ? "left-6" : "left-1"
+          }`}
+        />
+      </span>
+    </button>
+  );
+}
+
+function TimeField({ label, name, value, onChange }) {
+  return (
+    <div>
+      <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-slate-400">
+        {label}
+      </label>
+
+      <input
+        type="time"
+        name={name}
+        value={value}
+        onChange={onChange}
+        className="h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-800 outline-none transition focus:border-secondary"
+      />
     </div>
   );
 }

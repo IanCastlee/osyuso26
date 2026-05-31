@@ -1,7 +1,7 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import { LazyLoadImage } from "react-lazy-load-image-component";
-import { FiShoppingCart } from "react-icons/fi";
+import { FiClock, FiShoppingCart } from "react-icons/fi";
 
 function ProductCard({
   id,
@@ -15,11 +15,17 @@ function ProductCard({
   seller,
   stock,
   unitType,
+  isShopOpen = 1,
+  shopClosedMessage,
+  shopOpensAt,
+  shopClosesAt,
 }) {
   const navigate = useNavigate();
 
   const stockCount = Number(stock || 0);
   const isAvailable = stockCount > 0;
+  const isClosed = Number(isShopOpen) !== 1;
+  const canBuy = isAvailable && !isClosed;
 
   const computedOriginalPrice = Number(originalPrice ?? price ?? 0);
   const computedFinalPrice = Number(finalPrice ?? price ?? 0);
@@ -34,15 +40,25 @@ function ProductCard({
 
   const handleBuyNow = (e) => {
     e.stopPropagation();
-    if (!isAvailable) return;
+    if (!canBuy) return;
 
     navigate(`/reserve/${id}`);
+  };
+
+  const formatTime = (value) => {
+    if (!value) return null;
+    return String(value).slice(0, 5);
   };
 
   return (
     <article
       onClick={handleBuyNow}
-      className="group flex h-full min-h-[330px] cursor-pointer flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition duration-200 hover:-translate-y-1 hover:border-orange-200 hover:shadow-lg"
+      aria-disabled={!canBuy}
+      className={`group relative flex h-full min-h-[330px] flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition duration-200 ${
+        canBuy
+          ? "cursor-pointer hover:-translate-y-1 hover:border-orange-200 hover:shadow-lg"
+          : "cursor-not-allowed"
+      }`}
     >
       <div className="relative aspect-[4/3] w-full overflow-hidden bg-slate-100">
         <LazyLoadImage
@@ -50,7 +66,9 @@ function ProductCard({
           alt={name}
           effect="opacity"
           wrapperClassName="block h-full w-full"
-          className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
+          className={`h-full w-full object-cover transition duration-500 ${
+            canBuy ? "group-hover:scale-105" : "grayscale-[0.25]"
+          }`}
         />
 
         <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-black/0 to-black/0 opacity-0 transition group-hover:opacity-100" />
@@ -63,9 +81,17 @@ function ProductCard({
           </div>
         )}
 
-        {hasSale && (
+        {isClosed && isAvailable && (
+          <div className="absolute left-0 top-0 z-10">
+            <span className="inline-flex bg-slate-900 px-2.5 py-1 text-[10px] font-bold text-white shadow-sm ring-1 ring-white/50">
+              CLOSED
+            </span>
+          </div>
+        )}
+
+        {hasSale && !isClosed && (
           <div className="absolute right-0 top-0 z-10">
-            <span className="inline-flex  bg-orange-500 px-2.5 py-1 text-[10px] font-bold text-white shadow-sm ring-1 ring-white/50">
+            <span className="inline-flex bg-orange-500 px-2.5 py-1 text-[10px] font-bold text-white shadow-sm ring-1 ring-white/50">
               {saleLabel || "SALE"}
             </span>
           </div>
@@ -74,7 +100,13 @@ function ProductCard({
 
       <div className="flex flex-1 flex-col p-3.5">
         <div>
-          <h3 className="line-clamp-2 min-h-[40px] text-sm font-semibold leading-5 text-slate-950 transition group-hover:text-orange-600">
+          <h3
+            className={`line-clamp-2 min-h-[40px] text-sm font-semibold leading-5 transition ${
+              canBuy
+                ? "text-slate-950 group-hover:text-orange-600"
+                : "text-slate-500"
+            }`}
+          >
             {name}
           </h3>
 
@@ -85,10 +117,16 @@ function ProductCard({
 
             <p
               className={`line-clamp-1 text-xs font-medium ${
-                isAvailable ? "text-slate-500" : "text-red-500"
+                isClosed
+                  ? "text-red-500"
+                  : isAvailable
+                    ? "text-slate-500"
+                    : "text-red-500"
               }`}
             >
-              Stock: {isAvailable ? formattedStock : "Unavailable"}
+              {isClosed
+                ? "Shop is closed"
+                : `Stock: ${isAvailable ? formattedStock : "Unavailable"}`}
             </p>
           </div>
 
@@ -120,15 +158,37 @@ function ProductCard({
         <div className="mt-auto pt-3">
           <button
             type="button"
-            disabled={!isAvailable}
+            disabled={!canBuy}
             onClick={handleBuyNow}
-            className="flex cursor-pointer h-10 w-full items-center justify-center gap-2 rounded-lg bg-secondary px-3 text-xs font-bold text-white shadow-sm transition hover:bg-orange-600 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-500"
+            className="flex h-10 w-full cursor-pointer items-center justify-center gap-2 rounded-lg bg-secondary px-3 text-xs font-bold text-white shadow-sm transition hover:bg-orange-600 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-500"
           >
             <FiShoppingCart className="text-sm" />
-            {isAvailable ? "Buy Now" : "Unavailable"}
+            {isClosed ? "Shop Closed" : isAvailable ? "Buy Now" : "Unavailable"}
           </button>
         </div>
       </div>
+
+      {isClosed && (
+        <div className="absolute inset-0 z-20 flex items-center justify-center bg-slate-700/60 px-4 text-center backdrop-blur-[1px]">
+          <div>
+            <div className="mx-auto grid h-10 w-10 place-items-center rounded-full bg-white/15 text-white">
+              <FiClock />
+            </div>
+
+            <p className="mt-2 text-sm font-black text-white">Shop is closed</p>
+
+            <p className="mt-1 line-clamp-2 text-xs leading-5 text-white/80">
+              {shopClosedMessage || "This product is not available right now."}
+            </p>
+
+            {shopOpensAt && shopClosesAt && (
+              <p className="mt-2 text-[10px] font-semibold text-white/70">
+                Hours: {formatTime(shopOpensAt)} - {formatTime(shopClosesAt)}
+              </p>
+            )}
+          </div>
+        </div>
+      )}
     </article>
   );
 }

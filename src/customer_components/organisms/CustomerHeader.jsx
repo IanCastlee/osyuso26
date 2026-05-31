@@ -396,7 +396,7 @@ function CustomerHeader() {
           </button>
         </div>
 
-        <form onSubmit={handleNavbarSearch} className="px-4 pb-3 md:hidden">
+        <form onSubmit={handleNavbarSearch} className="px-2 pb-3 md:hidden">
           <div className="flex h-9 overflow-hidden rounded-full bg-white p-1 shadow-sm">
             <input
               type="text"

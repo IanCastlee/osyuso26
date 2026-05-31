@@ -87,6 +87,50 @@ function makePaymentReference($orderId) {
     return "PAY-" . date("Ymd") . "-O" . $orderId . "-" . strtoupper(bin2hex(random_bytes(4)));
 }
 
+function isShopOpen($shop) {
+    if (($shop["shop_status"] ?? "") !== "active") {
+        return false;
+    }
+
+    if ((int)($shop["is_accepting_orders"] ?? 1) !== 1) {
+        return false;
+    }
+
+    if ((int)($shop["operating_hours_enabled"] ?? 0) !== 1) {
+        return true;
+    }
+
+    if (empty($shop["opens_at"]) || empty($shop["closes_at"])) {
+        return true;
+    }
+
+    $now = date("H:i:s");
+    $opensAt = $shop["opens_at"];
+    $closesAt = $shop["closes_at"];
+
+    if ($opensAt <= $closesAt) {
+        return $now >= $opensAt && $now <= $closesAt;
+    }
+
+    return $now >= $opensAt || $now <= $closesAt;
+}
+
+function getShopClosedMessage($shop) {
+    if (($shop["shop_status"] ?? "") !== "active") {
+        return "Shop is unavailable.";
+    }
+
+    if (!empty($shop["closed_message"])) {
+        return $shop["closed_message"];
+    }
+
+    if ((int)($shop["is_accepting_orders"] ?? 1) !== 1) {
+        return "Shop is closed now.";
+    }
+
+    return "Shop is closed now. Please order during operating hours.";
+}
+
 function isSaleActive($product) {
     $saleType = $product["sale_type"] ?? "none";
     $saleValue = (float)($product["sale_value"] ?? 0);
@@ -185,8 +229,10 @@ try {
         throw new Exception("Product ID is required");
     }
 
+    $conn->begin_transaction();
+
     $stmt = $conn->prepare("
-        SELECT 
+        SELECT
             p.id,
             p.name,
             p.price,
@@ -198,12 +244,19 @@ try {
             p.sale_value,
             p.sale_starts_at,
             p.sale_ends_at,
-            s.status AS shop_status
+
+            s.status AS shop_status,
+            s.is_accepting_orders,
+            s.operating_hours_enabled,
+            s.opens_at,
+            s.closes_at,
+            s.closed_message
         FROM products p
         INNER JOIN shops s
             ON s.id = p.shop_id
         WHERE p.id = ?
         LIMIT 1
+        FOR UPDATE
     ");
 
     $stmt->bind_param("i", $product_id);
@@ -215,8 +268,12 @@ try {
         throw new Exception("Product not found");
     }
 
-    if ($product["status"] !== "active" || $product["shop_status"] !== "active") {
+    if ($product["status"] !== "active") {
         throw new Exception("Product is not available");
+    }
+
+    if (!isShopOpen($product)) {
+        throw new Exception(getShopClosedMessage($product));
     }
 
     $stock = (float)$product["stock"];
@@ -271,8 +328,6 @@ try {
     if ($total <= 0) {
         throw new Exception("Invalid order total");
     }
-
-    $conn->begin_transaction();
 
     $order = $conn->prepare("
         INSERT INTO orders (

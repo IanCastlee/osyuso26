@@ -8,6 +8,7 @@ error_reporting(E_ALL);
 ini_set("display_errors", 0);
 
 require_once "../dbConn.php";
+require_once "../helpers/cache.php";
 
 function response($success, $message, $data = null, $statusCode = 200) {
     if (ob_get_length()) {
@@ -26,6 +27,18 @@ function response($success, $message, $data = null, $statusCode = 200) {
 }
 
 try {
+    $cacheKey = "featured_promotions:" . ($_SERVER["QUERY_STRING"] ?? "");
+    $cached = appGetCache($cacheKey, 60);
+
+    if ($cached !== null) {
+        if (ob_get_length()) {
+            ob_clean();
+        }
+
+        echo json_encode($cached);
+        exit;
+    }
+
     $stmt = $conn->prepare("
         SELECT
             fp.id,
@@ -91,7 +104,20 @@ try {
         ];
     }
 
-    response(true, "Active promotions fetched successfully", $promotions);
+    $response = [
+        "success" => true,
+        "message" => "Active promotions fetched successfully",
+        "data" => $promotions
+    ];
+
+    appSetCache($cacheKey, $response);
+
+    if (ob_get_length()) {
+        ob_clean();
+    }
+
+    echo json_encode($response);
+    exit;
 } catch (Throwable $e) {
     error_log("Get active promotions failed: " . $e->getMessage());
 

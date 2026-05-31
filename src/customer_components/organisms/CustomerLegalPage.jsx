@@ -72,7 +72,7 @@ function CustomerLegalPage({ slug, fallbackTitle }) {
   const isPrivacy = slug === "privacy-policy";
 
   return (
-    <div className="min-h-screen bg-slate-50 px-4 py-6 sm:px-6 lg:px-10">
+    <div className="min-h-screen bg-slate-50 px-4 py-6 sm:px-6 lg:px-[120px]">
       <div className="mx-auto flex max-w-7xl flex-col gap-5">
         <div className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
           <div className="grid gap-0 lg:grid-cols-[1fr_360px]">

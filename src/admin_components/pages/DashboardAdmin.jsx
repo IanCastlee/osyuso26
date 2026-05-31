@@ -7,8 +7,10 @@ import {
   FiDollarSign,
   FiShoppingCart,
   FiTrendingUp,
+  FiLogOut,
 } from "react-icons/fi";
 import { LuPhilippinePeso } from "react-icons/lu";
+import { LuCircleUserRound } from "react-icons/lu";
 
 import {
   CartesianGrid,
@@ -22,6 +24,7 @@ import {
 import { useAuth } from "../../context/AuthContext";
 import { useNavigate } from "react-router-dom";
 import useGetData from "../../hooks/useGetData";
+import NotificationDropdown from "../organisms/NotificationDropdown";
 
 function DashboardAdmin() {
   const navigate = useNavigate();
@@ -63,47 +66,98 @@ function DashboardAdmin() {
 
   return (
     <div className="flex min-h-full w-full flex-col gap-4 bg-gray-100 p-4">
-      <div className="flex h-20 w-full items-center justify-between rounded-lg bg-white px-6 shadow">
-        <h1 className="flex items-center text-lg font-bold">
-          <RxDashboard className="mr-1 inline-block text-2xl" />
-          ADMIN DASHBOARD
+      <div className="flex h-20 w-full items-center justify-between rounded-lg border border-slate-200 bg-white px-6 shadow-sm">
+        <h1 className="flex items-center text-lg font-bold text-slate-950">
+          <RxDashboard className="mr-2 inline-block text-2xl text-secondary" />
+          DASHBOARD
         </h1>
 
-        <div className="relative">
-          <div className="flex items-center gap-1">
-            <icons.HiMiniUserCircle className="text-2xl" />
+        <div className="flex items-center gap-3">
+          <NotificationDropdown
+            onOpen={() => setOpenUserMenu(false)}
+            notificationPath="/admin/notifications"
+          />
+
+          <div className="relative">
             <button
-              onClick={() => setOpenUserMenu(!openUserMenu)}
-              className="flex items-center font-semibold hover:opacity-80"
+              onClick={() => setOpenUserMenu((value) => !value)}
+              className="flex items-center gap-2 rounded-full border border-slate-200 bg-white py-1 pl-1 pr-3 text-slate-800 transition hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-secondary/30"
             >
-              {user?.fullname?.split(" ")[0] || "User"}{" "}
-              <icons.MdKeyboardArrowDown />
+              <icons.HiMiniUserCircle className="text-3xl text-slate-500" />
+
+              <span className="max-w-32 truncate text-sm font-semibold">
+                {user?.fullname?.split(" ")[0] || "User"}
+              </span>
+
+              <icons.MdKeyboardArrowDown
+                className={`text-lg transition ${
+                  openUserMenu ? "rotate-180" : ""
+                }`}
+              />
             </button>
+
+            {openUserMenu && (
+              <div className="absolute right-0 z-50 mt-3 w-64 overflow-hidden rounded-xl border border-slate-200 bg-white text-sm shadow-xl shadow-slate-900/10">
+                <div className="border-b border-slate-100 px-4 py-3">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                    Signed in as
+                  </p>
+
+                  <p className="mt-1 truncate text-sm font-bold text-slate-900">
+                    {user?.fullname || "User"}
+                  </p>
+
+                  <p className="mt-0.5 truncate text-xs text-slate-500">
+                    {user?.email || "No email"}
+                  </p>
+                </div>
+
+                <div className="p-1.5">
+                  <button
+                    onClick={() => {
+                      navigate("/admin/admin-account");
+                      setOpenUserMenu(false);
+                    }}
+                    className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left font-medium text-slate-700 transition hover:bg-slate-50 hover:text-slate-950"
+                  >
+                    <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-slate-100 text-slate-600">
+                      <LuCircleUserRound className="text-lg" />
+                    </span>
+
+                    <span>
+                      <span className="block text-sm font-semibold">
+                        My Account
+                      </span>
+                      <span className="block text-xs text-slate-500">
+                        View profile settings
+                      </span>
+                    </span>
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      logout();
+                      navigate("/signin");
+                    }}
+                    className="mt-1 flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left font-medium text-red-600 transition hover:bg-red-50"
+                  >
+                    <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-red-50 text-red-600">
+                      <FiLogOut className="text-lg" />
+                    </span>
+
+                    <span>
+                      <span className="block text-sm font-semibold">
+                        Logout
+                      </span>
+                      <span className="block text-xs text-red-400">
+                        End current session
+                      </span>
+                    </span>
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
-
-          {openUserMenu && (
-            <div className="absolute right-0 z-50 mt-2 w-44 overflow-hidden rounded-md bg-white text-black shadow-lg">
-              <button
-                onClick={() => {
-                  navigate("/admin/admin-account");
-                  setOpenUserMenu(false);
-                }}
-                className="w-full px-4 py-2 text-left hover:bg-gray-100"
-              >
-                My Account
-              </button>
-
-              <button
-                onClick={() => {
-                  logout();
-                  navigate("/signin");
-                }}
-                className="w-full px-4 py-2 text-left text-red-600 hover:bg-gray-100"
-              >
-                Logout
-              </button>
-            </div>
-          )}
         </div>
       </div>
 

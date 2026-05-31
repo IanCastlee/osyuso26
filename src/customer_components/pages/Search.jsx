@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { LazyLoadImage } from "react-lazy-load-image-component";
-import { FiMapPin, FiSearch, FiShoppingBag } from "react-icons/fi";
+import { FiClock, FiMapPin, FiSearch, FiShoppingBag } from "react-icons/fi";
 
 import ProductCard from "../molecules/ProductCard";
 import useGetData from "../../hooks/useGetData";
@@ -57,6 +57,19 @@ function Search() {
     return Array.from(
       new Map([...oldRows, ...newRows].map((item) => [item.id, item])).values(),
     );
+  };
+
+  const isShopClosed = (shop) => Number(shop?.is_shop_open) !== 1;
+
+  const formatTime = (value) => {
+    if (!value) return null;
+    return String(value).slice(0, 5);
+  };
+
+  const openShop = (shop) => {
+    if (isShopClosed(shop)) return;
+
+    navigate(`/market/${shop.owner_id || shop.id}`);
   };
 
   useEffect(() => {
@@ -142,8 +155,8 @@ function Search() {
 
   return (
     <main className="min-h-[calc(100vh-4rem)] bg-slate-50">
-      <section className="mx-auto w-full max-w-7xl lg:px-3 lg:py-4  lg:px-[120px]">
-        <div className="overflow-hidden rounded-none lg:rounded-2xl border border-orange-200 bg-white shadow-sm">
+      <section className="mx-auto w-full max-w-7xl lg:px-[120px] lg:py-4">
+        <div className="overflow-hidden rounded-none border border-orange-200 bg-white shadow-sm lg:rounded-2xl">
           <div className="bg-orange-500 px-4 py-6 text-white sm:px-6 sm:py-8">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
               <div>
@@ -185,7 +198,7 @@ function Search() {
             </form>
           </div>
 
-          <div className="flex gap-2 overflow-x-auto bg-white px-4 py-4 no-scrollbar sm:px-6">
+          <div className="no-scrollbar flex gap-2 overflow-x-auto bg-white px-4 py-4 sm:px-6">
             {[
               { key: "all", label: "All" },
               { key: "products", label: "Products" },
@@ -228,15 +241,19 @@ function Search() {
                       key={item.id}
                       id={item.id}
                       name={item.name}
-                      price={item.final_price ?? item.price}
-                      originalPrice={item.original_price ?? item.price}
-                      finalPrice={item.final_price ?? item.price}
+                      price={item.price}
+                      originalPrice={item.original_price}
+                      finalPrice={item.final_price}
                       isOnSale={item.is_on_sale}
                       saleLabel={item.sale_label}
                       image={item.image_path}
                       seller={item.shop_name}
                       stock={item.stock}
                       unitType={item.unit_type}
+                      isShopOpen={item.is_shop_open}
+                      shopClosedMessage={item.shop_closed_message}
+                      shopOpensAt={item.shop_opens_at}
+                      shopClosesAt={item.shop_closes_at}
                     />
                   ))}
                 </div>
@@ -259,48 +276,104 @@ function Search() {
                 />
 
                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                  {shops.map((shop) => (
-                    <Link
-                      key={shop.id}
-                      to={`/market/${shop.id}`}
-                      className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
-                    >
-                      <div className="relative h-36 sm:h-40">
-                        <LazyLoadImage
-                          src={shop.shop_cover_photo || bgImage}
-                          alt={shop.shop_name}
-                          className="h-full w-full object-cover"
-                        />
+                  {shops.map((shop) => {
+                    const closed = isShopClosed(shop);
 
-                        <div className="absolute inset-0 bg-gradient-to-t from-slate-950/55 to-transparent" />
-
-                        <div className="absolute -bottom-8 left-4 h-16 w-16 overflow-hidden rounded-xl border-4 border-white bg-white shadow">
+                    return (
+                      <article
+                        key={shop.id}
+                        role="button"
+                        tabIndex={closed ? -1 : 0}
+                        onClick={() => openShop(shop)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") openShop(shop);
+                        }}
+                        aria-disabled={closed}
+                        className={`relative overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition ${
+                          closed
+                            ? "cursor-not-allowed opacity-95"
+                            : "cursor-pointer hover:-translate-y-0.5 hover:shadow-md"
+                        }`}
+                      >
+                        <div className="relative h-36 sm:h-40">
                           <LazyLoadImage
-                            src={shop.shop_logo || profileImage}
+                            src={shop.shop_cover_photo || bgImage}
                             alt={shop.shop_name}
-                            className="h-full w-full object-cover"
+                            className={`h-full w-full object-cover ${
+                              closed ? "grayscale-[0.25]" : ""
+                            }`}
                           />
+
+                          <div className="absolute inset-0 bg-gradient-to-t from-slate-950/55 to-transparent" />
+
+                          <div className="absolute -bottom-8 left-4 h-16 w-16 overflow-hidden rounded-xl border-4 border-white bg-white shadow">
+                            <LazyLoadImage
+                              src={shop.shop_logo || profileImage}
+                              alt={shop.shop_name}
+                              className="h-full w-full object-cover"
+                            />
+                          </div>
+
+                          {closed && (
+                            <span className="absolute right-3 top-3 inline-flex items-center gap-1 rounded-full bg-slate-950/80 px-3 py-1 text-xs font-bold text-white">
+                              <FiClock />
+                              Closed
+                            </span>
+                          )}
                         </div>
-                      </div>
 
-                      <div className="px-4 pb-4 pt-10">
-                        <h3 className="truncate text-base font-bold text-slate-950">
-                          {shop.shop_name}
-                        </h3>
+                        <div className="px-4 pb-4 pt-10">
+                          <h3 className="truncate text-base font-bold text-slate-950">
+                            {shop.shop_name}
+                          </h3>
 
-                        <p className="mt-1 line-clamp-2 text-sm text-slate-500">
-                          {shop.shop_description || "No description"}
-                        </p>
+                          <p className="mt-1 line-clamp-2 text-sm text-slate-500">
+                            {shop.shop_description || "No description"}
+                          </p>
 
-                        <p className="mt-3 flex items-start gap-2 text-xs text-slate-500">
-                          <FiMapPin className="mt-0.5 shrink-0 text-orange-500" />
-                          <span className="line-clamp-2">
-                            {shop.address || "Address unavailable"}
-                          </span>
-                        </p>
-                      </div>
-                    </Link>
-                  ))}
+                          <p className="mt-3 flex items-start gap-2 text-xs text-slate-500">
+                            <FiMapPin className="mt-0.5 shrink-0 text-orange-500" />
+                            <span className="line-clamp-2">
+                              {shop.address || "Address unavailable"}
+                            </span>
+                          </p>
+
+                          {closed && (
+                            <div className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-xs font-semibold text-red-700">
+                              {shop.shop_closed_message ||
+                                "This market is not accepting orders right now."}
+
+                              {shop.shop_opens_at && shop.shop_closes_at && (
+                                <span className="mt-1 block font-bold">
+                                  Hours: {formatTime(shop.shop_opens_at)} -{" "}
+                                  {formatTime(shop.shop_closes_at)}
+                                </span>
+                              )}
+                            </div>
+                          )}
+                        </div>
+
+                        {closed && (
+                          <div className="absolute inset-0 z-20 flex items-center justify-center bg-slate-950/55 px-5 text-center backdrop-blur-[1px]">
+                            <div>
+                              <div className="mx-auto grid h-11 w-11 place-items-center rounded-full bg-white/15 text-white">
+                                <FiClock />
+                              </div>
+
+                              <p className="mt-2 text-sm font-black text-white">
+                                Shop is closed
+                              </p>
+
+                              <p className="mt-1 line-clamp-2 text-xs leading-5 text-white/80">
+                                {shop.shop_closed_message ||
+                                  "This market is not accepting orders right now."}
+                              </p>
+                            </div>
+                          </div>
+                        )}
+                      </article>
+                    );
+                  })}
                 </div>
 
                 {activeTab === "shops" && shopHasMore && (

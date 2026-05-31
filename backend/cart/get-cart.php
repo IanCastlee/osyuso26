@@ -1,5 +1,4 @@
 <?php
-
 ob_start();
 
 include("../header.php");
@@ -28,6 +27,50 @@ function response($success, $message, $data = [], $statusCode = 200) {
     ]);
 
     exit;
+}
+
+function isShopOpen($shop) {
+    if (($shop["shop_status"] ?? "") !== "active") {
+        return false;
+    }
+
+    if ((int)($shop["is_accepting_orders"] ?? 1) !== 1) {
+        return false;
+    }
+
+    if ((int)($shop["operating_hours_enabled"] ?? 0) !== 1) {
+        return true;
+    }
+
+    if (empty($shop["opens_at"]) || empty($shop["closes_at"])) {
+        return true;
+    }
+
+    $now = date("H:i:s");
+    $opensAt = $shop["opens_at"];
+    $closesAt = $shop["closes_at"];
+
+    if ($opensAt <= $closesAt) {
+        return $now >= $opensAt && $now <= $closesAt;
+    }
+
+    return $now >= $opensAt || $now <= $closesAt;
+}
+
+function getShopClosedMessage($shop) {
+    if (($shop["shop_status"] ?? "") !== "active") {
+        return "Shop is unavailable.";
+    }
+
+    if (!empty($shop["closed_message"])) {
+        return $shop["closed_message"];
+    }
+
+    if ((int)($shop["is_accepting_orders"] ?? 1) !== 1) {
+        return "Shop is closed now.";
+    }
+
+    return "Shop is closed now. Please order during operating hours.";
 }
 
 function isSaleActive($product) {
@@ -135,6 +178,7 @@ try {
             p.name,
             p.price AS product_price,
             p.stock,
+            p.status AS product_status,
             p.sale_type,
             p.sale_value,
             p.sale_starts_at,
@@ -142,7 +186,13 @@ try {
 
             pi.image_path,
 
-            s.shop_name
+            s.shop_name,
+            s.status AS shop_status,
+            s.is_accepting_orders,
+            s.operating_hours_enabled,
+            s.opens_at,
+            s.closes_at,
+            s.closed_message
         FROM cart_items ci
         INNER JOIN products p
             ON ci.product_id = p.id
@@ -169,10 +219,16 @@ try {
         $weight = (float)($row["weight"] ?? 0);
         $unitType = $row["unit_type"] ?? "pcs";
         $amount = $unitType === "kg" ? $weight : $quantity;
+        $stock = (float)($row["stock"] ?? 0);
+
+        $isShopOpen = isShopOpen($row);
+        $isProductActive = ($row["product_status"] ?? "") === "active";
+        $hasStock = $stock > 0 && $amount <= $stock;
+        $isPurchasable = $isShopOpen && $isProductActive && $hasStock;
 
         $row["quantity"] = $quantity;
         $row["weight"] = $weight;
-        $row["stock"] = (float)($row["stock"] ?? 0);
+        $row["stock"] = $stock;
 
         $row["original_price"] = $priceData["original_price"];
         $row["final_price"] = $priceData["final_price"];
@@ -186,12 +242,34 @@ try {
         $row["original_subtotal"] = round($priceData["original_price"] * $amount, 2);
         $row["savings"] = max(0, round($row["original_subtotal"] - $row["subtotal"], 2));
 
+        $row["is_shop_open"] = $isShopOpen ? 1 : 0;
+        $row["shop_closed_message"] = $isShopOpen ? null : getShopClosedMessage($row);
+        $row["shop_opens_at"] = $row["opens_at"];
+        $row["shop_closes_at"] = $row["closes_at"];
+        $row["is_purchasable"] = $isPurchasable ? 1 : 0;
+
+        if (!$isProductActive) {
+            $row["unavailable_reason"] = "Product is no longer available.";
+        } elseif (!$isShopOpen) {
+            $row["unavailable_reason"] = $row["shop_closed_message"];
+        } elseif (!$hasStock) {
+            $row["unavailable_reason"] = "Insufficient stock.";
+        } else {
+            $row["unavailable_reason"] = null;
+        }
+
         unset(
             $row["product_price"],
+            $row["product_status"],
             $row["sale_type"],
             $row["sale_value"],
             $row["sale_starts_at"],
-            $row["sale_ends_at"]
+            $row["sale_ends_at"],
+            $row["is_accepting_orders"],
+            $row["operating_hours_enabled"],
+            $row["opens_at"],
+            $row["closes_at"],
+            $row["closed_message"]
         );
 
         $items[] = $row;

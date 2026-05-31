@@ -210,7 +210,7 @@ function SignUpSeller() {
         </button>
       </header>
 
-      <main className="mx-auto grid w-full max-w-6xl gap-6 px-4 py-6 sm:px-6 lg:grid-cols-[360px_1fr] lg:px-8 lg:py-10">
+      <main className="mx-auto grid w-full max-w-6xl gap-2 px-2 py-6 sm:px-6 lg:grid-cols-[360px_1fr] lg:px-8 lg:py-10">
         <section className="rounded-2xl bg-secondary p-6 text-white shadow-sm lg:p-8">
           <div className="flex h-12 w-12 items-center justify-center rounded-full bg-white/15">
             <FaStore className="text-xl" />

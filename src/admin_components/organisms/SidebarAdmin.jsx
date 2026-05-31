@@ -14,6 +14,7 @@ import {
   FaBookOpen,
 } from "react-icons/fa";
 import { PiShoppingCartSimpleFill } from "react-icons/pi";
+import { TbCategoryFilled } from "react-icons/tb";
 
 function SidebarAdmin() {
   const navigate = useNavigate();
@@ -24,6 +25,7 @@ function SidebarAdmin() {
   const [openOrders, setOpenOrders] = useState(false);
   const [openPromotion, setOpenPromotion] = useState(false);
   const [openPayout, setOpenPayout] = useState(false);
+  const [openCateg, setOpenCateg] = useState(false);
 
   const itemClass = ({ isActive }) =>
     `group flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition ${
@@ -52,7 +54,7 @@ function SidebarAdmin() {
       onMouseEnter={() => setExpanded(true)}
       onMouseLeave={() => setExpanded(false)}
       onFocus={() => setExpanded(true)}
-      className={`flex h-screen shrink-0 flex-col overflow-hidden bg-secondary text-white transition-all duration-300 ${
+      className={`flex h-screen cursor-pointer shrink-0 flex-col overflow-hidden bg-orange-900 text-white transition-all duration-300 ${
         expanded ? "w-[270px]" : "w-[76px]"
       }`}
     >
@@ -163,6 +165,41 @@ function SidebarAdmin() {
             </NavLink>
             <NavLink to="/admin/payout-history" className={subItemClass}>
               History
+            </NavLink>
+          </div>
+        </div>
+
+        <button
+          onClick={() => {
+            setExpanded(true);
+            setOpenCateg((prev) => !prev);
+          }}
+          className="flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-sm font-medium text-white/85 transition hover:bg-white/10 hover:text-white"
+          title="Vendor Payouts"
+        >
+          <span className="flex min-w-0 items-center gap-3">
+            <TbCategoryFilled className="shrink-0 text-lg" />
+            <span className={labelClass}>Product Category</span>
+          </span>
+
+          {openCateg ? (
+            <FaChevronDown className={chevronClass} />
+          ) : (
+            <FaChevronRight className={chevronClass} />
+          )}
+        </button>
+
+        <div
+          className={`overflow-hidden transition-all duration-300 ${
+            expanded && openCateg ? "max-h-24 pb-1 pl-8" : "max-h-0"
+          }`}
+        >
+          <div className="space-y-1 border-l border-white/10 pl-3">
+            <NavLink to="/admin/categories" className={subItemClass}>
+              Category
+            </NavLink>
+            <NavLink to="/admin/category-requests" className={subItemClass}>
+              Category Request
             </NavLink>
           </div>
         </div>

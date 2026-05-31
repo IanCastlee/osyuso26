@@ -4,7 +4,7 @@ ob_start();
 include("../header.php");
 require_once "../dbConn.php";
 
-header("Content-Type: application/json");
+header("Content-Type: application/json; charset=UTF-8");
 
 error_reporting(E_ALL);
 ini_set("display_errors", 0);
@@ -77,6 +77,50 @@ function saleLabel($saleType, $saleValue) {
     return null;
 }
 
+function isShopOpen($shop) {
+    if (($shop["shop_status"] ?? "") !== "active") {
+        return false;
+    }
+
+    if ((int)($shop["is_accepting_orders"] ?? 1) !== 1) {
+        return false;
+    }
+
+    if ((int)($shop["operating_hours_enabled"] ?? 0) !== 1) {
+        return true;
+    }
+
+    if (empty($shop["opens_at"]) || empty($shop["closes_at"])) {
+        return true;
+    }
+
+    $now = date("H:i:s");
+    $opensAt = $shop["opens_at"];
+    $closesAt = $shop["closes_at"];
+
+    if ($opensAt <= $closesAt) {
+        return $now >= $opensAt && $now <= $closesAt;
+    }
+
+    return $now >= $opensAt || $now <= $closesAt;
+}
+
+function getShopClosedMessage($shop) {
+    if (($shop["shop_status"] ?? "") !== "active") {
+        return "Shop is unavailable.";
+    }
+
+    if (!empty($shop["closed_message"])) {
+        return $shop["closed_message"];
+    }
+
+    if ((int)($shop["is_accepting_orders"] ?? 1) !== 1) {
+        return "Shop is closed now.";
+    }
+
+    return "Shop is closed now. Please order during operating hours.";
+}
+
 function applySalePricing($row) {
     $now = date("Y-m-d H:i:s");
 
@@ -112,11 +156,30 @@ function applySalePricing($row) {
         $finalPrice = max(0, $finalPrice);
     }
 
-    $row["price"] = $originalPrice;
-    $row["original_price"] = $originalPrice;
-    $row["final_price"] = $finalPrice;
+    $row["price"] = round($originalPrice, 2);
+    $row["original_price"] = round($originalPrice, 2);
+    $row["final_price"] = round($finalPrice, 2);
     $row["is_on_sale"] = $isOnSale ? 1 : 0;
     $row["sale_label"] = $isOnSale ? saleLabel($saleType, $saleValue) : null;
+
+    return $row;
+}
+
+function attachShopAvailability($row) {
+    $isOpen = isShopOpen($row);
+
+    $row["is_shop_open"] = $isOpen ? 1 : 0;
+    $row["shop_closed_message"] = $isOpen ? null : getShopClosedMessage($row);
+    $row["shop_opens_at"] = $row["opens_at"];
+    $row["shop_closes_at"] = $row["closes_at"];
+
+    unset(
+        $row["is_accepting_orders"],
+        $row["operating_hours_enabled"],
+        $row["opens_at"],
+        $row["closes_at"],
+        $row["closed_message"]
+    );
 
     return $row;
 }
@@ -145,6 +208,12 @@ function fetchProducts($conn, $search, $limit, $cursor = null) {
             pi.image_path,
 
             s.shop_name,
+            s.status AS shop_status,
+            s.is_accepting_orders,
+            s.operating_hours_enabled,
+            s.opens_at,
+            s.closes_at,
+            s.closed_message,
 
             MATCH(p.name, p.description)
                 AGAINST (? IN BOOLEAN MODE) AS score
@@ -152,9 +221,10 @@ function fetchProducts($conn, $search, $limit, $cursor = null) {
         LEFT JOIN product_images pi
             ON pi.product_id = p.id
             AND pi.is_primary = 1
-        LEFT JOIN shops s
+        INNER JOIN shops s
             ON s.id = p.shop_id
         WHERE p.status = 'active'
+            AND s.status = 'active'
             AND MATCH(p.name, p.description)
                 AGAINST (? IN BOOLEAN MODE)
     ";
@@ -189,7 +259,16 @@ function fetchProducts($conn, $search, $limit, $cursor = null) {
     $rows = [];
 
     while ($row = $result->fetch_assoc()) {
-        $rows[] = applySalePricing($row);
+        $row = applySalePricing($row);
+        $row = attachShopAvailability($row);
+
+        $row["id"] = (int)$row["id"];
+        $row["shop_id"] = (int)$row["shop_id"];
+        $row["category_id"] = (int)$row["category_id"];
+        $row["subcategory_id"] = (int)$row["subcategory_id"];
+        $row["stock"] = (float)$row["stock"];
+
+        $rows[] = $row;
     }
 
     $hasMore = count($rows) > $limit;
@@ -221,6 +300,12 @@ function fetchShops($conn, $search, $limit, $cursor = null) {
             s.phone,
             s.shop_logo,
             s.shop_cover_photo,
+            s.status AS shop_status,
+            s.is_accepting_orders,
+            s.operating_hours_enabled,
+            s.opens_at,
+            s.closes_at,
+            s.closed_message,
             s.created_at,
             MATCH(
                 s.shop_name,
@@ -229,12 +314,13 @@ function fetchShops($conn, $search, $limit, $cursor = null) {
                 s.nearby_landmark
             ) AGAINST (? IN BOOLEAN MODE) AS score
         FROM shops s
-        WHERE MATCH(
-            s.shop_name,
-            s.shop_description,
-            s.address,
-            s.nearby_landmark
-        ) AGAINST (? IN BOOLEAN MODE)
+        WHERE s.status = 'active'
+            AND MATCH(
+                s.shop_name,
+                s.shop_description,
+                s.address,
+                s.nearby_landmark
+            ) AGAINST (? IN BOOLEAN MODE)
     ";
 
     $params = [$search, $search];
@@ -267,6 +353,11 @@ function fetchShops($conn, $search, $limit, $cursor = null) {
     $rows = [];
 
     while ($row = $result->fetch_assoc()) {
+        $row = attachShopAvailability($row);
+
+        $row["id"] = (int)$row["id"];
+        $row["owner_id"] = (int)$row["owner_id"];
+
         $rows[] = $row;
     }
 

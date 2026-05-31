@@ -847,7 +847,7 @@ function processPromotionPayment($conn, $payload, $promotion, $paymentAttemptSta
                 "promotion_pending_approval_admin_email_" . $adminId . "_" . $promotionId
             );
 
-            $emailQueued = $emailQueued || $adminEmailQueued;
+            $emailQueued = $emailQueued || $adminEmaiSlQueued;
         }
     }
 

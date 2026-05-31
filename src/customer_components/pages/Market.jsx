@@ -312,7 +312,7 @@ function Market() {
               </button>
 
               {openDropdown && (
-                <div className="absolute left-0 right-0 top-14 z-50 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl">
+                <div className="absolute  left-0 right-0 top-14 z-50 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl">
                   <div className="max-h-64 overflow-y-auto p-2">
                     <button
                       onClick={() => {
@@ -400,15 +400,19 @@ function Market() {
                   key={item.id}
                   id={item.id}
                   name={item.name}
-                  price={item.final_price ?? item.price}
-                  originalPrice={item.original_price ?? item.price}
-                  finalPrice={item.final_price ?? item.price}
+                  price={item.price}
+                  originalPrice={item.original_price}
+                  finalPrice={item.final_price}
                   isOnSale={item.is_on_sale}
                   saleLabel={item.sale_label}
                   image={item.image_path}
+                  seller={item.shop_name}
                   stock={item.stock}
-                  seller={market?.shop_name}
                   unitType={item.unit_type}
+                  isShopOpen={item.is_shop_open}
+                  shopClosedMessage={item.shop_closed_message}
+                  shopOpensAt={item.shop_opens_at}
+                  shopClosesAt={item.shop_closes_at}
                 />
               ))}
             </div>
