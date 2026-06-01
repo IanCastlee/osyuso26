@@ -74,6 +74,88 @@ function getPlatformCommissionRate($conn) {
     return $rate;
 }
 
+function getPayoutSchedule($conn) {
+    $stmt = $conn->prepare("
+        SELECT
+            payout_release_day,
+            payout_release_time
+        FROM admin_settings
+        ORDER BY id ASC
+        LIMIT 1
+    ");
+
+    $stmt->execute();
+    $setting = $stmt->get_result()->fetch_assoc();
+
+    $releaseDay = (int)($setting["payout_release_day"] ?? 1);
+    $releaseTime = $setting["payout_release_time"] ?? "00:00:00";
+
+    if ($releaseDay < 1 || $releaseDay > 7) {
+        $releaseDay = 1;
+    }
+
+    if (strlen($releaseTime) === 5) {
+        $releaseTime .= ":00";
+    }
+
+    if (!preg_match("/^\d{2}:\d{2}:\d{2}$/", $releaseTime)) {
+        $releaseTime = "00:00:00";
+    }
+
+    return [
+        "release_day" => $releaseDay,
+        "release_time" => $releaseTime
+    ];
+}
+
+function getPayoutDayName($day) {
+    $days = [
+        1 => "Monday",
+        2 => "Tuesday",
+        3 => "Wednesday",
+        4 => "Thursday",
+        5 => "Friday",
+        6 => "Saturday",
+        7 => "Sunday",
+    ];
+
+    return $days[(int)$day] ?? "Monday";
+}
+
+function getNextPayoutDateTime($releaseDay, $releaseTime) {
+    $now = new DateTimeImmutable("now", new DateTimeZone("Asia/Manila"));
+
+    if (strlen($releaseTime) === 5) {
+        $releaseTime .= ":00";
+    }
+
+    [$hour, $minute, $second] = array_map("intval", explode(":", $releaseTime));
+
+    $currentDay = (int)$now->format("N");
+    $daysUntilRelease = ((int)$releaseDay - $currentDay + 7) % 7;
+
+    $releaseDate = $now
+        ->modify("+{$daysUntilRelease} days")
+        ->setTime($hour, $minute, $second);
+
+    if ($releaseDate <= $now) {
+        $releaseDate = $releaseDate->modify("+7 days");
+    }
+
+    return $releaseDate;
+}
+
+function canRequestPayoutNow($releaseDay, $releaseTime) {
+    $now = new DateTimeImmutable("now", new DateTimeZone("Asia/Manila"));
+
+    if (strlen($releaseTime) === 5) {
+        $releaseTime .= ":00";
+    }
+
+    return (int)$now->format("N") === (int)$releaseDay
+        && $now->format("H:i:s") >= $releaseTime;
+}
+
 try {
     $user = requireRole(["vendor", "admin"]);
 
@@ -95,9 +177,12 @@ try {
     $cursor = isset($_GET["cursor"]) ? (int)$_GET["cursor"] : 0;
     $search = trim($_GET["search"] ?? "");
 
-   $today = new DateTimeImmutable("today", new DateTimeZone("Asia/Manila"));
-$isSunday = in_array($today->format("w"), ["0", "5"], true);
-$nextSunday = $isSunday ? $today : $today->modify("next sunday");
+    $schedule = getPayoutSchedule($conn);
+    $payoutReleaseDay = (int)$schedule["release_day"];
+    $payoutReleaseTime = $schedule["release_time"];
+
+    $canRequestPayout = canRequestPayoutNow($payoutReleaseDay, $payoutReleaseTime);
+    $nextPayoutDateTime = getNextPayoutDateTime($payoutReleaseDay, $payoutReleaseTime);
 
     $currentCommissionRate = getPlatformCommissionRate($conn);
 
@@ -192,6 +277,13 @@ $nextSunday = $isSunday ? $today : $today->modify("next sunday");
     $result = $stmt->get_result();
 
     while ($row = $result->fetch_assoc()) {
+        $row["id"] = (int)$row["id"];
+        $row["gross_amount"] = (float)$row["gross_amount"];
+        $row["commission_rate"] = (float)$row["commission_rate"];
+        $row["commission_amount"] = (float)$row["commission_amount"];
+        $row["net_amount"] = (float)$row["net_amount"];
+        $row["items_count"] = (int)$row["items_count"];
+
         $rows[] = $row;
     }
 
@@ -214,8 +306,14 @@ $nextSunday = $isSunday ? $today : $today->modify("next sunday");
             "available_net_amount" => $netAmount,
             "available_items_count" => $itemsCount,
             "commission_rate" => $displayCommissionRate,
-            "next_payout_date" => $nextSunday->format("Y-m-d"),
-            "can_request_payout" => $isSunday,
+
+            "payout_release_day" => $payoutReleaseDay,
+            "payout_release_day_name" => getPayoutDayName($payoutReleaseDay),
+            "payout_release_time" => $payoutReleaseTime,
+            "next_payout_date" => $nextPayoutDateTime->format("Y-m-d"),
+            "next_payout_at" => $nextPayoutDateTime->format("Y-m-d H:i:s"),
+            "can_request_payout" => $canRequestPayout,
+
             "has_pending_payout" => ((int)$pending["total"]) > 0
         ],
         "rows" => $rows,

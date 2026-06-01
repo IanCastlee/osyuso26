@@ -118,6 +118,20 @@ function VendorPayout() {
     Number(summary.available_net_amount || 0) > 0 &&
     !summary.has_pending_payout;
 
+  const formatPayoutTime = (value) => {
+    if (!value) return "";
+
+    const [hour = "0", minute = "00"] = String(value).split(":");
+    const date = new Date();
+
+    date.setHours(Number(hour), Number(minute), 0, 0);
+
+    return date.toLocaleTimeString("en-PH", {
+      hour: "numeric",
+      minute: "2-digit",
+    });
+  };
+
   const columns = [
     {
       header: "Reference",
@@ -205,7 +219,12 @@ function VendorPayout() {
                   Vendor Payout
                 </h1>
                 <p className="mt-1 text-sm text-slate-500">
-                  Weekly payout is available every Sunday.
+                  Weekly payout is available every{" "}
+                  {summary?.payout_release_day_name || "scheduled day"}
+                  {summary?.payout_release_time
+                    ? ` at ${formatPayoutTime(summary.payout_release_time)}`
+                    : ""}
+                  .
                 </p>
               </div>
             </div>

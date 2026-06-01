@@ -8,17 +8,15 @@ error_reporting(E_ALL);
 ini_set("display_errors", 0);
 date_default_timezone_set("Asia/Manila");
 
-mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
-
 require_once "../dbConn.php";
 require_once "../auth/middleware.php";
 
-function response($success, $message, $data = [], $statusCode = 200) {
+function response($success, $message, $data = null, $status = 200) {
     if (ob_get_length()) {
         ob_clean();
     }
 
-    http_response_code($statusCode);
+    http_response_code($status);
 
     echo json_encode([
         "success" => $success,
@@ -29,76 +27,84 @@ function response($success, $message, $data = [], $statusCode = 200) {
     exit;
 }
 
+function ensureAdminSettingsRow($conn) {
+    $result = $conn->query("SELECT id FROM admin_settings ORDER BY id ASC LIMIT 1");
+
+    if ($result && $result->num_rows > 0) {
+        $row = $result->fetch_assoc();
+        return (int)$row["id"];
+    }
+
+    $stmt = $conn->prepare("
+        INSERT INTO admin_settings (
+            promotion_price_per_hour,
+            platform_commission_rate,
+            payout_release_day,
+            payout_release_time,
+            payout_hold_days,
+            email,
+            phone,
+            fb_url,
+            created_at,
+            updated_at
+        )
+        VALUES (0, 0, 1, '00:00:00', 0, '', '', '', NOW(), NOW())
+    ");
+
+    if (!$stmt) {
+        response(false, "Prepare failed: " . $conn->error, null, 500);
+    }
+
+    $stmt->execute();
+
+    return (int)$stmt->insert_id;
+}
+
 try {
     requireRole(["admin"]);
+
+    $settingsId = ensureAdminSettingsRow($conn);
 
     $stmt = $conn->prepare("
         SELECT
             id,
             promotion_price_per_hour,
             platform_commission_rate,
+            payout_release_day,
+            payout_release_time,
+            payout_hold_days,
             email,
             phone,
             fb_url,
             created_at,
             updated_at
         FROM admin_settings
-        ORDER BY id ASC
+        WHERE id = ?
         LIMIT 1
     ");
 
+    if (!$stmt) {
+        response(false, "Prepare failed: " . $conn->error, null, 500);
+    }
+
+    $stmt->bind_param("i", $settingsId);
     $stmt->execute();
+
     $settings = $stmt->get_result()->fetch_assoc();
 
     if (!$settings) {
-        $promotionPrice = 0.00;
-        $commissionRate = 10.00;
-        $email = "osyuso38@gmail.com";
-        $phone = "+63 912 345 6789";
-        $fbUrl = "https://www.facebook.com/osyuso";
-
-        $insert = $conn->prepare("
-            INSERT INTO admin_settings
-            (
-                promotion_price_per_hour,
-                platform_commission_rate,
-                email,
-                phone,
-                fb_url,
-                created_at,
-                updated_at
-            )
-            VALUES (?, ?, ?, ?, ?, NOW(), NOW())
-        ");
-
-        $insert->bind_param(
-            "ddsss",
-            $promotionPrice,
-            $commissionRate,
-            $email,
-            $phone,
-            $fbUrl
-        );
-
-        $insert->execute();
-
-        $settings = [
-            "id" => $insert->insert_id,
-            "promotion_price_per_hour" => $promotionPrice,
-            "platform_commission_rate" => $commissionRate,
-            "email" => $email,
-            "phone" => $phone,
-            "fb_url" => $fbUrl,
-            "created_at" => date("Y-m-d H:i:s"),
-            "updated_at" => date("Y-m-d H:i:s")
-        ];
+        response(false, "Admin settings not found", null, 404);
     }
 
-    response(true, "Admin settings fetched", $settings);
+    $settings["id"] = (int)$settings["id"];
+    $settings["promotion_price_per_hour"] = (float)$settings["promotion_price_per_hour"];
+    $settings["platform_commission_rate"] = (float)$settings["platform_commission_rate"];
+    $settings["payout_release_day"] = (int)$settings["payout_release_day"];
+    $settings["payout_hold_days"] = (int)$settings["payout_hold_days"];
+
+    response(true, "Admin settings fetched successfully", $settings);
 } catch (Throwable $e) {
     error_log("Get admin settings failed: " . $e->getMessage());
 
-    response(false, "Server error", [
-        "error" => $e->getMessage()
-    ], 500);
+    response(false, $e->getMessage(), null, 500);
 }

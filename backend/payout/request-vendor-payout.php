@@ -56,6 +56,81 @@ function makeReferenceNo($vendorId) {
     return "PO-" . date("Ymd") . "-V" . $vendorId . "-" . strtoupper(bin2hex(random_bytes(4)));
 }
 
+function getPayoutSchedule($conn) {
+    $stmt = $conn->prepare("
+        SELECT
+            payout_release_day,
+            payout_release_time
+        FROM admin_settings
+        ORDER BY id ASC
+        LIMIT 1
+    ");
+
+    $stmt->execute();
+
+    $settings = $stmt->get_result()->fetch_assoc();
+
+    $releaseDay = (int)($settings["payout_release_day"] ?? 1);
+    $releaseTime = $settings["payout_release_time"] ?? "00:00:00";
+
+    if ($releaseDay < 1 || $releaseDay > 7) {
+        $releaseDay = 1;
+    }
+
+    if (strlen($releaseTime) === 5) {
+        $releaseTime .= ":00";
+    }
+
+    if (!preg_match("/^\d{2}:\d{2}:\d{2}$/", $releaseTime)) {
+        $releaseTime = "00:00:00";
+    }
+
+    return [
+        "release_day" => $releaseDay,
+        "release_time" => $releaseTime
+    ];
+}
+
+function assertPayoutWindowOpen($conn) {
+    $schedule = getPayoutSchedule($conn);
+
+    $releaseDay = (int)$schedule["release_day"];
+    $releaseTime = $schedule["release_time"];
+
+    $now = new DateTimeImmutable("now", new DateTimeZone("Asia/Manila"));
+    $currentDay = (int)$now->format("N");
+    $currentTime = $now->format("H:i:s");
+
+    $dayNames = [
+        1 => "Monday",
+        2 => "Tuesday",
+        3 => "Wednesday",
+        4 => "Thursday",
+        5 => "Friday",
+        6 => "Saturday",
+        7 => "Sunday",
+    ];
+
+    if ($currentDay !== $releaseDay || $currentTime < $releaseTime) {
+        response(
+            false,
+            "Payout is only available every " .
+                ($dayNames[$releaseDay] ?? "scheduled day") .
+                " at " .
+                substr($releaseTime, 0, 5) .
+                ".",
+            [
+                "release_day" => $releaseDay,
+                "release_day_name" => $dayNames[$releaseDay] ?? null,
+                "release_time" => $releaseTime,
+                "current_day" => $currentDay,
+                "current_time" => $currentTime
+            ],
+            400
+        );
+    }
+}
+
 try {
     $user = requireRole(["vendor", "admin"]);
 
@@ -70,14 +145,7 @@ try {
         response(false, "Invalid vendor", [], 400);
     }
 
-    $today = new DateTimeImmutable("today", new DateTimeZone("Asia/Manila"));
-
-    // if ($today->format("w") !== "0") {
-    //     response(false, "Payout is only available every Sunday.", [], 400);
-    // }
-if (!in_array($today->format("w"), ["0", "5"], true)) {
-    response(false, "Payout is only available every Sunday.", [], 400);
-}
+    assertPayoutWindowOpen($conn);
 
     $conn->begin_transaction();
 
@@ -255,6 +323,8 @@ if (!in_array($today->format("w"), ["0", "5"], true)) {
             error_log($rollbackError->getMessage());
         }
     }
+
+    error_log("Create payout request failed: " . $e->getMessage());
 
     response(false, "Server error", [
         "error" => $e->getMessage()

@@ -51,11 +51,13 @@ function toMysqlDateTime($value) {
     }
 }
 
-function getPlatformCommissionRate($conn) {
-    $rate = 10.00;
-
+function getPayoutSettings($conn) {
     $stmt = $conn->prepare("
-        SELECT platform_commission_rate
+        SELECT
+            platform_commission_rate,
+            payout_release_day,
+            payout_release_time,
+            payout_hold_days
         FROM admin_settings
         ORDER BY id ASC
         LIMIT 1
@@ -64,15 +66,67 @@ function getPlatformCommissionRate($conn) {
     $stmt->execute();
     $setting = $stmt->get_result()->fetch_assoc();
 
-    if ($setting && $setting["platform_commission_rate"] !== null) {
-        $rate = (float)$setting["platform_commission_rate"];
-    }
+    $commissionRate = (float)($setting["platform_commission_rate"] ?? 10);
+    $releaseDay = (int)($setting["payout_release_day"] ?? 1);
+    $releaseTime = $setting["payout_release_time"] ?? "00:00:00";
+    $holdDays = (int)($setting["payout_hold_days"] ?? 0);
 
-    if ($rate < 0 || $rate > 100) {
+    if ($commissionRate < 0 || $commissionRate > 100) {
         throw new Exception("Invalid platform commission rate");
     }
 
-    return $rate;
+    if ($releaseDay < 1 || $releaseDay > 7) {
+        $releaseDay = 1;
+    }
+
+    if (strlen($releaseTime) === 5) {
+        $releaseTime .= ":00";
+    }
+
+    if (!preg_match("/^\d{2}:\d{2}:\d{2}$/", $releaseTime)) {
+        $releaseTime = "00:00:00";
+    }
+
+    if ($holdDays < 0) {
+        $holdDays = 0;
+    }
+
+    return [
+        "commission_rate" => $commissionRate,
+        "release_day" => $releaseDay,
+        "release_time" => $releaseTime,
+        "hold_days" => $holdDays
+    ];
+}
+
+function computeNextPayoutAvailableAt($releaseDay, $releaseTime, $holdDays = 0, $baseDateTime = null) {
+    $date = new DateTimeImmutable(
+        $baseDateTime ?: "now",
+        new DateTimeZone("Asia/Manila")
+    );
+
+    if ($holdDays > 0) {
+        $date = $date->modify("+{$holdDays} days");
+    }
+
+    if (strlen($releaseTime) === 5) {
+        $releaseTime .= ":00";
+    }
+
+    [$hour, $minute, $second] = array_map("intval", explode(":", $releaseTime));
+
+    $currentDay = (int)$date->format("N"); // 1 Monday, 7 Sunday
+    $daysUntilRelease = ($releaseDay - $currentDay + 7) % 7;
+
+    $releaseDate = $date
+        ->modify("+{$daysUntilRelease} days")
+        ->setTime($hour, $minute, $second);
+
+    if ($releaseDate <= $date) {
+        $releaseDate = $releaseDate->modify("+7 days");
+    }
+
+    return $releaseDate->format("Y-m-d H:i:s");
 }
 
 function createNotification(
@@ -464,7 +518,15 @@ function processOrderPayment($conn, $payload, $order, $orderPaymentStatus, $paym
             $receiptCreated = true;
         }
 
-        $commissionRate = getPlatformCommissionRate($conn);
+        $payoutSettings = getPayoutSettings($conn);
+        $commissionRate = $payoutSettings["commission_rate"];
+
+        $availableAt = computeNextPayoutAvailableAt(
+            $payoutSettings["release_day"],
+            $payoutSettings["release_time"],
+            $payoutSettings["hold_days"],
+            $paidAt
+        );
 
         $earningStmt = $conn->prepare("
             INSERT INTO vendor_earnings (
@@ -489,7 +551,7 @@ function processOrderPayment($conn, $payload, $order, $orderPaymentStatus, $paym
                 ROUND(o.total_amount * (? / 100), 2) AS commission_amount,
                 ROUND(o.total_amount - (o.total_amount * (? / 100)), 2) AS net_amount,
                 'available' AS earning_status,
-                NOW() AS available_at
+                ? AS available_at
             FROM orders o
             INNER JOIN shops s
                 ON s.id = o.shop_id
@@ -507,18 +569,20 @@ function processOrderPayment($conn, $payload, $order, $orderPaymentStatus, $paym
                 vendor_earnings.available_at = IF(
                     vendor_earnings.payout_id IS NULL
                     AND vendor_earnings.available_at IS NULL,
-                    NOW(),
+                    ?,
                     vendor_earnings.available_at
                 ),
                 vendor_earnings.updated_at = NOW()
         ");
 
         $earningStmt->bind_param(
-            "dddi",
+            "dddsis",
             $commissionRate,
             $commissionRate,
             $commissionRate,
-            $orderId
+            $availableAt,
+            $orderId,
+            $availableAt
         );
 
         $earningStmt->execute();
@@ -847,7 +911,7 @@ function processPromotionPayment($conn, $payload, $promotion, $paymentAttemptSta
                 "promotion_pending_approval_admin_email_" . $adminId . "_" . $promotionId
             );
 
-            $emailQueued = $emailQueued || $adminEmaiSlQueued;
+            $emailQueued = $emailQueued || $adminEmailQueued;
         }
     }
 

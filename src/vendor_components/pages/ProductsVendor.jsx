@@ -53,8 +53,6 @@ function ProductsVendor() {
     `product/get-products.php?${query}`,
   );
 
-  console.log(" ___ ", data);
-
   const payload = useMemo(() => data?.data || data, [data]);
 
   const products = useMemo(() => {
