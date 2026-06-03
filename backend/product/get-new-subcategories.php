@@ -72,6 +72,15 @@ try {
         FROM subcategories sc
         INNER JOIN categories c
             ON c.id = sc.category_id
+
+        WHERE EXISTS (
+            SELECT 1
+            FROM products p3
+            WHERE p3.subcategory_id = sc.id
+                AND p3.status = 'active'
+            LIMIT 1
+        )
+
         ORDER BY sc.created_at DESC, sc.id DESC
         LIMIT ?
     ");

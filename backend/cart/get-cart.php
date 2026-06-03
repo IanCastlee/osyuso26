@@ -139,6 +139,72 @@ function calculateFinalPrice($product) {
     ];
 }
 
+function getKgOrderSettings($conn) {
+    $stmt = $conn->prepare("
+        SELECT
+            high_price_threshold,
+            normal_kg_min_order,
+            normal_kg_order_step,
+            high_price_kg_min_order,
+            high_price_kg_order_step
+        FROM admin_settings
+        ORDER BY id ASC
+        LIMIT 1
+    ");
+
+    $stmt->execute();
+    $settings = $stmt->get_result()->fetch_assoc() ?: [];
+
+    return [
+        "threshold" => max(0, (float)($settings["high_price_threshold"] ?? 300)),
+        "normal_min" => max(0.01, (float)($settings["normal_kg_min_order"] ?? 0.50)),
+        "normal_step" => max(0.01, (float)($settings["normal_kg_order_step"] ?? 0.50)),
+        "high_min" => max(0.01, (float)($settings["high_price_kg_min_order"] ?? 0.25)),
+        "high_step" => max(0.01, (float)($settings["high_price_kg_order_step"] ?? 0.25)),
+    ];
+}
+
+function getOrderRule($conn, $unitType, $unitPrice) {
+    if ($unitType !== "kg") {
+        return [
+            "min_order" => 1,
+            "order_step" => 1,
+            "is_high_price_kg" => 0,
+            "high_price_threshold" => null
+        ];
+    }
+
+    $settings = getKgOrderSettings($conn);
+    $isHighPrice = (float)$unitPrice >= $settings["threshold"];
+
+    return [
+        "min_order" => $isHighPrice ? $settings["high_min"] : $settings["normal_min"],
+        "order_step" => $isHighPrice ? $settings["high_step"] : $settings["normal_step"],
+        "is_high_price_kg" => $isHighPrice ? 1 : 0,
+        "high_price_threshold" => $settings["threshold"]
+    ];
+}
+
+function isValidStepAmount($value, $min, $step) {
+    $value = round((float)$value, 4);
+    $min = round((float)$min, 4);
+    $step = round((float)$step, 4);
+
+    if ($value < $min) {
+        return false;
+    }
+
+    if ($step <= 0) {
+        return true;
+    }
+
+    $diff = round($value - $min, 4);
+    $steps = round($diff / $step);
+    $expected = round($steps * $step, 4);
+
+    return abs($diff - $expected) < 0.0001;
+}
+
 try {
     $user = requireRole(["customer"]);
     $user_id = (int)($user->user_id ?? 0);
@@ -214,17 +280,38 @@ try {
 
     while ($row = $result->fetch_assoc()) {
         $priceData = calculateFinalPrice($row);
+        $orderRule = getOrderRule($conn, $row["unit_type"] ?? "pcs", $priceData["final_price"]);
 
         $quantity = (int)($row["quantity"] ?? 0);
-        $weight = (float)($row["weight"] ?? 0);
+        $weight = round((float)($row["weight"] ?? 0), 2);
         $unitType = $row["unit_type"] ?? "pcs";
         $amount = $unitType === "kg" ? $weight : $quantity;
         $stock = (float)($row["stock"] ?? 0);
 
         $isShopOpen = isShopOpen($row);
         $isProductActive = ($row["product_status"] ?? "") === "active";
+
+        $meetsMinOrder = true;
+        $followsStep = true;
+
+        if ($unitType === "kg") {
+            $meetsMinOrder = $weight >= (float)$orderRule["min_order"];
+            $followsStep = isValidStepAmount(
+                $weight,
+                $orderRule["min_order"],
+                $orderRule["order_step"]
+            );
+        } else {
+            $meetsMinOrder = $quantity >= 1;
+        }
+
         $hasStock = $stock > 0 && $amount <= $stock;
-        $isPurchasable = $isShopOpen && $isProductActive && $hasStock;
+        $isPurchasable =
+            $isShopOpen &&
+            $isProductActive &&
+            $hasStock &&
+            $meetsMinOrder &&
+            $followsStep;
 
         $row["quantity"] = $quantity;
         $row["weight"] = $weight;
@@ -237,6 +324,13 @@ try {
 
         $row["price"] = $priceData["final_price"];
         $row["cart_price"] = (float)($row["cart_price"] ?? 0);
+
+        $row["min_order"] = $orderRule["min_order"];
+        $row["order_step"] = $orderRule["order_step"];
+        $row["kg_min_order"] = $orderRule["min_order"];
+        $row["kg_order_step"] = $orderRule["order_step"];
+        $row["is_high_price_kg"] = $orderRule["is_high_price_kg"];
+        $row["high_price_threshold"] = $orderRule["high_price_threshold"];
 
         $row["subtotal"] = round($priceData["final_price"] * $amount, 2);
         $row["original_subtotal"] = round($priceData["original_price"] * $amount, 2);
@@ -252,8 +346,15 @@ try {
             $row["unavailable_reason"] = "Product is no longer available.";
         } elseif (!$isShopOpen) {
             $row["unavailable_reason"] = $row["shop_closed_message"];
-        } elseif (!$hasStock) {
-            $row["unavailable_reason"] = "Insufficient stock.";
+        } elseif ($stock <= 0) {
+            $row["unavailable_reason"] = "Out of stock.";
+        } elseif ($amount > $stock) {
+            $unitLabel = $unitType === "kg" ? "kg" : "pcs";
+            $row["unavailable_reason"] = "Insufficient stock. Available stock: {$stock} {$unitLabel}.";
+        } elseif (!$meetsMinOrder && $unitType === "kg") {
+            $row["unavailable_reason"] = "Minimum order is " . $orderRule["min_order"] . " kg.";
+        } elseif (!$followsStep && $unitType === "kg") {
+            $row["unavailable_reason"] = "Order weight must follow " . $orderRule["order_step"] . " kg increments.";
         } else {
             $row["unavailable_reason"] = null;
         }

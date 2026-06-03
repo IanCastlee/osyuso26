@@ -26,13 +26,27 @@ function Cart() {
   const navigate = useNavigate();
   const { showToast } = useToast();
 
-  const { data, loading } = useGetData("cart/get-cart.php");
+  const { data, loading, error } = useGetData("cart/get-cart.php");
 
   const [items, setItems] = useState([]);
   const [selectedItem, setSelectedItem] = useState(null);
 
   const { submit: updateSubmit } = useFormSubmit("cart/update-cart.php");
   const { submit: removeSubmit } = useFormSubmit("cart/remove-cart-item.php");
+
+  const cartRows = useMemo(() => {
+    const payload = data?.data ?? data;
+
+    if (Array.isArray(payload)) return payload;
+    if (Array.isArray(payload?.rows)) return payload.rows;
+    if (Array.isArray(payload?.items)) return payload.items;
+
+    return [];
+  }, [data]);
+
+  function toBoolean(value) {
+    return value === true || value === 1 || value === "1" || value === "true";
+  }
 
   const isPurchasable = (item) => {
     return toBoolean(item?.is_purchasable ?? 1);
@@ -43,20 +57,18 @@ function Cart() {
   };
 
   useEffect(() => {
-    if (!Array.isArray(data)) return;
-
-    setItems(data);
+    setItems(cartRows);
 
     setSelectedItem((prev) => {
-      const stillExistsAndPurchasable = data.some(
+      const stillExistsAndPurchasable = cartRows.some(
         (item) => item.cart_item_id === prev && isPurchasable(item),
       );
 
       if (stillExistsAndPurchasable) return prev;
 
-      return data.find((item) => isPurchasable(item))?.cart_item_id || null;
+      return cartRows.find((item) => isPurchasable(item))?.cart_item_id || null;
     });
-  }, [data]);
+  }, [cartRows]);
 
   const selectedCartItem = useMemo(
     () => items.find((item) => item.cart_item_id === selectedItem),
@@ -75,9 +87,18 @@ function Cart() {
     })}`;
   };
 
-  function toBoolean(value) {
-    return value === true || value === 1 || value === "1" || value === "true";
-  }
+  const formatKg = (value) => {
+    const number = Number(value || 0);
+
+    return number.toLocaleString("en-PH", {
+      minimumFractionDigits: Number.isInteger(number) ? 0 : 2,
+      maximumFractionDigits: 2,
+    });
+  };
+
+  const normalizeAmount = (value) => {
+    return Number(Number(value || 0).toFixed(2));
+  };
 
   const formatTime = (value) => {
     if (!value) return null;
@@ -104,6 +125,24 @@ function Cart() {
     const originalPrice = getOriginalPrice(item);
 
     return finalPrice > 0 ? finalPrice : originalPrice;
+  };
+
+  const getStock = (item) => {
+    return Number(item.stock || 0);
+  };
+
+  const getMinOrder = (item) => {
+    if (item.unit_type !== "kg") return 1;
+    return Number(item.min_order ?? item.kg_min_order ?? 0.5);
+  };
+
+  const getOrderStep = (item) => {
+    if (item.unit_type !== "kg") return 1;
+    return Number(item.order_step ?? item.kg_order_step ?? getMinOrder(item));
+  };
+
+  const isHighPriceKg = (item) => {
+    return toBoolean(item?.is_high_price_kg);
   };
 
   const isItemOnSale = (item) => {
@@ -143,7 +182,10 @@ function Cart() {
   };
 
   const getQtyLabel = (item) => {
-    if (item.unit_type === "kg") return `${Number(item.weight || 0)} kg`;
+    if (item.unit_type === "kg") {
+      return `${formatKg(item.weight)} kg`;
+    }
+
     return `${Number(item.quantity || 0)} pcs`;
   };
 
@@ -155,6 +197,29 @@ function Cart() {
     }
 
     return "This item is not available right now.";
+  };
+
+  const canDecrease = (item) => {
+    if (!isPurchasable(item)) return false;
+
+    if (item.unit_type === "kg") {
+      return Number(item.weight || 0) > getMinOrder(item);
+    }
+
+    return Number(item.quantity || 0) > 1;
+  };
+
+  const canIncrease = (item) => {
+    if (!isPurchasable(item)) return false;
+
+    if (item.unit_type === "kg") {
+      return (
+        normalizeAmount(Number(item.weight || 0) + getOrderStep(item)) <=
+        getStock(item)
+      );
+    }
+
+    return Number(item.quantity || 0) < getStock(item);
   };
 
   const total =
@@ -191,26 +256,53 @@ function Cart() {
       const updated = { ...item };
 
       if (item.unit_type === "kg") {
-        updated.weight = Math.max(0.5, value);
+        const minOrder = getMinOrder(item);
+        const stock = getStock(item);
+
+        if (stock < minOrder) {
+          showToast({
+            type: "error",
+            message: `Minimum order is ${formatKg(minOrder)} kg.`,
+            duration: 3500,
+          });
+          return;
+        }
+
+        updated.weight = Math.min(
+          stock,
+          Math.max(minOrder, normalizeAmount(value)),
+        );
         updated.quantity = 0;
       } else {
-        updated.quantity = Math.max(1, value);
+        updated.quantity = Math.min(getStock(item), Math.max(1, value));
         updated.weight = 0;
       }
 
-      await updateSubmit({
+      const res = await updateSubmit({
         cart_item_id: item.cart_item_id,
         quantity: updated.quantity,
         weight: updated.weight,
       });
+
+      const payload = res?.data || res || {};
 
       setItems((prev) =>
         prev.map((cartItem) =>
           cartItem.cart_item_id === item.cart_item_id
             ? {
                 ...cartItem,
-                quantity: updated.quantity,
-                weight: updated.weight,
+                quantity: payload.quantity ?? updated.quantity,
+                weight: payload.weight ?? updated.weight,
+                price: payload.unit_price ?? cartItem.price,
+                final_price: payload.unit_price ?? cartItem.final_price,
+                min_order: payload.min_order ?? cartItem.min_order,
+                order_step: payload.order_step ?? cartItem.order_step,
+                kg_min_order: payload.min_order ?? cartItem.kg_min_order,
+                kg_order_step: payload.order_step ?? cartItem.kg_order_step,
+                is_high_price_kg:
+                  payload.is_high_price_kg ?? cartItem.is_high_price_kg,
+                high_price_threshold:
+                  payload.high_price_threshold ?? cartItem.high_price_threshold,
               }
             : cartItem,
         ),
@@ -289,11 +381,17 @@ function Cart() {
       final_price: getUnitPrice(selectedCartItem),
       is_on_sale: isItemOnSale(selectedCartItem) ? 1 : 0,
       sale_label: getSaleLabel(selectedCartItem),
+      min_order: getMinOrder(selectedCartItem),
+      order_step: getOrderStep(selectedCartItem),
+      kg_min_order: getMinOrder(selectedCartItem),
+      kg_order_step: getOrderStep(selectedCartItem),
+      is_high_price_kg: isHighPriceKg(selectedCartItem) ? 1 : 0,
     };
 
     const unit = product.unit_type;
     const quantity = unit === "kg" ? 0 : Number(product.quantity || 1);
-    const weight = unit === "kg" ? Number(product.weight || 0.5) : 0;
+    const weight =
+      unit === "kg" ? Number(product.weight || getMinOrder(product)) : 0;
     const total = getItemAmount(product);
 
     navigate("/checkout", {
@@ -308,6 +406,10 @@ function Cart() {
   };
 
   if (loading) return <Loader />;
+
+  if (error) {
+    return <NoData text="Failed to load cart" subText={String(error)} />;
+  }
 
   if (!items.length) {
     return <NoData text="Your cart is empty" />;
@@ -381,6 +483,8 @@ function Cart() {
 
               const subtotal = getItemAmount(item);
               const originalSubtotal = getItemOriginalAmount(item);
+              const minOrder = getMinOrder(item);
+              const orderStep = getOrderStep(item);
 
               return (
                 <article
@@ -500,6 +604,22 @@ function Cart() {
                               </>
                             )}
                           </div>
+
+                          {item.unit_type === "kg" && (
+                            <div className="mt-3 rounded-lg bg-orange-50 px-3 py-2 text-xs text-orange-700">
+                              <p className="font-bold">
+                                Min: {formatKg(minOrder)} kg • Step:{" "}
+                                {formatKg(orderStep)} kg
+                              </p>
+
+                              {isHighPriceKg(item) && (
+                                <p className="mt-1 text-orange-700/80">
+                                  Quarter-kilo ordering is enabled for this
+                                  item.
+                                </p>
+                              )}
+                            </div>
+                          )}
                         </div>
 
                         <button
@@ -527,12 +647,12 @@ function Cart() {
                           >
                             <button
                               type="button"
-                              disabled={!itemAvailable}
+                              disabled={!canDecrease(item)}
                               onClick={() =>
                                 updateCart(
                                   item,
                                   item.unit_type === "kg"
-                                    ? qtyValue - 0.5
+                                    ? normalizeAmount(qtyValue - orderStep)
                                     : qtyValue - 1,
                                 )
                               }
@@ -548,12 +668,12 @@ function Cart() {
 
                             <button
                               type="button"
-                              disabled={!itemAvailable}
+                              disabled={!canIncrease(item)}
                               onClick={() =>
                                 updateCart(
                                   item,
                                   item.unit_type === "kg"
-                                    ? qtyValue + 0.5
+                                    ? normalizeAmount(qtyValue + orderStep)
                                     : qtyValue + 1,
                                 )
                               }
@@ -653,6 +773,15 @@ function Cart() {
                       {getQtyLabel(selectedCartItem)}
                     </span>
                   </div>
+
+                  {selectedCartItem.unit_type === "kg" && (
+                    <div className="rounded-lg bg-orange-50 px-3 py-2 text-xs text-orange-700">
+                      <p className="font-bold">
+                        Min {formatKg(getMinOrder(selectedCartItem))} kg • Step{" "}
+                        {formatKg(getOrderStep(selectedCartItem))} kg
+                      </p>
+                    </div>
+                  )}
 
                   <div className="flex justify-between">
                     <span className="text-slate-500">Unit price</span>

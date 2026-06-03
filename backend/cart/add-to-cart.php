@@ -14,9 +14,7 @@ require_once "../dbConn.php";
 require_once "../auth/middleware.php";
 
 function response($success, $message, $data = null, $status = 200) {
-    if (ob_get_length()) {
-        ob_clean();
-    }
+    if (ob_get_length()) ob_clean();
 
     http_response_code($status);
 
@@ -30,43 +28,23 @@ function response($success, $message, $data = null, $status = 200) {
 }
 
 function getUserId($user) {
-    if (is_object($user)) {
-        return (int)($user->user_id ?? 0);
-    }
-
-    if (is_array($user)) {
-        return (int)($user["user_id"] ?? 0);
-    }
-
+    if (is_object($user)) return (int)($user->user_id ?? 0);
+    if (is_array($user)) return (int)($user["user_id"] ?? 0);
     return 0;
 }
 
 function getInputData() {
-    if (!empty($_POST)) {
-        return $_POST;
-    }
+    if (!empty($_POST)) return $_POST;
 
     $json = json_decode(file_get_contents("php://input"), true);
-
     return is_array($json) ? $json : [];
 }
 
 function isShopOpen($shop) {
-    if (($shop["shop_status"] ?? "") !== "active") {
-        return false;
-    }
-
-    if ((int)($shop["is_accepting_orders"] ?? 1) !== 1) {
-        return false;
-    }
-
-    if ((int)($shop["operating_hours_enabled"] ?? 0) !== 1) {
-        return true;
-    }
-
-    if (empty($shop["opens_at"]) || empty($shop["closes_at"])) {
-        return true;
-    }
+    if (($shop["shop_status"] ?? "") !== "active") return false;
+    if ((int)($shop["is_accepting_orders"] ?? 1) !== 1) return false;
+    if ((int)($shop["operating_hours_enabled"] ?? 0) !== 1) return true;
+    if (empty($shop["opens_at"]) || empty($shop["closes_at"])) return true;
 
     $now = date("H:i:s");
     $opensAt = $shop["opens_at"];
@@ -80,18 +58,9 @@ function isShopOpen($shop) {
 }
 
 function getShopClosedMessage($shop) {
-    if (($shop["shop_status"] ?? "") !== "active") {
-        return "Shop is unavailable.";
-    }
-
-    if (!empty($shop["closed_message"])) {
-        return $shop["closed_message"];
-    }
-
-    if ((int)($shop["is_accepting_orders"] ?? 1) !== 1) {
-        return "Shop is closed now.";
-    }
-
+    if (($shop["shop_status"] ?? "") !== "active") return "Shop is unavailable.";
+    if (!empty($shop["closed_message"])) return $shop["closed_message"];
+    if ((int)($shop["is_accepting_orders"] ?? 1) !== 1) return "Shop is closed now.";
     return "Shop is closed now. Please order during operating hours.";
 }
 
@@ -100,17 +69,9 @@ function isSaleActive($product) {
     $saleValue = (float)($product["sale_value"] ?? 0);
     $now = date("Y-m-d H:i:s");
 
-    if ($saleType === "none" || $saleValue <= 0) {
-        return false;
-    }
-
-    if (!empty($product["sale_starts_at"]) && $product["sale_starts_at"] > $now) {
-        return false;
-    }
-
-    if (!empty($product["sale_ends_at"]) && $product["sale_ends_at"] < $now) {
-        return false;
-    }
+    if ($saleType === "none" || $saleValue <= 0) return false;
+    if (!empty($product["sale_starts_at"]) && $product["sale_starts_at"] > $now) return false;
+    if (!empty($product["sale_ends_at"]) && $product["sale_ends_at"] < $now) return false;
 
     return true;
 }
@@ -120,9 +81,7 @@ function calculateFinalPrice($product) {
     $saleType = $product["sale_type"] ?? "none";
     $saleValue = (float)($product["sale_value"] ?? 0);
 
-    if (!isSaleActive($product)) {
-        return $originalPrice;
-    }
+    if (!isSaleActive($product)) return $originalPrice;
 
     if ($saleType === "percent") {
         $discountPercent = min($saleValue, 100);
@@ -135,6 +94,67 @@ function calculateFinalPrice($product) {
     }
 
     return $originalPrice;
+}
+
+function getKgOrderSettings($conn) {
+    $stmt = $conn->prepare("
+        SELECT
+            high_price_threshold,
+            normal_kg_min_order,
+            normal_kg_order_step,
+            high_price_kg_min_order,
+            high_price_kg_order_step
+        FROM admin_settings
+        ORDER BY id ASC
+        LIMIT 1
+    ");
+
+    $stmt->execute();
+    $settings = $stmt->get_result()->fetch_assoc() ?: [];
+
+    return [
+        "threshold" => max(0, (float)($settings["high_price_threshold"] ?? 300)),
+        "normal_min" => max(0.01, (float)($settings["normal_kg_min_order"] ?? 0.50)),
+        "normal_step" => max(0.01, (float)($settings["normal_kg_order_step"] ?? 0.50)),
+        "high_min" => max(0.01, (float)($settings["high_price_kg_min_order"] ?? 0.25)),
+        "high_step" => max(0.01, (float)($settings["high_price_kg_order_step"] ?? 0.25)),
+    ];
+}
+
+function getOrderRule($conn, $unitType, $unitPrice) {
+    if ($unitType !== "kg") {
+        return [
+            "min_order" => 1,
+            "order_step" => 1,
+            "is_high_price_kg" => 0,
+            "high_price_threshold" => null
+        ];
+    }
+
+    $settings = getKgOrderSettings($conn);
+    $isHighPrice = (float)$unitPrice >= $settings["threshold"];
+
+    return [
+        "min_order" => $isHighPrice ? $settings["high_min"] : $settings["normal_min"],
+        "order_step" => $isHighPrice ? $settings["high_step"] : $settings["normal_step"],
+        "is_high_price_kg" => $isHighPrice ? 1 : 0,
+        "high_price_threshold" => $settings["threshold"]
+    ];
+}
+
+function isValidStepAmount($value, $min, $step) {
+    $value = round((float)$value, 4);
+    $min = round((float)$min, 4);
+    $step = round((float)$step, 4);
+
+    if ($value < $min) return false;
+    if ($step <= 0) return true;
+
+    $diff = round($value - $min, 4);
+    $steps = round($diff / $step);
+    $expected = round($steps * $step, 4);
+
+    return abs($diff - $expected) < 0.0001;
 }
 
 $transactionStarted = false;
@@ -194,17 +214,9 @@ try {
 
     $product = $stmt->get_result()->fetch_assoc();
 
-    if (!$product) {
-        throw new Exception("Product not found");
-    }
-
-    if ($product["status"] !== "active") {
-        throw new Exception("Product is not available");
-    }
-
-    if (!isShopOpen($product)) {
-        throw new Exception(getShopClosedMessage($product));
-    }
+    if (!$product) throw new Exception("Product not found");
+    if ($product["status"] !== "active") throw new Exception("Product is not available");
+    if (!isShopOpen($product)) throw new Exception(getShopClosedMessage($product));
 
     $stock = (float)$product["stock"];
 
@@ -214,12 +226,19 @@ try {
 
     $price = calculateFinalPrice($product);
     $unit_type = $product["unit_type"];
+    $orderRule = getOrderRule($conn, $unit_type, $price);
 
     if ($unit_type === "kg") {
         $weight = round($weight, 2);
+        $minOrder = (float)$orderRule["min_order"];
+        $orderStep = (float)$orderRule["order_step"];
 
-        if ($weight <= 0) {
-            throw new Exception("Weight must be greater than zero");
+        if ($weight < $minOrder) {
+            throw new Exception("Minimum order is {$minOrder} kg");
+        }
+
+        if (!isValidStepAmount($weight, $minOrder, $orderStep)) {
+            throw new Exception("Order weight must follow {$orderStep} kg increments");
         }
 
         $quantity = 0;
@@ -277,27 +296,22 @@ try {
         if ($unit_type === "kg") {
             $newWeight = round((float)$item["weight"] + $weight, 2);
 
+            if (!isValidStepAmount($newWeight, $orderRule["min_order"], $orderRule["order_step"])) {
+                throw new Exception("Total cart weight must follow {$orderRule["order_step"]} kg increments");
+            }
+
             if ($newWeight > $stock) {
                 throw new Exception("Insufficient stock. Available stock: {$stock} kg");
             }
 
             $stmt = $conn->prepare("
                 UPDATE cart_items
-                SET
-                    weight = ?,
-                    quantity = 0,
-                    price = ?,
-                    unit_type = ?
+                SET weight = ?, quantity = 0, price = ?, unit_type = ?
                 WHERE cart_item_id = ?
             ");
 
-            $stmt->bind_param(
-                "ddsi",
-                $newWeight,
-                $price,
-                $unit_type,
-                $item["cart_item_id"]
-            );
+            $stmt->bind_param("ddsi", $newWeight, $price, $unit_type, $item["cart_item_id"]);
+            $weight = $newWeight;
         } else {
             $newQty = (int)$item["quantity"] + $quantity;
 
@@ -307,25 +321,15 @@ try {
 
             $stmt = $conn->prepare("
                 UPDATE cart_items
-                SET
-                    quantity = ?,
-                    weight = 0,
-                    price = ?,
-                    unit_type = ?
+                SET quantity = ?, weight = 0, price = ?, unit_type = ?
                 WHERE cart_item_id = ?
             ");
 
-            $stmt->bind_param(
-                "idsi",
-                $newQty,
-                $price,
-                $unit_type,
-                $item["cart_item_id"]
-            );
+            $stmt->bind_param("idsi", $newQty, $price, $unit_type, $item["cart_item_id"]);
+            $quantity = $newQty;
         }
 
         $stmt->execute();
-
         $cart_item_id = (int)$item["cart_item_id"];
     } else {
         $requestedAmount = $unit_type === "kg" ? $weight : $quantity;
@@ -352,16 +356,10 @@ try {
         );
 
         $stmt->execute();
-
         $cart_item_id = $conn->insert_id;
     }
 
-    $stmt = $conn->prepare("
-        UPDATE carts
-        SET updated_at = NOW()
-        WHERE cart_id = ?
-    ");
-
+    $stmt = $conn->prepare("UPDATE carts SET updated_at = NOW() WHERE cart_id = ?");
     $stmt->bind_param("i", $cart_id);
     $stmt->execute();
 
@@ -374,7 +372,11 @@ try {
         "quantity" => $quantity,
         "weight" => $weight,
         "unit_type" => $unit_type,
-        "unit_price" => $price
+        "unit_price" => $price,
+        "min_order" => $orderRule["min_order"],
+        "order_step" => $orderRule["order_step"],
+        "is_high_price_kg" => $orderRule["is_high_price_kg"],
+        "high_price_threshold" => $orderRule["high_price_threshold"]
     ]);
 } catch (Throwable $e) {
     if ($transactionStarted) {
@@ -386,7 +388,6 @@ try {
     }
 
     error_log("Add to cart failed: " . $e->getMessage());
-
     response(false, $e->getMessage(), null, 400);
 }
 

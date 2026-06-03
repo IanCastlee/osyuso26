@@ -428,7 +428,7 @@ function AddVendorProduct_Form({
               <InputField
                 label="Stock"
                 name="stock"
-                type="number"
+                type="decimal"
                 value={form.stock}
                 onChange={handleChange}
                 error={errors.stock}

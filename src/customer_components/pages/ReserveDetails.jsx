@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { LazyLoadImage } from "react-lazy-load-image-component";
 import { BsCartPlus } from "react-icons/bs";
@@ -34,6 +34,8 @@ function ReserveDetails() {
     },
   );
 
+  const product = data || {};
+
   const toBoolean = (value) => {
     return value === true || value === 1 || value === "1" || value === "true";
   };
@@ -43,10 +45,18 @@ function ReserveDetails() {
     return String(value).slice(0, 5);
   };
 
-  if (loading) return <SingleSkeletonLoader />;
-  if (!data) return <NoData text="Product Not Found" />;
+  const formatKg = (value) => {
+    const number = Number(value || 0);
 
-  const product = data;
+    return number.toLocaleString("en-PH", {
+      minimumFractionDigits: Number.isInteger(number) ? 0 : 2,
+      maximumFractionDigits: 2,
+    });
+  };
+
+  const normalizeAmount = (value) => {
+    return Number(Number(value || 0).toFixed(2));
+  };
 
   const stock = Number(product.stock || 0);
   const originalPrice = Number(product.original_price ?? product.price ?? 0);
@@ -55,35 +65,77 @@ function ReserveDetails() {
     Number(product.is_on_sale) === 1 && finalPrice < originalPrice;
 
   const isKg = product.unit_type === "kg";
+
+  const minOrder = isKg
+    ? Number(product.min_order ?? product.kg_min_order ?? 0.5)
+    : 1;
+
+  const orderStep = isKg
+    ? Number(product.order_step ?? product.kg_order_step ?? minOrder)
+    : 1;
+
+  const isHighPriceKg = toBoolean(product.is_high_price_kg);
   const selectedAmount = isKg ? weight : quantity;
   const total = selectedAmount * finalPrice;
   const isOutOfStock = stock <= 0;
+  const hasEnoughMinimum = !isKg || stock >= minOrder;
   const isShopOpen = toBoolean(product.is_shop_open ?? 1);
   const isPurchasable = toBoolean(product.is_purchasable ?? 1);
-  const canOrder = !isOutOfStock && isShopOpen && isPurchasable;
+
+  const canOrder =
+    !isOutOfStock && hasEnoughMinimum && isShopOpen && isPurchasable;
 
   const unavailableMessage =
     product.unavailable_reason ||
     product.shop_closed_message ||
-    "This product is not available right now.";
+    (!hasEnoughMinimum
+      ? `Minimum order is ${formatKg(minOrder)} kg, but available stock is only ${formatKg(stock)} kg.`
+      : "This product is not available right now.");
+
+  const canIncrease = canOrder
+    ? isKg
+      ? normalizeAmount(weight + orderStep) <= stock
+      : quantity < stock
+    : false;
+
+  useEffect(() => {
+    if (!data?.id) return;
+
+    if (data.unit_type === "kg") {
+      const nextMin = Number(data.min_order ?? data.kg_min_order ?? 0.5);
+      setWeight(normalizeAmount(nextMin));
+      setQuantity(1);
+      return;
+    }
+
+    setQuantity(1);
+    setWeight(0.5);
+  }, [data?.id, data?.unit_type, data?.min_order, data?.kg_min_order]);
+
+  if (loading) return <SingleSkeletonLoader />;
+  if (!data) return <NoData text="Product Not Found" />;
 
   const decrease = () => {
     if (!canOrder) return;
 
     if (isKg) {
-      setWeight((w) => Math.max(0.5, Number((w - 0.5).toFixed(1))));
+      setWeight((current) =>
+        Math.max(minOrder, normalizeAmount(current - orderStep)),
+      );
     } else {
-      setQuantity((q) => Math.max(1, q - 1));
+      setQuantity((current) => Math.max(1, current - 1));
     }
   };
 
   const increase = () => {
-    if (!canOrder) return;
+    if (!canIncrease) return;
 
     if (isKg) {
-      setWeight((w) => Math.min(stock, Number((w + 0.5).toFixed(1))));
+      setWeight((current) =>
+        Math.min(stock, normalizeAmount(current + orderStep)),
+      );
     } else {
-      setQuantity((q) => Math.min(stock, q + 1));
+      setQuantity((current) => Math.min(stock, current + 1));
     }
   };
 
@@ -129,6 +181,8 @@ function ReserveDetails() {
           original_price: originalPrice,
           final_price: finalPrice,
           is_on_sale: isOnSale ? 1 : 0,
+          min_order: minOrder,
+          order_step: orderStep,
         },
         unit: product.unit_type,
         quantity,
@@ -156,18 +210,18 @@ function ReserveDetails() {
 
             <span
               className={`absolute left-3 top-3 rounded-full px-3 py-1 text-xs font-semibold text-white shadow-sm ${
-                isOutOfStock
+                isOutOfStock || !hasEnoughMinimum
                   ? "bg-red-500"
                   : !isShopOpen
                     ? "bg-slate-900"
                     : "bg-emerald-500"
               }`}
             >
-              {isOutOfStock
+              {isOutOfStock || !hasEnoughMinimum
                 ? "Sold Out"
                 : !isShopOpen
                   ? "Shop Closed"
-                  : `${stock} in stock`}
+                  : `${formatKg(stock)} ${isKg ? "kg" : "pcs"} in stock`}
             </span>
 
             {isOnSale && canOrder && (
@@ -245,9 +299,30 @@ function ReserveDetails() {
               {product.description || "No description available."}
             </p>
 
+            {isKg && (
+              <div className="mt-4 rounded-xl border border-orange-100 bg-orange-50 p-3">
+                <p className="text-xs font-bold uppercase tracking-wide text-orange-500">
+                  Weight Rule
+                </p>
+
+                <p className="mt-1 text-sm font-semibold text-orange-800">
+                  Minimum: {formatKg(minOrder)} kg • Increment:{" "}
+                  {formatKg(orderStep)} kg
+                </p>
+
+                {isHighPriceKg && (
+                  <p className="mt-1 text-xs text-orange-700/80">
+                    Quarter-kilo ordering is enabled because this item is a high
+                    price per kilo product.
+                  </p>
+                )}
+              </div>
+            )}
+
             {!canOrder && (
               <div className="mt-4 flex gap-3 rounded-xl border border-red-100 bg-red-50 p-3 text-sm text-red-700">
                 <FiAlertCircle className="mt-0.5 shrink-0" />
+
                 <div>
                   <p className="font-semibold">{unavailableMessage}</p>
 
@@ -272,20 +347,22 @@ function ReserveDetails() {
 
               <div className="inline-flex items-center overflow-hidden rounded-xl border border-slate-200 bg-slate-50">
                 <button
+                  type="button"
                   onClick={decrease}
-                  disabled={!canOrder}
+                  disabled={!canOrder || selectedAmount <= minOrder}
                   className="flex h-11 w-11 items-center justify-center text-slate-600 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-40"
                 >
                   <FiMinus />
                 </button>
 
                 <span className="min-w-28 px-4 text-center text-sm font-semibold text-slate-900">
-                  {isKg ? `${weight} kg` : `${quantity} pcs`}
+                  {isKg ? `${formatKg(weight)} kg` : `${quantity} pcs`}
                 </span>
 
                 <button
+                  type="button"
                   onClick={increase}
-                  disabled={!canOrder || selectedAmount >= stock}
+                  disabled={!canIncrease}
                   className="flex h-11 w-11 items-center justify-center text-slate-600 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-40"
                 >
                   <FiPlus />
@@ -293,8 +370,15 @@ function ReserveDetails() {
               </div>
 
               <p className="mt-2 text-xs text-slate-500">
-                Available stock: {stock} {isKg ? "kg" : "pcs"}
+                Available stock: {formatKg(stock)} {isKg ? "kg" : "pcs"}
               </p>
+
+              {isKg && (
+                <p className="mt-1 text-xs text-slate-500">
+                  Starts at {formatKg(minOrder)} kg, then adds{" "}
+                  {formatKg(orderStep)} kg each tap.
+                </p>
+              )}
             </div>
 
             <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
@@ -314,6 +398,7 @@ function ReserveDetails() {
 
           <div className="mt-auto flex flex-col-reverse gap-3 border-t border-slate-100 pt-5 sm:flex-row sm:justify-end">
             <button
+              type="button"
               onClick={handleAddToCart}
               disabled={cartLoading || !canOrder}
               className="flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-slate-200 px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
@@ -327,6 +412,7 @@ function ReserveDetails() {
             </button>
 
             <button
+              type="button"
               onClick={handleBuyNow}
               disabled={!canOrder}
               className="cursor-pointer rounded-xl bg-secondary px-6 py-3 text-sm font-semibold text-white shadow-sm transition hover:opacity-90 disabled:cursor-not-allowed disabled:bg-slate-300"

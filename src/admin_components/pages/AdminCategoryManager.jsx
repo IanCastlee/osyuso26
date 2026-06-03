@@ -529,7 +529,7 @@ function AdminCategoryManager() {
           </form>
         </section>
 
-        <section className="grid gap-5 xl:grid-cols-2">
+        <section className="flex flex-col gap-5">
           <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
             <div className="border-b border-slate-100 p-5">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
